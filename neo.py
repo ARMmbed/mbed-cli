@@ -461,7 +461,7 @@ class Repo(object):
     @classmethod
     def fromurl(cls, url, path=None):
         repo = cls()
-        m_local = re.match('^([\w./+-]+)/?(?:#(.*))?$', url.strip())
+        m_local = re.match('^([\w.+-][\w./+-]+)/?(?:#(.*))?$', url.strip())
         m_url = re.match('^(.*/([\w+-]+)(?:\.\w+)?)/?(?:#(.*))?$', url.strip())
         if m_local:
             repo.name = os.path.basename(path or m_local.group(1))
