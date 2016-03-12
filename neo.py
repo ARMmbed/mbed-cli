@@ -461,8 +461,8 @@ class Repo(object):
     @classmethod
     def fromurl(cls, url, path=None):
         repo = cls()
-        m_local = re.match('^([\w.+-][\w./+-]+)/?(?:#(.*))?$', url.strip())
-        m_url = re.match('^(.*/([\w+-]+)(?:\.\w+)?)/?(?:#(.*))?$', url.strip())
+        m_local = re.match('^([\w.+-][\w./+-]+)/?(?:#(.*))?$', url.strip().replace('\\', '/'))
+        m_url = re.match('^(.*/([\w+-]+)(?:\.\w+)?)/?(?:#(.*))?$', url.strip().replace('\\', '/'))
         if m_local:
             repo.name = os.path.basename(path or m_local.group(1))
             repo.path = os.path.abspath(path or os.path.join(os.getcwd(), m_local.group(1)))
@@ -614,7 +614,7 @@ class Repo(object):
     def geturl(self):
         if self.scm:
             with cd(self.path):
-                return self.scm.geturl(self)
+                return self.scm.geturl(self).strip().replace('\\', '/')
 
     def getlibs(self):
         for root, dirs, files in os.walk(self.path):
