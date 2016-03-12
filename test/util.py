@@ -119,7 +119,7 @@ def mkcommit(dir=None, files=[]):
 
 # Different repository structures
 @pytest.fixture(params=['git1', 'hg1', 'alt1', 'alt2'])
-def teststructure(neo, request):
+def testrepos(neo, request):
     if request.param in ['git1', 'alt1']:
         test1 = mkgit('test1')
         popen(['git', 'clone', test1, 'test1'])
