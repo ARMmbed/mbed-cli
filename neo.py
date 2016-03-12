@@ -419,7 +419,7 @@ class Git(object):
         return url
 
     def gethash(repo):
-        return pquery([git_cmd, 'rev-parse', '--short=12', 'HEAD']).strip()
+        return pquery([git_cmd, 'rev-parse', 'HEAD']).strip()
 
     def ignores(repo):
         with open(os.path.join(repo.path, '.git/info/exclude'), 'w') as f:

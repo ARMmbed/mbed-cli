@@ -152,7 +152,7 @@ def teststructure(neo, request):
         with open('test4.lib', 'w') as f:
             with cd('test4'):
                 if scm() == 'git':
-                    hash = pquery(['git', 'rev-parse', '--short=12', 'HEAD'])
+                    hash = pquery(['git', 'rev-parse', 'HEAD'])
                 elif scm() == 'hg':
                     hash = pquery(['hg', 'id', '-i'])
             f.write(test4 + '/#' + hash + '\n')
@@ -170,7 +170,7 @@ def teststructure(neo, request):
         with open('test3.lib', 'w') as f:
             with cd('test3'):
                 if scm() == 'git':
-                    hash = pquery(['git', 'rev-parse', '--short=12', 'HEAD'])
+                    hash = pquery(['git', 'rev-parse', 'HEAD'])
                 elif scm() == 'hg':
                     hash = pquery(['hg', 'id', '-i'])
             f.write(test3 + '/#' + hash + '\n')
@@ -188,7 +188,7 @@ def teststructure(neo, request):
         with open('test2.lib', 'w') as f:
             with cd('test2'):
                 if scm() == 'git':
-                    hash = pquery(['git', 'rev-parse', '--short=12', 'HEAD'])
+                    hash = pquery(['git', 'rev-parse', 'HEAD'])
                 elif scm() == 'hg':
                     hash = pquery(['hg', 'id', '-i'])
             f.write(test2 + '/#' + hash + '\n')
