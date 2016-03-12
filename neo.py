@@ -963,7 +963,7 @@ def list_(all=False, prefix=''):
     repo = Repo.fromrepo()
     print prefix + repo.name, '(%s)' % (repo.url if all else repo.hash)
 
-    for i, lib in enumerate(repo.libs):
+    for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.name)):
         if prefix:
             nprefix = prefix[:-3] + ('|  ' if prefix[-3] == '|' else '   ')
         else:
