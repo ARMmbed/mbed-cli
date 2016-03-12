@@ -1,7 +1,8 @@
 from util import *
 
-def test_sync_update(neo, teststructure):
-    test1 = teststructure[0]
+# Tests if a 'neo sync', commit, and 'neo update' works on a simple file change
+def test_sync_update(neo, testrepos):
+    test1 = testrepos[0]
     popen(['python', neo, 'import', test1, 'testimport'])
 
     with cd('test1/test2'):
@@ -20,8 +21,9 @@ def test_sync_update(neo, teststructure):
 
     assert os.path.isfile('testimport/test2/hello')
 
-def test_sync_update_remove(neo, teststructure):
-    test1 = teststructure[0]
+# Tests if removing a library is carried over sync/update
+def test_sync_update_remove(neo, testrepos):
+    test1 = testrepos[0]
     popen(['python', neo, 'import', test1, 'testimport'])
 
     with cd('test1/test2'):
@@ -41,9 +43,10 @@ def test_sync_update_remove(neo, teststructure):
         "`- test2",
     ])
 
-def test_sync_update_add(neo, teststructure):
-    test1 = teststructure[0]
-    test3 = teststructure[2]
+# Tests if adding a library is carried over sync/update
+def test_sync_update_add(neo, testrepos):
+    test1 = testrepos[0]
+    test3 = testrepos[2]
     popen(['python', neo, 'import', test1, 'testimport'])
 
     with cd('test1/test2'):
@@ -67,9 +70,10 @@ def test_sync_update_add(neo, teststructure):
         "      `- test4",
     ])
 
-def test_sync_update_move(neo, teststructure):
-    test1 = teststructure[0]
-    test3 = teststructure[2]
+# Tests if moving a library is carried over sync/update
+def test_sync_update_move(neo, testrepos):
+    test1 = testrepos[0]
+    test3 = testrepos[2]
     popen(['python', neo, 'import', test1, 'testimport'])
 
     with cd('test1/test2'):
