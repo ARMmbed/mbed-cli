@@ -388,14 +388,6 @@ class Repo(object):
             return cls.fromurl(f.read(), lib[:-4])
 
     @classmethod
-    def isrepo(cls, path=None):
-        for name, scm in scms.items():
-            if os.path.isdir(os.path.join(path, '.'+name)):
-                return True
-
-        return False
-
-    @classmethod
     def fromrepo(cls, path=None):
         repo = cls()
         repo.path = os.path.abspath(path or os.getcwd())
@@ -407,6 +399,14 @@ class Repo(object):
             error("Current folder is not a supported repository", -1)
 
         return repo
+
+    @classmethod
+    def isrepo(cls, path=None):
+        for name, scm in scms.items():
+            if os.path.isdir(os.path.join(path, '.'+name)):
+                return True
+
+        return False
 
     @property
     def lib(self):
@@ -567,8 +567,9 @@ def update(ref=None):
     repo.scm.pull(ref)
 
     for lib in repo.libs:
-        if Repo.isrepo(lib.path) and (not os.path.isfile(lib.lib) or
-            lib.repo != Repo.fromrepo(lib.path).repo):
+        if (not os.path.isfile(lib.lib) or 
+            (Repo.isrepo(lib.path) and 
+             lib.repo != Repo.fromrepo(lib.path).repo)):
             with cd(lib.path):
                 if lib.cwd.dirty():
                     error('Uncommitted changes in %s (%s)\n'
@@ -606,18 +607,18 @@ def sync():
         files[:] = [f for f in files if not f.startswith('.')]
 
         for dir in list(dirs):
-            if Repo.isrepo(os.path.join(root, dir)):
-                lib = Repo.fromrepo(os.path.join(root, dir))            
-                if os.path.isfile(lib.lib):
-                    dirs.remove(dir)
-                    continue
+            if not Repo.isrepo(os.path.join(root, dir)):
+                continue
 
-                for name, scm in scms.items():
-                    if os.path.isdir(os.path.join(lib.path, '.'+name)):
-                        dirs.remove(dir)
-                        repo.scm.ignore(relpath(repo.path, lib.path))
-                        lib.write()
-                        repo.scm.add(lib.lib)
+            lib = Repo.fromrepo(os.path.join(root, dir))            
+            if os.path.isfile(lib.lib):
+                dirs.remove(dir)
+                continue
+
+            dirs.remove(dir)
+            repo.scm.ignore(relpath(repo.path, lib.path))
+            lib.write()
+            repo.scm.add(lib.lib)
 
     repo.sync()
 
