@@ -155,33 +155,31 @@ class Hg(object):
         return pquery([hg_cmd, 'paths', 'default']).strip()
 
     def deploy_hook():
-
-        hg_ignore = """
-syntax: regexp
-\.hg$
-\.git$
-\.svn$
-\.cvs$
-\.orig$
-\.msub$
-\.meta$
-\.ctags
-\.uvproj$
-\.uvopt$
-\.project$
-\.cproject$
-\.launch$
-\.project$
-\.cproject$
-\.launch$
-Makefile$
-\.ewp$
-\.eww$
-\.htm$
-Debug$
-.settings$
-"""
-
+        hg_ignore = '\n'.join([
+            "syntax: regexp",
+            "\.hg$",
+            "\.git$",
+            "\.svn$",
+            "\.cvs$",
+            "\.orig$",
+            "\.msub$",
+            "\.meta$",
+            "\.ctags",
+            "\.uvproj$",
+            "\.uvopt$",
+            "\.project$",
+            "\.cproject$",
+            "\.launch$",
+            "\.project$",
+            "\.cproject$",
+            "\.launch$",
+            "Makefile$",
+            "\.ewp$",
+            "\.eww$",
+            "\.htm$",
+            "Debug$",
+            ".settings$",
+        ])
         pass
 
     def ignore(file):
@@ -267,31 +265,31 @@ class Git(object):
         return pquery([git_cmd, 'config', '--get', 'remote.origin.url']).strip()
 
     def deploy_hook():
-        git_ignore = """
-syntax: regexp
-\.hg$
-\.git$
-\.svn$
-\.cvs$
-\.orig$
-\.msub$
-\.meta$
-\.ctags
-\.uvproj$
-\.uvopt$
-\.project$
-\.cproject$
-\.launch$
-\.project$
-\.cproject$
-\.launch$
-Makefile$
-\.ewp$
-\.eww$
-\.htm$
-Debug$
-.settings$
-"""
+        git_ignore = '\n'.join([
+            "syntax: regexp",
+            "\.hg$",
+            "\.git$",
+            "\.svn$",
+            "\.cvs$",
+            "\.orig$",
+            "\.msub$",
+            "\.meta$",
+            "\.ctags",
+            "\.uvproj$",
+            "\.uvopt$",
+            "\.project$",
+            "\.cproject$",
+            "\.launch$",
+            "\.project$",
+            "\.cproject$",
+            "\.launch$",
+            "Makefile$",
+            "\.ewp$",
+            "\.eww$",
+            "\.htm$",
+            "Debug$",
+            ".settings$",
+        ])
         pass
 
     def ignore(file):
@@ -381,7 +379,8 @@ class Repo(object):
             except ProcessException:
                 pass
         elif self.scm:
-            self.repo = self.scm.repo()
+            with cd(self.path):
+                self.repo = self.scm.repo()
 
     def getscm(self):
         for name, scm in scms.items():
@@ -549,7 +548,7 @@ def sync():
         dirs[:]  = [d for d in dirs  if not d.startswith('.')]
         files[:] = [f for f in files if not f.startswith('.')]
 
-        for dir in dirs:
+        for dir in list(dirs):
             lib = Repo.fromrepo(os.path.join(root, dir))
             if os.path.isfile(lib.lib):
                 dirs.remove(dir)
