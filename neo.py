@@ -14,7 +14,7 @@ from itertools import *
 hg_cmd = 'hg'
 git_cmd = 'git'
 
-ignore = [
+ignores = [
     # Version control folders
     "\.hg$",
     "\.git$",
@@ -196,32 +196,8 @@ class Hg(object):
     def repo():
         return pquery([hg_cmd, 'paths', 'default']).strip()
 
-    def deploy_hook():
-        hg_ignore = '\n'.join([
-            "syntax: regexp",
-            "\.hg$",
-            "\.git$",
-            "\.svn$",
-            "\.cvs$",
-            "\.orig$",
-            "\.msub$",
-            "\.meta$",
-            "\.ctags",
-            "\.uvproj$",
-            "\.uvopt$",
-            "\.project$",
-            "\.cproject$",
-            "\.launch$",
-            "\.project$",
-            "\.cproject$",
-            "\.launch$",
-            "Makefile$",
-            "\.ewp$",
-            "\.eww$",
-            "\.htm$",
-            "Debug$",
-            ".settings$",
-        ])
+    def set_ignores():
+        hg_ignores = "syntax: regexp"+('\n'.join([ignores]))
         pass
 
     def ignore(file):
@@ -306,32 +282,8 @@ class Git(object):
     def repo():
         return pquery([git_cmd, 'config', '--get', 'remote.origin.url']).strip()
 
-    def deploy_hook():
-        git_ignore = '\n'.join([
-            "syntax: regexp",
-            "\.hg$",
-            "\.git$",
-            "\.svn$",
-            "\.cvs$",
-            "\.orig$",
-            "\.msub$",
-            "\.meta$",
-            "\.ctags",
-            "\.uvproj$",
-            "\.uvopt$",
-            "\.project$",
-            "\.cproject$",
-            "\.launch$",
-            "\.project$",
-            "\.cproject$",
-            "\.launch$",
-            "Makefile$",
-            "\.ewp$",
-            "\.eww$",
-            "\.htm$",
-            "Debug$",
-            ".settings$",
-        ])
+    def set_ignores():
+        git_ignores = '\n'.join(ignores)
         pass
 
     def ignore(file):
@@ -505,7 +457,7 @@ def deploy():
         import_(lib.url, lib.path)
         repo.scm.ignore(relpath(repo.path, lib.path))
 
-    repo.scm.deploy_hook()
+    repo.scm.set_ignores()
 
     if (not os.path.isfile('mbed_settings.py') and 
         os.path.isfile('mbed-os/tools/default_settings.py')):
