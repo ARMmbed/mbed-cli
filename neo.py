@@ -496,13 +496,14 @@ def remove(path):
 # Publish command
 @subcommand('publish',
     help='Publish working tree to remote repositories')
-def publish(always=True):
+def publish(top=True):
+    if top:
+        sync()
+
     repo = Repo.fromrepo()
     for lib in repo.libs:
         with cd(lib.path):
             publish(False)
-
-    sync()
 
     dirty = repo.scm.dirty()
 
@@ -511,7 +512,7 @@ def publish(always=True):
         raw_input('Press enter to commit and push: ')
         repo.scm.commit()
 
-    if dirty or always:
+    if dirty or top:
         try:
             repo.scm.push()
         except ProcessException as e:
