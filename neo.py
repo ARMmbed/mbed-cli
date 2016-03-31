@@ -155,6 +155,33 @@ class Hg(object):
         return pquery([hg_cmd, 'paths', 'default']).strip()
 
     def deploy_hook():
+
+        hg_ignore = """
+syntax: regexp
+\.hg$
+\.git$
+\.svn$
+\.cvs$
+\.orig$
+\.msub$
+\.meta$
+\.ctags
+\.uvproj$
+\.uvopt$
+\.project$
+\.cproject$
+\.launch$
+\.project$
+\.cproject$
+\.launch$
+Makefile$
+\.ewp$
+\.eww$
+\.htm$
+Debug$
+.settings$
+"""
+
         pass
 
     def ignore(file):
@@ -240,6 +267,31 @@ class Git(object):
         return pquery([git_cmd, 'config', '--get', 'remote.origin.url']).strip()
 
     def deploy_hook():
+        git_ignore = """
+syntax: regexp
+\.hg$
+\.git$
+\.svn$
+\.cvs$
+\.orig$
+\.msub$
+\.meta$
+\.ctags
+\.uvproj$
+\.uvopt$
+\.project$
+\.cproject$
+\.launch$
+\.project$
+\.cproject$
+\.launch$
+Makefile$
+\.ewp$
+\.eww$
+\.htm$
+Debug$
+.settings$
+"""
         pass
 
     def ignore(file):
