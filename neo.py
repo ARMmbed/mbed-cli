@@ -368,8 +368,20 @@ class Repo(object):
         if os.path.isdir(self.path):
             try:
                 self.scm  = self.getscm()
+            except ProcessException:
+                pass
+
+            try:
                 self.repo = self.getrepo()
+            except ProcessException:
+                pass
+
+            try:
                 self.hash = self.gethash()
+            except ProcessException:
+                pass
+
+            try:
                 self.libs = list(self.getlibs())
             except ProcessException:
                 pass
