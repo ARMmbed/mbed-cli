@@ -197,11 +197,17 @@ class Hg(object):
         return pquery([hg_cmd, 'paths', 'default']).strip()
 
     def set_ignores():
-        hg_ignores = "syntax: regexp"+('\n'.join([ignores]))
-        pass
+        hook = 'ignore.local = .hg/hgignore'
+        with open('.hg/hgrc') as f:
+            if hook not in f.read().splitlines():
+                with open('.hg/hgrc', 'a') as f:
+                    f.write('[ui]\n')
+                    f.write(hook + '\n')
+
+        with open('.hg/hgignore', 'w') as f:
+            f.write("syntax: regexp\n"+('\n'.join([ignores]))+'\n')
 
     def ignore(file):
-        hooked = False
         hook = 'ignore.local = .hg/hgignore'
         with open('.hg/hgrc') as f:
             if hook not in f.read().splitlines():
@@ -283,8 +289,8 @@ class Git(object):
         return pquery([git_cmd, 'config', '--get', 'remote.origin.url']).strip()
 
     def set_ignores():
-        git_ignores = '\n'.join(ignores)
-        pass
+        with open('.git/info/exclude', 'w') as f:
+            f.write('\n'.join([ignores])+'\n')
 
     def ignore(file):
         exclude = '.git/info/exclude'
@@ -453,11 +459,11 @@ def import_(url, path=None):
     help='Import library in the current program or library')
 def deploy():
     repo = Repo.fromrepo()
+    repo.scm.set_ignores()
+
     for lib in repo.libs:
         import_(lib.url, lib.path)
         repo.scm.ignore(relpath(repo.path, lib.path))
-
-    repo.scm.set_ignores()
 
     if (not os.path.isfile('mbed_settings.py') and 
         os.path.isfile('mbed-os/tools/default_settings.py')):
@@ -568,8 +574,9 @@ def sync():
                 continue
 
             dirs.remove(dir)
-            repo.scm.ignore(relpath(repo.path, lib.path))
+            lib.scm.set_ignores()
             lib.write()
+            repo.scm.ignore(relpath(repo.path, lib.path))
             repo.scm.add(lib.lib)
 
     repo.sync()
