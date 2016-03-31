@@ -278,6 +278,9 @@ class Repo(object):
         repo = cls()
 
         m = re.match('^(.*/([\w+-]+)(?:\.\w+)?)/?(?:#(.*))?$', url.strip())
+        if not m:
+            error('Invalid repository (%s)' % url.strip(), -1)
+
         repo.name = os.path.basename(path or m.group(2))
         repo.path = os.path.abspath(
             path or os.path.join(os.getcwd(), repo.name))
@@ -308,7 +311,8 @@ class Repo(object):
     @property
     def url(self):
         if self.repo:
-            return self.repo + '/' + ('#'+self.hash if self.hash else '')
+            return (self.repo.strip('/') + '/' + 
+                ('#'+self.hash if self.hash else ''))
 
     def sync(self):
         if os.path.isdir(self.path):
@@ -496,10 +500,12 @@ def sync():
         for dir in dirs:
             lib = Repo.fromrepo(os.path.join(root, dir))
             if os.path.isfile(lib.lib):
+                dirs.remove(dir)
                 continue
 
             for name, scm in scms.items():
                 if os.path.isdir(os.path.join(lib.path, '.'+name)):
+                    dirs.remove(dir)
                     repo.scm.ignore(relpath(repo.path, lib.path))
                     lib.write()
                     repo.scm.add(lib.lib)
