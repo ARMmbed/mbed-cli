@@ -407,7 +407,7 @@ class Repo(object):
                     print self.name, 'unmodified'
                     return
 
-        with open(self.lib, 'w') as f:
+        with open(self.lib, 'wb') as f:
             f.write(self.url + '\n')
 
         print self.name, '->', self.url
