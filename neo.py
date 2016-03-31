@@ -561,6 +561,12 @@ def sync():
                     lib.write()
                     repo.scm.add(lib.lib)
 
+    repo.sync()
+
+    for lib in repo.libs:
+        with cd(lib.path):
+            sync()
+
 # Compile command
 @subcommand('compile', 'args*',
     help='Compile project using mbed OS build system')
