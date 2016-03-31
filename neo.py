@@ -145,12 +145,16 @@ class Hg(object):
         popen([hg_cmd, 'status'])
 
     def hash():
-        return pquery([hg_cmd, 'id', '-i']).strip().strip('+')
+        with open('.hg/dirstate') as f:
+            return ''.join('%02x'%ord(i) for i in f.read(6))
 
     def dirty():
         return pquery([hg_cmd, 'status', '-q'])
 
-    def hook():
+    def repo():
+        return pquery([hg_cmd, 'paths', 'default']).strip()
+
+    def deploy_hook():
         pass
 
     def ignore(file):
@@ -232,7 +236,10 @@ class Git(object):
     def dirty():
         return pquery([git_cmd, 'diff', '--name-only', 'HEAD'])
 
-    def hook():
+    def repo():
+        return pquery([git_cmd, 'config', '--get', 'remote.origin.url']).strip()
+
+    def deploy_hook():
         pass
 
     def ignore(file):
@@ -291,7 +298,7 @@ class Repo(object):
         repo.path = os.path.abspath(path or os.getcwd())
         repo.name = os.path.basename(repo.path)
 
-        repo.synch()
+        repo.sync()
         return repo
 
     @property
@@ -303,7 +310,7 @@ class Repo(object):
         if self.repo:
             return self.repo + '/' + ('#'+self.hash if self.hash else '')
 
-    def synch(self):
+    def sync(self):
         if os.path.isdir(self.path):
             try:
                 self.scm  = self.getscm()
@@ -317,6 +324,8 @@ class Repo(object):
                 self.repo = self.getrepo()
             except ProcessException:
                 pass
+        elif self.scm:
+            self.repo = self.scm.repo()
 
     def getscm(self):
         for name, scm in scms.items():
@@ -368,7 +377,7 @@ def import_(url, path=None):
         except ProcessException:
             pass
 
-    repo.synch()
+    repo.sync()
 
     with cd(repo.path):
         deploy()
@@ -382,14 +391,14 @@ def deploy():
         import_(lib.url, lib.path)
         repo.scm.ignore(relpath(repo.path, lib.path))
 
-    repo.scm.hook()
+    repo.scm.deploy_hook()
 
     if (not os.path.isfile('mbed_settings.py') and 
         os.path.isfile('mbed-os/tools/default_settings.py')):
         shutil.copy('mbed-os/tools/default_settings.py', 'mbed_settings.py')
 
 # Install/uninstall command
-@subcommand('add', 'url', 'name?',
+@subcommand('add', 'url', 'path?',
     help='Add a library to the current program or library')
 def add(url, path=None):
     repo = Repo.fromrepo()
@@ -397,7 +406,7 @@ def add(url, path=None):
     lib = Repo.fromurl(url, path)
     import_(lib.url, lib.path)
     repo.scm.ignore(relpath(repo.path, lib.path))
-    lib.synch()
+    lib.sync()
 
     lib.write()
     repo.scm.add(lib.lib)
@@ -421,7 +430,8 @@ def publish(always=True):
     for lib in repo.libs:
         with cd(lib.path):
             publish(False)
-    synch()
+
+    sync()
 
     dirty = repo.scm.dirty()
 
@@ -455,7 +465,7 @@ def update(ref=None):
             shutil.rmtree(lib.path)
             repo.scm.unignore(relpath(repo.path, lib.path))
 
-    repo.synch()
+    repo.sync()
 
     for lib in repo.libs:
         if os.path.isdir(lib.path):
@@ -466,13 +476,33 @@ def update(ref=None):
             repo.scm.ignore(relpath(repo.path, lib.path))
 
 # Synch command
-@subcommand('synch',
+@subcommand('sync',
     help='Synchronize library references (.lib files)')
-def synch():
+def sync():
     repo = Repo.fromrepo()
     for lib in repo.libs:
-        lib.synch()
-        lib.write()
+        if os.path.isdir(lib.path):
+            lib.sync()
+            lib.write()
+            repo.scm.ignore(relpath(repo.path, lib.path))
+        else:
+            repo.scm.remove(lib.lib)
+            repo.scm.unignore(relpath(repo.path, lib.path))
+
+    for root, dirs, files in os.walk(repo.path):
+        dirs[:]  = [d for d in dirs  if not d.startswith('.')]
+        files[:] = [f for f in files if not f.startswith('.')]
+
+        for dir in dirs:
+            lib = Repo.fromrepo(os.path.join(root, dir))
+            if os.path.isfile(lib.lib):
+                continue
+
+            for name, scm in scms.items():
+                if os.path.isdir(os.path.join(lib.path, '.'+name)):
+                    repo.scm.ignore(relpath(repo.path, lib.path))
+                    lib.write()
+                    repo.scm.add(lib.lib)
 
 # Compile command
 @subcommand('compile', 'args*',
