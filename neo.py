@@ -205,7 +205,7 @@ class Hg(object):
                     f.write(hook + '\n')
 
         with open('.hg/hgignore', 'w') as f:
-            f.write("syntax: regexp\n"+('\n'.join([ignores]))+'\n')
+            f.write("syntax: regexp\n"+'\n'.join(ignores)+'\n')
 
     def ignore(file):
         hook = 'ignore.local = .hg/hgignore'
@@ -290,7 +290,7 @@ class Git(object):
 
     def set_ignores():
         with open('.git/info/exclude', 'w') as f:
-            f.write('\n'.join([ignores])+'\n')
+            f.write('\n'.join(ignores)+'\n')
 
     def ignore(file):
         exclude = '.git/info/exclude'
@@ -551,6 +551,8 @@ def update(ref=None):
     help='Synchronize library references (.lib files)')
 def sync():
     repo = Repo.fromrepo()
+    repo.scm.set_ignores()
+
     for lib in repo.libs:
         if os.path.isdir(lib.path):
             lib.sync()
@@ -574,7 +576,6 @@ def sync():
                 continue
 
             dirs.remove(dir)
-            lib.scm.set_ignores()
             lib.write()
             repo.scm.ignore(relpath(repo.path, lib.path))
             repo.scm.add(lib.lib)
