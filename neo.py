@@ -59,7 +59,7 @@ ignores = [
     "mbed_settings.py$",
     
     # Python 
-    "*.py[cod]",
+    ".py[cod]",
     "# subrepo ignores",
     ]
 # Subparser handling
