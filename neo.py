@@ -18,32 +18,6 @@ git_cmd = 'git'
 parser = argparse.ArgumentParser()
 subparsers = parser.add_subparsers()
 
-ignores = """
-\.hg$
-\.git$
-\.svn$
-\.CVS$
-\.orig$
-\.msub$
-\.meta$
-\.ctags
-\.uvproj$
-\.uvopt$
-\.project$
-\.cproject$
-\.launch$
-\.project$
-\.cproject$
-\.launch$
-\.ewp$
-\.eww$
-\.htm$
-Makefile$
-Debug$
-\.settings$
-mbed_settings.py$
-"""
-
 def message(msg):
     return "["+os.path.basename(sys.argv[0])+"] "+msg+"\n"
 
@@ -181,33 +155,31 @@ class Hg(object):
         return pquery([hg_cmd, 'paths', 'default']).strip()
 
     def deploy_hook():
-        hg_ignore = """
-syntax: regexp
-\.hg$
-\.git$
-\.svn$
-\.CVS$
-\.orig$
-\.msub$
-\.meta$
-\.ctags
-\.uvproj$
-\.uvopt$
-\.project$
-\.cproject$
-\.launch$
-\.project$
-\.cproject$
-\.launch$
-\.ewp$
-\.eww$
-\.htm$
-Makefile$
-Debug$
-\.settings$
-mbed_settings.py$
-"""
-
+        hg_ignore = '\n'.join([
+            "syntax: regexp",
+            "\.hg$",
+            "\.git$",
+            "\.svn$",
+            "\.cvs$",
+            "\.orig$",
+            "\.msub$",
+            "\.meta$",
+            "\.ctags",
+            "\.uvproj$",
+            "\.uvopt$",
+            "\.project$",
+            "\.cproject$",
+            "\.launch$",
+            "\.project$",
+            "\.cproject$",
+            "\.launch$",
+            "Makefile$",
+            "\.ewp$",
+            "\.eww$",
+            "\.htm$",
+            "Debug$",
+            ".settings$",
+        ])
         pass
 
     def ignore(file):
@@ -293,6 +265,31 @@ class Git(object):
         return pquery([git_cmd, 'config', '--get', 'remote.origin.url']).strip()
 
     def deploy_hook():
+        git_ignore = '\n'.join([
+            "syntax: regexp",
+            "\.hg$",
+            "\.git$",
+            "\.svn$",
+            "\.cvs$",
+            "\.orig$",
+            "\.msub$",
+            "\.meta$",
+            "\.ctags",
+            "\.uvproj$",
+            "\.uvopt$",
+            "\.project$",
+            "\.cproject$",
+            "\.launch$",
+            "\.project$",
+            "\.cproject$",
+            "\.launch$",
+            "Makefile$",
+            "\.ewp$",
+            "\.eww$",
+            "\.htm$",
+            "Debug$",
+            ".settings$",
+        ])
         pass
 
     def ignore(file):
@@ -331,6 +328,9 @@ class Repo(object):
         repo = cls()
 
         m = re.match('^(.*/([\w+-]+)(?:\.\w+)?)/?(?:#(.*))?$', url.strip())
+        if not m:
+            error('Invalid repository (%s)' % url.strip(), -1)
+
         repo.name = os.path.basename(path or m.group(2))
         repo.path = os.path.abspath(
             path or os.path.join(os.getcwd(), repo.name))
@@ -361,7 +361,8 @@ class Repo(object):
     @property
     def url(self):
         if self.repo:
-            return self.repo + '/' + ('#'+self.hash if self.hash else '')
+            return (self.repo.strip('/') + '/' + 
+                ('#'+self.hash if self.hash else ''))
 
     def sync(self):
         if os.path.isdir(self.path):
@@ -378,7 +379,8 @@ class Repo(object):
             except ProcessException:
                 pass
         elif self.scm:
-            self.repo = self.scm.repo()
+            with cd(self.path):
+                self.repo = self.scm.repo()
 
     def getscm(self):
         for name, scm in scms.items():
@@ -546,16 +548,24 @@ def sync():
         dirs[:]  = [d for d in dirs  if not d.startswith('.')]
         files[:] = [f for f in files if not f.startswith('.')]
 
-        for dir in dirs:
+        for dir in list(dirs):
             lib = Repo.fromrepo(os.path.join(root, dir))
             if os.path.isfile(lib.lib):
+                dirs.remove(dir)
                 continue
 
             for name, scm in scms.items():
                 if os.path.isdir(os.path.join(lib.path, '.'+name)):
+                    dirs.remove(dir)
                     repo.scm.ignore(relpath(repo.path, lib.path))
                     lib.write()
                     repo.scm.add(lib.lib)
+
+    repo.sync()
+
+    for lib in repo.libs:
+        with cd(lib.path):
+            sync()
 
 # Compile command
 @subcommand('compile', 'args*',
