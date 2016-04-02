@@ -62,10 +62,12 @@ ignores = [
     ".py[cod]",
     "# subrepo ignores",
     ]
+
 # Subparser handling
 parser = argparse.ArgumentParser()
 subparsers = parser.add_subparsers()
 
+# Logging and output
 def message(msg):
     return "["+os.path.basename(sys.argv[0])+"] "+msg+"\n"
 
@@ -79,6 +81,19 @@ def error(msg, code):
     sys.stderr.write("---\n["+os.path.basename(sys.argv[0])+" ERROR] "+msg+"\n---\n")
     sys.exit(code)
 
+def progress_cursor():
+    while True:
+        for cursor in '|/-\\':
+            yield cursor
+
+progress_spinner = progress_cursor()
+
+def progress():
+    sys.stdout.write(progress_spinner.next())
+    sys.stdout.flush()
+    sys.stdout.write('\b')
+
+# Process handling
 def subcommand(name, *args, **kwargs):
     def subcommand(command):
         subparser = subparsers.add_parser(name, **kwargs)
@@ -429,7 +444,8 @@ class Repo(object):
         if os.path.isfile(self.lib):
             with open(self.lib) as f:
                 if f.read().strip() == self.url.strip():
-                    print self.name, 'unmodified'
+                    #print self.name, 'unmodified'
+                    progress()
                     return
 
         with open(self.lib, 'wb') as f:
@@ -500,10 +516,12 @@ def remove(path):
 def publish(top=True):
     if top:
         sync()
+        action("Checking for modifications...")
 
     repo = Repo.fromrepo()
     for lib in repo.libs:
         with cd(lib.path):
+            progress()
             publish(False)
 
     dirty = repo.scm.dirty()
@@ -551,7 +569,10 @@ def update(ref=None):
 # Synch command
 @subcommand('sync',
     help='Synchronize library references (.lib files)')
-def sync():
+def sync(top=True):
+    if top:
+        action("Syncing library references...")
+        
     repo = Repo.fromrepo()
     repo.scm.set_ignores()
 
@@ -586,7 +607,7 @@ def sync():
 
     for lib in repo.libs:
         with cd(lib.path):
-            sync()
+            sync(False)
 
 # Compile command
 @subcommand('compile', 'args*',
