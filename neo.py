@@ -278,7 +278,16 @@ class Git(object):
         
     def remove(file):
         action("Removing "+file)
-        popen([git_cmd, 'rm', '-f', file])
+        
+        try:
+            popen([git_cmd, 'rm', '-f', file])
+        except ProcessException:
+            pass
+            
+        try:
+            os.remove(file)
+        except OSError:
+            pass
 
     def commit():
         popen([git_cmd, 'commit', '-a'])
