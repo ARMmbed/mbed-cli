@@ -177,11 +177,17 @@ class Hg(object):
 
     def add(file):
         action("Adding "+file)
-        popen([hg_cmd, 'add', file])
+        try:
+            popen([hg_cmd, 'add', file])
+        except ProcessException:
+            pass
         
     def remove(file):
         action("Removing "+file)
-        popen([hg_cmd, 'rm', '-f', file])
+        try:
+            popen([hg_cmd, 'rm', '-f', file])
+        except ProcessException:
+            pass
         try:
             os.remove(file)
         except OSError:
@@ -274,16 +280,17 @@ class Git(object):
 
     def add(file):
         action("Adding "+file)
-        popen([git_cmd, 'add', file])
+        try:
+            popen([git_cmd, 'add', file])
+        except ProcessException:
+            pass
         
     def remove(file):
         action("Removing "+file)
-        
         try:
             popen([git_cmd, 'rm', '-f', file])
         except ProcessException:
             pass
-            
         try:
             os.remove(file)
         except OSError:
