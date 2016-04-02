@@ -60,6 +60,7 @@ ignores = [
     
     # Python 
     "*.py[cod]",
+    "# subrepo ignores",
     ]
 # Subparser handling
 parser = argparse.ArgumentParser()
