@@ -192,7 +192,7 @@ class Hg(object):
         popen([hg_cmd, 'status'])
 
     def hash():
-        with open('.hg/dirstate') as f:
+        with open('.hg/dirstate', 'rb') as f:
             return ''.join('%02x'%ord(i) for i in f.read(6))
 
     def dirty():
@@ -415,19 +415,11 @@ class Repo(object):
         if os.path.isdir(self.path):
             try:
                 self.scm  = self.getscm()
+                self.repo = self.getrepo()
                 self.hash = self.gethash()
                 self.libs = list(self.getlibs())
             except ProcessException:
                 pass
-
-        if os.path.isfile(self.lib):
-            try:
-                self.repo = self.getrepo()
-            except ProcessException:
-                pass
-        elif self.scm:
-            with cd(self.path):
-                self.repo = self.scm.repo()
 
     def getscm(self):
         for name, scm in scms.items():
@@ -439,6 +431,11 @@ class Repo(object):
             with cd(self.path):
                 return self.scm.hash()
 
+    def getrepo(self):
+        if self.scm:
+            with cd(self.path):
+                return self.scm.repo()
+
     def getlibs(self):
         for root, dirs, files in os.walk(self.path):
             dirs[:]  = [d for d in dirs  if not d.startswith('.')]
@@ -449,10 +446,6 @@ class Repo(object):
                     yield Repo.fromlib(os.path.join(root, file))
                     if file[:-4] in dirs:
                         dirs.remove(file[:-4])
-
-    def getrepo(self):
-        with open(self.lib) as f:
-            return Repo.fromurl(f.read()).repo
 
     def write(self):
         if os.path.isfile(self.lib):
