@@ -10,6 +10,7 @@ The rest of this document details the installation and usage of *neo*.
 
 1. If you depend on a library in a repository that exists only on your local machine (as opposed to a host like github of developer.mbed.org), various *neo* commands might not work as you expect. If you want to depend on a new library, create it locally, push it to a remote host, then depend on the remote URL of the library, not the local one.
 1. Manually renaming some directories in your work tree might lead to unexpected results. Please refrain from renaming directories for now, as much as possible.
+1. `neo.py update` has some limitations if ran from a dependency's subdirectory. For now, run `neo.py update` only from the root (top level directory) of your program.
 
 # Installation
 
@@ -53,6 +54,8 @@ $ neo.py deploy # tell neo to clone mbed-os and its dependencies
 ```
 
 `deploy` above works a lot like `clone`, except it clones the dependencies of a program that already exists on your local machine.
+
+You can get a list of all the dependencies of your program by running `neo.py ls`.
 
 ## Compiling and exporting
 
@@ -130,25 +133,8 @@ $ neo.py remove HD44780-Text-LCD
 
 **IMPORTANT**: removing a library from your Morpheus project is not the same thing as just deleting its local clone. Use `neo.py remove` to remove the library, don't simply remove its directory with 'rm'.
 
-# Other commands
+## Synchronizing your tree (WIP)
 
-The previous section showed the most usual commands in *neo*. This section lists the other available commands.
+As you work on your code, you'll edit parts of it: either your program code or code in some of the libraries that your depend on. You can get the status of all the repositories in your project (recursively) by running `neo.py status`. If a repository has uncommitted changes, this command will display these changes.
 
-use `neo.py deploy` to clone `mbed-os` and all its dependencies locally.
-
-## ls
-
-Lists the revisions of the top level project and all its repositories.
-
-```
-$ neo.py ls
-```
-
-## status
-
-Gets the status of all the repositories in the project, recursively. If a repository has uncomitted changes, this command will display these changes.
-
-```
-$ neo.py status
-```
-
+To update your program to another upstream version, go to the root of the program and run `neo.py update [rev]`. It will update the program to the specified revision (or to the latest one if `rev` is not specified), then it will update recursively all the other dependencies to match the top-level dependencies in `rev`. **NOTE**: this command will fail if there are changes in your local repository that will be overwritten as a result of running `update`. This is by design: *neo* will not run operations that would result in overwriting local changes that are not yet committed. If you get an error, take care of your local changes (commit or abandon them manually), then re-run `update`.
