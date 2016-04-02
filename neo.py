@@ -59,7 +59,7 @@ ignore = [
     "mbed_settings.py$",
     
     # Python 
-    "*.py[cod]"
+    "*.py[cod]",
     ]
 # Subparser handling
 parser = argparse.ArgumentParser()
@@ -77,11 +77,6 @@ def action(msg):
 def error(msg, code):
     sys.stderr.write("---\n["+os.path.basename(sys.argv[0])+" ERROR] "+msg+"\n---\n")
     sys.exit(code)
-
-def repo_or_die():
-    repo = Repo.fromrepo()
-    if repo.scm is None:
-        error("Current folder is not a repository", -1)
 
 def subcommand(name, *args, **kwargs):
     def subcommand(command):
@@ -399,6 +394,10 @@ class Repo(object):
         repo.name = os.path.basename(repo.path)
 
         repo.sync()
+
+        if repo.scm is None:
+            error("Current folder is not a repository", -1)
+
         return repo
 
     @property
@@ -520,7 +519,6 @@ def remove(path):
 @subcommand('publish',
     help='Publish working tree to remote repositories')
 def publish(always=True):
-    repo_or_die()
     repo = Repo.fromrepo()
     for lib in repo.libs:
         with cd(lib.path):
@@ -545,7 +543,6 @@ def publish(always=True):
 @subcommand('update', 'ref?',
     help='Update current program or library and recursively update all libraries')
 def update(ref=None):
-    repo_or_die()
     repo = Repo.fromrepo()
     repo.scm.pull(ref)
 
