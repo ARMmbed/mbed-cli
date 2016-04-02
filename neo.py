@@ -388,6 +388,14 @@ class Repo(object):
             return cls.fromurl(f.read(), lib[:-4])
 
     @classmethod
+    def isrepo(cls, path=None):
+        for name, scm in scms.items():
+            if os.path.isdir(os.path.join(path, '.'+name)):
+                return True
+
+        return False
+
+    @classmethod
     def fromrepo(cls, path=None):
         repo = cls()
         repo.path = os.path.abspath(path or os.getcwd())
@@ -396,7 +404,7 @@ class Repo(object):
         repo.sync()
 
         if repo.scm is None:
-            error("Current folder is not a repository", -1)
+            error("Current folder is not a supported repository", -1)
 
         return repo
 
@@ -559,7 +567,7 @@ def update(ref=None):
     repo.scm.pull(ref)
 
     for lib in repo.libs:
-        if (not os.path.isfile(lib.lib) or
+        if Repo.isrepo(lib.path) and (not os.path.isfile(lib.lib) or
             lib.repo != Repo.fromrepo(lib.path).repo):
             with cd(lib.path):
                 if lib.cwd.dirty():
@@ -598,17 +606,18 @@ def sync():
         files[:] = [f for f in files if not f.startswith('.')]
 
         for dir in list(dirs):
-            lib = Repo.fromrepo(os.path.join(root, dir))
-            if os.path.isfile(lib.lib):
-                dirs.remove(dir)
-                continue
-
-            for name, scm in scms.items():
-                if os.path.isdir(os.path.join(lib.path, '.'+name)):
+            if Repo.isrepo(os.path.join(root, dir)):
+                lib = Repo.fromrepo(os.path.join(root, dir))            
+                if os.path.isfile(lib.lib):
                     dirs.remove(dir)
-                    repo.scm.ignore(relpath(repo.path, lib.path))
-                    lib.write()
-                    repo.scm.add(lib.lib)
+                    continue
+
+                for name, scm in scms.items():
+                    if os.path.isdir(os.path.join(lib.path, '.'+name)):
+                        dirs.remove(dir)
+                        repo.scm.ignore(relpath(repo.path, lib.path))
+                        lib.write()
+                        repo.scm.add(lib.lib)
 
     repo.sync()
 
