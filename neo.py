@@ -14,6 +14,53 @@ from itertools import *
 hg_cmd = 'hg'
 git_cmd = 'git'
 
+ignore = [
+    # Version control folders
+    "\.hg$",
+    "\.git$",
+    "\.svn$",
+    "\.CVS$",
+    "\.cvs$",
+    
+    # Version control fallout
+    "\.orig$",
+    
+    # mbed Tools
+    "\.build$",
+    "\.export$",
+    
+    # Online IDE caches
+    "\.msub$",
+    "\.meta$",
+    "\.ctags",
+    
+    # uVision project files
+    "\.uvproj$",
+    "\.uvopt$",
+    
+    # Eclipse project files
+    "\.project$",
+    "\.cproject$",
+    "\.launch$",
+    
+    # IAR project files
+    "\.ewp$",
+    "\.eww$",
+    
+    # GCC make
+    "Makefile$",
+    "Debug$",
+    
+    # HTML files
+    "\.htm$",
+    
+    # Settings files
+    ".settings$",
+    "mbed_settings.py$",
+    
+    # Python 
+    "*.py[cod]"
+    ]
 # Subparser handling
 parser = argparse.ArgumentParser()
 subparsers = parser.add_subparsers()
