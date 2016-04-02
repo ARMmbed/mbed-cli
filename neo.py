@@ -414,8 +414,20 @@ class Repo(object):
         if os.path.isdir(self.path):
             try:
                 self.scm  = self.getscm()
+            except ProcessException:
+                pass
+
+            try:
                 self.repo = self.getrepo()
+            except ProcessException:
+                pass
+
+            try:
                 self.hash = self.gethash()
+            except ProcessException:
+                pass
+
+            try:
                 self.libs = list(self.getlibs())
             except ProcessException:
                 pass
@@ -453,7 +465,7 @@ class Repo(object):
                     print self.name, 'unmodified'
                     return
 
-        with open(self.lib, 'w') as f:
+        with open(self.lib, 'wb') as f:
             f.write(self.url + '\n')
 
         print self.name, '->', self.url
