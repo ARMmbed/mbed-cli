@@ -131,7 +131,7 @@ def popen(command, stdin=None, **kwargs):
 
 def pquery(command, stdin=None, **kwargs):
     #log("Query "+' '.join(command))
-    proc = subprocess.Popen(command, stdout=subprocess.PIPE, **kwargs)
+    proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
     stdout, _ = proc.communicate(stdin)
 
     if proc.returncode != 0:
@@ -215,7 +215,10 @@ class Hg(object):
 
     def dirty():
         return pquery([hg_cmd, 'status', '-q'])
-
+       
+    def outgoing():
+        return pquery([hg_cmd, 'outgoing'])
+        
     def repo():
         tagpaths = '[paths]'
         default_url = ''
@@ -335,6 +338,9 @@ class Git(object):
         
     def dirty():
         return pquery([git_cmd, 'diff', '--name-only', 'HEAD'])
+
+    def outgoing():
+        return pquery([git_cmd, 'log', 'origin..'])
 
     def repo():
         return pquery([git_cmd, 'config', '--get', 'remote.origin.url']).strip()
@@ -566,11 +572,12 @@ def publish(top=True):
         raw_input('Press enter to commit and push: ')
         repo.scm.commit()
 
-    if dirty or top:
-        try:
+    try:
+        if repo.scm.outgoing():
             repo.scm.push()
-        except ProcessException as e:
-            sys.exit(e[0])
+    except ProcessException as e:
+        if e[0] != 1:
+            raise
 
 # Update command
 @subcommand('update', 'ref?',
@@ -721,6 +728,10 @@ def status():
 
 # Parse/run command
 args, remainder = parser.parse_known_args()
-status = args.command(args)
+
+try:
+    status = args.command(args)
+except ProcessException as e:
+    error('Process failed! Error code %d' % e[0], e[0])
 sys.exit(status or 0)
 
