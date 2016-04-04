@@ -130,6 +130,7 @@ def popen(command, stdin=None, **kwargs):
         raise ProcessException(proc.returncode)
 
 def pquery(command, stdin=None, **kwargs):
+    #log("Query "+' '.join(command))
     proc = subprocess.Popen(command, stdout=subprocess.PIPE, **kwargs)
     stdout, _ = proc.communicate(stdin)
 
@@ -216,7 +217,25 @@ class Hg(object):
         return pquery([hg_cmd, 'status', '-q'])
 
     def repo():
-        return pquery([hg_cmd, 'paths', 'default']).strip()
+        tagpaths = '[paths]'
+        default_url = ''
+        url = ''
+        with open('.hg/hgrc') as f:
+            lines = f.read().splitlines()
+            if tagpaths in lines:
+                idx = lines.index(tagpaths)
+                m = re.match('^([\w_]+)\s*=\s*(.*)?$', lines[idx+1])
+                if m:
+                    if m.group(1) == 'default':
+                        default_url = m.group(2)
+                    else:
+                        url = m.group(2)
+
+        if default_url:
+            url = default_url
+        
+        
+        return url if url else pquery([hg_cmd, 'paths', 'default']).strip()
 
     def set_ignores():
         hook = 'ignore.local = .hg/hgignore'
@@ -650,7 +669,7 @@ def compile(args):
 
 # Export command
 @subcommand('export', 'args*',
-    help='Generate project files for IDE')
+    help='Generate project files for desktop IDEs')
 def export(args):
     if not os.path.isdir('mbed-os'):
         error('mbed-os not found?\n', -1)
@@ -671,11 +690,11 @@ def export(args):
         env=env)
 
 # Helpful status commands
-@subcommand('ls',
-    help='list repositories recursively')
-def list_(prefix=''):
+@subcommand('ls', 'opt*',
+    help='List repositories recursively.')
+def list_(opt=False, prefix=''):
     repo = Repo.fromrepo()
-    print prefix + repo.name, '(%s)' % repo.hash
+    print prefix + repo.name, '(%s)' % (repo.url if "-a" in opt else repo.hash)
 
     for i, lib in enumerate(repo.libs):
         if prefix:
@@ -686,10 +705,10 @@ def list_(prefix=''):
         nprefix += '|- ' if i < len(repo.libs)-1 else '`- '
 
         with cd(lib.path):
-            list_(nprefix)
+            list_(opt, nprefix)
 
 @subcommand('status',
-    help='show status of nested repositories')
+    help='Show status of nested repositories')
 def status():
     repo = Repo.fromrepo()
     if repo.scm.dirty():
