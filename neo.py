@@ -139,6 +139,36 @@ def pquery(command, stdin=None, **kwargs):
 
     return stdout
 
+# Defaults config file
+def set_cfg(file, var, val):
+    try:
+        with open(file) as f:
+            lines = f.read().splitlines()
+    except:
+        lines = []
+
+    for line in lines:
+        m = re.match('^([\w+-]+)\=(.*)?$', line)
+        if m and m.group(1) == var:
+            lines.remove(line)
+
+    lines += [var+"="+val]
+
+    with open(file, 'w') as f:
+        f.write('\n'.join(lines) + '\n')
+
+def get_cfg(file, var):
+    try:
+        with open(file) as f:
+            lines = f.read().splitlines()
+    except:
+        lines = []
+
+    for line in lines:
+        m = re.match('^([\w+-]+)\=(.*)?$', line)
+        if m and m.group(1) == var:
+            return m.group(2)
+    
 # Directory navigation
 @contextlib.contextmanager
 def cd(newdir):
@@ -171,6 +201,7 @@ def staticclass(cls):
 @staticclass
 class Hg(object):
     name = 'hg'
+    store = '.hg'
 
     def clone(url, name=None, hash=None):
         action("Cloning "+name+" from "+url)
@@ -292,6 +323,7 @@ class Hg(object):
 @staticclass
 class Git(object):
     name = 'git'
+    store = '.git'
 
     def clone(url, name=None, hash=None):
         action("Cloning "+name+" from "+url)
@@ -651,52 +683,6 @@ def sync(top=True):
         with cd(lib.path):
             sync(False)
 
-# Compile command
-@subcommand('compile', 'args*',
-    help='Compile project using mbed OS build system')
-def compile(args):
-    if not os.path.isdir('mbed-os'):
-        error('mbed-os not found?\n', -1)
-
-    repo = Repo.fromrepo()
-
-    macros = []
-    if os.path.isfile('MACROS.txt'):
-        with open('MACROS.txt') as f:
-            macros = f.read().splitlines()
-
-    env = os.environ.copy()
-    env['PYTHONPATH'] = '.'
-    popen(['python', 'mbed-os/tools/make.py']
-        + list(chain.from_iterable(izip(repeat('-D'), macros)))
-        + ['--source=%s' % repo.path,
-           '--build=%s' % os.path.join(repo.path, '.build')]
-        + args,
-        env=env)
-
-# Export command
-@subcommand('export', 'args*',
-    help='Generate project files for desktop IDEs')
-def export(args):
-    if not os.path.isdir('mbed-os'):
-        error('mbed-os not found?\n', -1)
-
-    repo = Repo.fromrepo()
-
-    macros = []
-    if os.path.isfile('MACROS.txt'):
-        with open('MACROS.txt') as f:
-            macros = f.read().splitlines()
-
-    env = os.environ.copy()
-    env['PYTHONPATH'] = '.'
-    popen(['python', 'mbed-os/tools/project.py',
-           '--source=%s' % repo.path]
-        + list(chain.from_iterable(izip(repeat('-D'), macros)))
-        + args,
-        env=env)
-
-# Helpful status commands
 @subcommand('ls', 'opt*',
     help='List repositories recursively.')
 def list_(opt=False, prefix=''):
@@ -725,6 +711,98 @@ def status():
     for lib in repo.libs:
         with cd(lib.path):
             status()
+
+# Build system and exporters
+@subcommand('target', 'target',
+    help='Sets default target when compiling and exporting')
+def target(target):
+    repo = Repo.fromrepo()
+    
+    file = os.path.join(repo.scm.store, 'neo')
+    set_cfg(file, 'TARGET', target)
+
+@subcommand('toolchain', 'toolchain',
+    help='Sets default toolchain when compiling')
+def target(toolchain):
+    repo = Repo.fromrepo()
+    
+    file = os.path.join(repo.scm.store, 'neo')
+    set_cfg(file, 'TOOLCHAIN', toolchain)
+
+@subcommand('compile', 'args*',
+    help='Compile project using mbed OS build system')
+def compile(args):
+    if not os.path.isdir('mbed-os'):
+        error('mbed-os not found?\n', -1)
+
+    repo = Repo.fromrepo()
+    file = os.path.join(repo.scm.store, 'neo')
+    
+    target = get_cfg(file, 'TARGET')
+    if '-m' in args:
+        target = args[args.index('-m')+1]
+        args.remove('-m')
+        args.remove(target)
+
+    if target is None:
+        error('Please specify compile target using the -m switch or set default target using command "target"', 1)
+        
+    toolchain = get_cfg(file, 'TOOLCHAIN')
+    if '-t' in args:
+        toolchain = args[args.index('-t')+1]
+        args.remove('-t')
+        args.remove(toolchain)
+
+    if toolchain is None:
+        error('Please specify compile toolchain using the -m switch or set default toolchain using command "toolchain"', 1)
+
+    macros = []
+    if os.path.isfile('MACROS.txt'):
+        with open('MACROS.txt') as f:
+            macros = f.read().splitlines()
+
+    env = os.environ.copy()
+    env['PYTHONPATH'] = '.'
+    popen(['python', 'mbed-os/tools/make.py']
+        + list(chain.from_iterable(izip(repeat('-D'), macros)))
+        + ['-t', toolchain, '-m', target,
+           '--source=%s' % repo.path,
+           '--build=%s' % os.path.join(repo.path, '.build', target, toolchain)]
+        + args,
+        env=env)
+
+# Export command
+@subcommand('export', 'args*',
+    help='Generate project files for desktop IDEs')
+def export(args):
+    if not os.path.isdir('mbed-os'):
+        error('mbed-os not found?\n', -1)
+
+    repo = Repo.fromrepo()
+    file = os.path.join(repo.scm.store, 'neo')
+    
+    target = get_cfg(file, 'TARGET')
+    if '-m' in args:
+        target = args[args.index('-m')+1]
+        args.remove('-m')
+        args.remove(target)
+
+    if target is None:
+        error('Please specify export target using the -m switch or set default target using command "target"', 1)
+
+    macros = []
+    if os.path.isfile('MACROS.txt'):
+        with open('MACROS.txt') as f:
+            macros = f.read().splitlines()
+
+    env = os.environ.copy()
+    env['PYTHONPATH'] = '.'
+    popen(['python', 'mbed-os/tools/project.py']
+        + list(chain.from_iterable(izip(repeat('-D'), macros)))
+        + ['-m', target, '--source=%s' % repo.path]
+        + args,
+        env=env)
+
 
 # Parse/run command
 args, remainder = parser.parse_known_args()
