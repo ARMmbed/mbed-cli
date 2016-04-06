@@ -123,7 +123,7 @@ class ProcessException(Exception):
 
 def popen(command, stdin=None, **kwargs):
     # print for debugging
-    log("Exec "+' '.join(command))
+    log('"'+' '.join(command)+'"')
     proc = subprocess.Popen(command, **kwargs)
 
     if proc.wait() != 0:
@@ -233,7 +233,7 @@ class Hg(object):
         action("Pushing to remote repository")
         popen([hg_cmd, 'push'])
         
-    def pull(hash=None):
+    def pull():
         action("Pulling from remote repository")
         popen([hg_cmd, 'pull'])
 
@@ -361,7 +361,7 @@ class Git(object):
         action("Pushing to remote repository")
         popen([git_cmd, 'push', '--all'])
         
-    def pull(hash=None):
+    def pull():
         action("Pulling from remote repository")
         popen([git_cmd, 'fetch', 'origin'])
 
@@ -649,7 +649,8 @@ def publish(top=True):
     help='Update current program or library and recursively update all libraries')
 def update(ref=None):
     repo = Repo.fromrepo()
-    repo.scm.pull(ref)
+    repo.scm.pull()
+    repo.scm.update(ref)
 
     for lib in repo.libs:
         if (not os.path.isfile(lib.lib) or 
