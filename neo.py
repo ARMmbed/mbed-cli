@@ -543,15 +543,15 @@ class Repo(object):
     def write(self):
         if os.path.isfile(self.lib):
             with open(self.lib) as f:
-                if f.read().strip() == self.url.strip():
-                    #print self.name, 'unmodified'
+                if f.read().strip() == self.fullurl.strip():
+                    print self.name, 'unmodified'
                     progress()
                     return
 
         with open(self.lib, 'wb') as f:
-            f.write(self.url + '\n')
+            f.write(self.fullurl + '\n')
 
-        print self.name, '->', self.url
+        print self.name, '->', self.fullurl
 
         
 # Clone command
@@ -787,8 +787,8 @@ def compile(args):
     popen(['python', 'mbed-os/tools/make.py']
         + list(chain.from_iterable(izip(repeat('-D'), macros)))
         + ['-t', toolchain, '-m', target,
-           '--source=%s' % repo.path,
-           '--build=%s' % os.path.join(repo.path, '.build', target, toolchain)]
+           '--source=.',
+           '--build=%s' % os.path.join('.build', target, toolchain)]
         + args,
         env=env)
 
