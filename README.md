@@ -48,12 +48,15 @@ If you want to create a new program rather than importing an existing one, we re
 ```
 $ mkdir myprog
 $ cd myprog
-<add your sources here>
+$ git init (or hg init)
+<add your source files>
 $ echo "https://developer.mbed.org/teams/Morpheus/code/mbed-os/#71a471196d89" > mbed-os.lib # this adds the mbed-os dependency
 $ neo.py deploy # tell neo to clone mbed-os and its dependencies
 ```
 
 `deploy` above works a lot like `clone`, except it clones the dependencies of a program that already exists on your local machine.
+
+**NOTE**: at the moment, you have to initialize a new git or mercurial repository in your newly created program (third command in the code block above) for *neo* to work properly. This limitation will likely go away in a future version.
 
 You can get a list of all the dependencies of your program by running `neo.py ls`.
 
