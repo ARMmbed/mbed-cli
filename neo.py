@@ -235,14 +235,13 @@ class Hg(object):
     def pull(hash=None):
         action("Pulling from remote repository")
         popen([hg_cmd, 'pull'])
+
+    def update(hash=None, clean=False):
+        action("Updating to %s" % ("revision "+hash if hash else "latest revision in the current branch"))
         popen([hg_cmd, 'update'] + (['-r', hash] if hash else []))
 
     def status():
         popen([hg_cmd, 'status'])
-
-    def hash():
-        with open('.hg/dirstate', 'rb') as f:
-            return ''.join('%02x'%ord(i) for i in f.read(6))
 
     def dirty():
         return pquery([hg_cmd, 'status', '-q'])
@@ -250,11 +249,11 @@ class Hg(object):
     def outgoing():
         return pquery([hg_cmd, 'outgoing'])
         
-    def repo():
+    def geturl(repo):
         tagpaths = '[paths]'
         default_url = ''
         url = ''
-        with open('.hg/hgrc') as f:
+        with open(os.path.join(repo.path, '.hg/hgrc')) as f: 
             lines = f.read().splitlines()
             if tagpaths in lines:
                 idx = lines.index(tagpaths)
@@ -267,31 +266,34 @@ class Hg(object):
 
         if default_url:
             url = default_url
-        
-        
         return url if url else pquery([hg_cmd, 'paths', 'default']).strip()
 
-    def set_ignores():
+    def gethash(repo):
+        with open(os.path.join(repo.path, '.hg/dirstate'), 'rb') as f:
+            return ''.join('%02x'%ord(i) for i in f.read(6))
+            
+    def ignores(repo):
         hook = 'ignore.local = .hg/hgignore'
-        with open('.hg/hgrc') as f:
+        with open(os.path.join(repo.path, '.hg/hgrc')) as f:
             if hook not in f.read().splitlines():
                 with open('.hg/hgrc', 'a') as f:
                     f.write('[ui]\n')
                     f.write(hook + '\n')
 
-        with open('.hg/hgignore', 'w') as f:
+        exclude = os.path.join(repo.path, '.hg/hgignore')
+        with open(exclude, 'w') as f:
             f.write("syntax: regexp\n"+'\n'.join(ignores)+'\n')
 
-    def ignore(file):
+    def ignore(repo, file):
         hook = 'ignore.local = .hg/hgignore'
-        with open('.hg/hgrc') as f:
+        with open(os.path.join(repo.path, '.hg/hgrc')) as f:
             if hook not in f.read().splitlines():
                 with open('.hg/hgrc', 'a') as f:
                     f.write('[ui]\n')
                     f.write(hook + '\n')
 
         file = '^%s/' % file
-        exclude = '.hg/hgignore'
+        exclude = os.path.join(repo.path, '.hg/hgignore')
         try: 
             with open(exclude) as f:
                 exists = file in f.read().splitlines()
@@ -302,9 +304,9 @@ class Hg(object):
             with open(exclude, 'a') as f:
                 f.write(file + '\n')
 
-    def unignore(file):
+    def unignore(repo, file):
         file = '^%s/' % file
-        exclude = '.hg/hgignore'
+        exclude = os.path.join(repo.path, '.hg/hgignore')
         try:
             with open(exclude) as f:
                 lines = f.read().splitlines()
@@ -360,13 +362,13 @@ class Git(object):
     def pull(hash=None):
         action("Pulling from remote repository")
         popen([git_cmd, 'fetch', 'origin'])
-        popen([git_cmd, 'merge'] + ([hash] if hash else []))
+
+    def update(hash=None, clean=False):
+        action("Updating to %s" % ("revision "+hash if hash else "latest revision in the current branch"))
+        popen([git_cmd, 'checkout'] + ([hash] if hash else []))
 
     def status():
         popen([git_cmd, 'status', '-s'])
-
-    def hash():
-        return pquery([git_cmd, 'rev-parse', '--short', 'HEAD']).strip()
         
     def dirty():
         return pquery([git_cmd, 'diff', '--name-only', 'HEAD'])
@@ -374,15 +376,18 @@ class Git(object):
     def outgoing():
         return pquery([git_cmd, 'log', 'origin..'])
 
-    def repo():
+    def geturl(repo):
         return pquery([git_cmd, 'config', '--get', 'remote.origin.url']).strip()
 
-    def set_ignores():
-        with open('.git/info/exclude', 'w') as f:
+    def gethash(repo):
+        return pquery([git_cmd, 'rev-parse', '--short', 'HEAD']).strip()
+
+    def ignores(repo):
+        with open(os.path.join(repo.path, '.git/info/exclude'), 'w') as f:
             f.write('\n'.join(ignores)+'\n')
 
-    def ignore(file):
-        exclude = '.git/info/exclude'
+    def ignore(repo, file):
+        exclude = os.path.join(repo.path, '.git/info/exclude')
         try: 
             with open(exclude) as f:
                 exists = file in f.read().splitlines()
@@ -393,8 +398,8 @@ class Git(object):
             with open(exclude, 'a') as f:
                 f.write(file + '\n')
 
-    def unignore(file):
-        exclude = '.git/info/exclude'
+    def unignore(repo, file):
+        exclude = os.path.join(repo.path, '.git/info/exclude')
         try:
             with open(exclude) as f:
                 lines = f.read().splitlines()
@@ -421,10 +426,9 @@ class Repo(object):
             error('Invalid repository (%s)' % url.strip(), -1)
 
         repo.name = os.path.basename(path or m.group(2))
-        repo.path = os.path.abspath(
-            path or os.path.join(os.getcwd(), repo.name))
+        repo.path = os.path.abspath(path or os.path.join(os.getcwd(), repo.name))
 
-        repo.repo = m.group(1)
+        repo.url = m.group(1)
         repo.hash = m.group(3)
         return repo
 
@@ -437,7 +441,12 @@ class Repo(object):
     @classmethod
     def fromrepo(cls, path=None):
         repo = cls()
-        repo.path = os.path.abspath(path or os.getcwd())
+        if path is None:
+            path = Repo.findrepo(os.getcwd())
+            if path is None:
+                error("Cannot find the root of project in your current path. Please change dir to a project", 1)
+
+        repo.path = os.path.abspath(path)
         repo.name = os.path.basename(repo.path)
 
         repo.sync()
@@ -452,28 +461,42 @@ class Repo(object):
         for name, scm in scms.items():
             if os.path.isdir(os.path.join(path, '.'+name)):
                 return True
-
         return False
+        
+    @classmethod
+    def findrepo(cls, path=None):
+        path = path or os.getcwd()
+
+        while cd(path):
+            if Repo.isrepo(path):
+                return path
+
+            tpath = path
+            path = os.path.split(path)[0]
+            if tpath == path:
+                break
+
+        return None
 
     @property
     def lib(self):
         return self.path + '.lib'
 
     @property
-    def url(self):
-        if self.repo:
-            return (self.repo.strip('/') + '/' + 
+    def fullurl(self):
+        if self.url:
+            return (self.url.strip('/') + '/' + 
                 ('#'+self.hash if self.hash else ''))
 
     def sync(self):
         if os.path.isdir(self.path):
             try:
-                self.scm  = self.getscm()
+                self.scm = self.getscm()
             except ProcessException:
                 pass
 
             try:
-                self.repo = self.getrepo()
+                self.url = self.geturl()
             except ProcessException:
                 pass
 
@@ -495,12 +518,12 @@ class Repo(object):
     def gethash(self):
         if self.scm:
             with cd(self.path):
-                return self.scm.hash()
+                return self.scm.gethash(self)
 
-    def getrepo(self):
+    def geturl(self):
         if self.scm:
             with cd(self.path):
-                return self.scm.repo()
+                return self.scm.geturl(self)
 
     def getlibs(self):
         for root, dirs, files in os.walk(self.path):
@@ -534,7 +557,7 @@ def import_(url, path=None):
 
     for scm in scms.values():
         try:
-            scm.clone(repo.repo, repo.path, repo.hash)
+            scm.clone(repo.url, repo.path, repo.hash)
             break
         except ProcessException:
             pass
@@ -549,11 +572,11 @@ def import_(url, path=None):
     help='Import library in the current program or library')
 def deploy():
     repo = Repo.fromrepo()
-    repo.scm.set_ignores()
+    repo.scm.ignores(repo)
 
     for lib in repo.libs:
         import_(lib.url, lib.path)
-        repo.scm.ignore(relpath(repo.path, lib.path))
+        repo.scm.ignore(repo, relpath(repo.path, lib.path))
 
     if (not os.path.isfile('mbed_settings.py') and 
         os.path.isfile('mbed-os/tools/default_settings.py')):
@@ -567,7 +590,7 @@ def add(url, path=None):
 
     lib = Repo.fromurl(url, path)
     import_(lib.url, lib.path)
-    repo.scm.ignore(relpath(repo.path, lib.path))
+    repo.scm.ignore(repo, relpath(repo.path, lib.path))
     lib.sync()
 
     lib.write()
@@ -581,7 +604,7 @@ def remove(path):
 
     repo.scm.remove(lib.lib)
     shutil.rmtree(lib.path)
-    repo.scm.unignore(relpath(repo.path, lib.path))
+    repo.scm.unignore(repo, relpath(repo.path, lib.path))
 
 # Publish command
 @subcommand('publish',
@@ -621,14 +644,14 @@ def update(ref=None):
     for lib in repo.libs:
         if (not os.path.isfile(lib.lib) or 
             (Repo.isrepo(lib.path) and 
-             lib.repo != Repo.fromrepo(lib.path).repo)):
+             lib.url != Repo.fromrepo(lib.path).url)):
             with cd(lib.path):
                 if lib.cwd.dirty():
                     error('Uncommitted changes in %s (%s)\n'
                         % (lib.name, lib.path), 1)
 
             shutil.rmtree(lib.path)
-            repo.scm.unignore(relpath(repo.path, lib.path))
+            repo.scm.unignore(repo, relpath(repo.path, lib.path))
 
     repo.sync()
 
@@ -638,7 +661,7 @@ def update(ref=None):
                 update(lib.hash)
         else:
             import_(lib.url, lib.path)
-            repo.scm.ignore(relpath(repo.path, lib.path))
+            repo.scm.ignore(repo, relpath(repo.path, lib.path))
 
 # Synch command
 @subcommand('sync',
@@ -648,16 +671,16 @@ def sync(top=True):
         action("Syncing library references...")
         
     repo = Repo.fromrepo()
-    repo.scm.set_ignores()
+    repo.scm.ignores(repo)
 
     for lib in repo.libs:
         if os.path.isdir(lib.path):
             lib.sync()
             lib.write()
-            repo.scm.ignore(relpath(repo.path, lib.path))
+            repo.scm.ignore(repo, relpath(repo.path, lib.path))
         else:
             repo.scm.remove(lib.lib)
-            repo.scm.unignore(relpath(repo.path, lib.path))
+            repo.scm.unignore(repo, relpath(repo.path, lib.path))
 
     for root, dirs, files in os.walk(repo.path):
         dirs[:]  = [d for d in dirs  if not d.startswith('.')]
@@ -674,7 +697,7 @@ def sync(top=True):
 
             dirs.remove(dir)
             lib.write()
-            repo.scm.ignore(relpath(repo.path, lib.path))
+            repo.scm.ignore(repo, relpath(repo.path, lib.path))
             repo.scm.add(lib.lib)
 
     repo.sync()
