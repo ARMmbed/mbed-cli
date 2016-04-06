@@ -787,8 +787,8 @@ def compile(args):
     popen(['python', 'mbed-os/tools/make.py']
         + list(chain.from_iterable(izip(repeat('-D'), macros)))
         + ['-t', toolchain, '-m', target,
-           '--source=%s' % repo.path,
-           '--build=%s' % os.path.join(repo.path, '.build', target, toolchain)]
+           '--source=.',
+           '--build=%s' % os.path.join('.build', target, toolchain)]
         + args,
         env=env)
 
