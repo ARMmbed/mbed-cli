@@ -197,6 +197,7 @@ def staticclass(cls):
 
     return cls
 
+    
 @scm('hg')
 @staticclass
 class Hg(object):
@@ -237,8 +238,8 @@ class Hg(object):
         popen([hg_cmd, 'pull'])
 
     def update(hash=None, clean=False):
-        action("Updating to %s" % ("revision "+hash if hash else "latest revision in the current branch"))
-        popen([hg_cmd, 'update'] + (['-r', hash] if hash else []))
+        action("Updating repository to %s" % ("revision "+hash if hash else "latest revision in the current branch"))
+        popen([hg_cmd, 'update'] + (['-r', hash] if hash else []) + (['-C'] if clean else []))
 
     def status():
         popen([hg_cmd, 'status'])
@@ -321,6 +322,7 @@ class Hg(object):
         with open(exclude, 'w') as f:
             f.write('\n'.join(lines) + '\n')
 
+            
 @scm('git')
 @staticclass
 class Git(object):
@@ -364,8 +366,10 @@ class Git(object):
         popen([git_cmd, 'fetch', 'origin'])
 
     def update(hash=None, clean=False):
-        action("Updating to %s" % ("revision "+hash if hash else "latest revision in the current branch"))
+        action("Updating repository to %s" % ("revision "+hash if hash else "latest revision in the current branch"))
         popen([git_cmd, 'checkout'] + ([hash] if hash else []))
+        if clean:
+            popen([git_cmd, 'reset', '--hard'])
 
     def status():
         popen([git_cmd, 'status', '-s'])
@@ -549,6 +553,7 @@ class Repo(object):
 
         print self.name, '->', self.url
 
+        
 # Clone command
 @subcommand('import', 'url', 'name?',
     help='Import a program tree')
@@ -567,6 +572,7 @@ def import_(url, path=None):
     with cd(repo.path):
         deploy()
 
+        
 # Deploy command
 @subcommand('deploy',
     help='Import library in the current program or library')
@@ -582,6 +588,7 @@ def deploy():
         os.path.isfile('mbed-os/tools/default_settings.py')):
         shutil.copy('mbed-os/tools/default_settings.py', 'mbed_settings.py')
 
+        
 # Install/uninstall command
 @subcommand('add', 'url', 'path?',
     help='Add a library to the current program or library')
@@ -596,6 +603,7 @@ def add(url, path=None):
     lib.write()
     repo.scm.add(lib.lib)
 
+    
 @subcommand('remove', 'path',
     help='Remove a library from the current program or library')
 def remove(path):
@@ -606,6 +614,7 @@ def remove(path):
     shutil.rmtree(lib.path)
     repo.scm.unignore(repo, relpath(repo.path, lib.path))
 
+    
 # Publish command
 @subcommand('publish',
     help='Publish working tree to remote repositories')
@@ -634,6 +643,7 @@ def publish(top=True):
         if e[0] != 1:
             raise
 
+            
 # Update command
 @subcommand('update', 'ref?',
     help='Update current program or library and recursively update all libraries')
@@ -663,6 +673,7 @@ def update(ref=None):
             import_(lib.url, lib.path)
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
 
+            
 # Synch command
 @subcommand('sync',
     help='Synchronize library references (.lib files)')
@@ -706,6 +717,7 @@ def sync(top=True):
         with cd(lib.path):
             sync(False)
 
+            
 @subcommand('ls', 'opt*',
     help='List repositories recursively.')
 def list_(opt=False, prefix=''):
@@ -723,6 +735,7 @@ def list_(opt=False, prefix=''):
         with cd(lib.path):
             list_(opt, nprefix)
 
+            
 @subcommand('status',
     help='Show status of nested repositories')
 def status():
@@ -735,23 +748,7 @@ def status():
         with cd(lib.path):
             status()
 
-# Build system and exporters
-@subcommand('target', 'target',
-    help='Sets default target when compiling and exporting')
-def target(target):
-    repo = Repo.fromrepo()
-    
-    file = os.path.join(repo.scm.store, 'neo')
-    set_cfg(file, 'TARGET', target)
-
-@subcommand('toolchain', 'toolchain',
-    help='Sets default toolchain when compiling')
-def target(toolchain):
-    repo = Repo.fromrepo()
-    
-    file = os.path.join(repo.scm.store, 'neo')
-    set_cfg(file, 'TOOLCHAIN', toolchain)
-
+            
 @subcommand('compile', 'args*',
     help='Compile project using mbed OS build system')
 def compile(args):
@@ -794,6 +791,7 @@ def compile(args):
         + args,
         env=env)
 
+        
 # Export command
 @subcommand('export', 'args*',
     help='Generate project files for desktop IDEs')
@@ -825,6 +823,25 @@ def export(args):
         + ['-m', target, '--source=%s' % repo.path]
         + args,
         env=env)
+
+        
+# Build system and exporters
+@subcommand('target', 'target',
+    help='Sets default target when compiling and exporting')
+def target(target):
+    repo = Repo.fromrepo()
+    
+    file = os.path.join(repo.scm.store, 'neo')
+    set_cfg(file, 'TARGET', target)
+
+    
+@subcommand('toolchain', 'toolchain',
+    help='Sets default toolchain when compiling')
+def target(toolchain):
+    repo = Repo.fromrepo()
+    
+    file = os.path.join(repo.scm.store, 'neo')
+    set_cfg(file, 'TOOLCHAIN', toolchain)
 
 
 # Parse/run command
