@@ -1,0 +1,7 @@
+site_name: neo
+
+docs_dir: docs
+
+pages:
+- ['index.md','Introduction to neo']
+- ['user_guide.md','neo User Guide']
