@@ -64,8 +64,10 @@ ignores = [
     ]
 
 # Subparser handling
-parser = argparse.ArgumentParser()
-subparsers = parser.add_subparsers()
+parser = argparse.ArgumentParser(
+    description="ARM mbed neo.py")
+subparsers = parser.add_subparsers(
+    title="Commands", metavar="")
 
 # Logging and output
 def message(msg):
@@ -75,7 +77,7 @@ def log(msg):
     sys.stderr.write(message(msg))
     
 def action(msg):
-    sys.stderr.write("---\n"+message(msg))
+    sys.stderr.write(message(msg))
 
 def error(msg, code):
     sys.stderr.write("---\n["+os.path.basename(sys.argv[0])+" ERROR] "+msg+"\n---\n")
@@ -99,18 +101,23 @@ def subcommand(name, *args, **kwargs):
         subparser = subparsers.add_parser(name, **kwargs)
     
         for arg in args:
-            if arg.endswith('?'):
-                subparser.add_argument(arg.strip('?'), nargs='?')
-            elif arg.endswith('*'):
-                pass
+            arg = dict(arg)
+            opt = arg['name']
+            del arg['name']
+
+            if isinstance(opt, basestring):
+                subparser.add_argument(opt, **arg)
             else:
-                subparser.add_argument(arg)
+                subparser.add_argument(*opt, **arg)
     
         def thunk(parsed_args):
-            ordered_args = [vars(parsed_args)[arg.strip('?*')]
-                            if not arg.endswith('*') else remainder
-                            for arg in args]
-            return command(*ordered_args)
+            argv = [arg['name'] for arg in args]
+            argv = [(arg if isinstance(arg, basestring) else arg[-1]).strip('-')
+                    for arg in argv]
+            argv = {arg: vars(parsed_args)[arg] for arg in argv
+                    if vars(parsed_args)[arg]}
+
+            return command(**argv)
     
         subparser.set_defaults(command=thunk)
         return command
@@ -183,7 +190,7 @@ def relpath(root, path):
     return path[len(root)+1:]
 
 # Handling for multiple version controls
-scms = OrderedDict()
+scms = {}
 def scm(name):
     def scm(cls):
         scms[name] = cls()
@@ -203,6 +210,9 @@ def staticclass(cls):
 class Hg(object):
     name = 'hg'
     store = '.hg'
+
+    def isurl(url):
+        return re.match('^https?\:\/\/(developer\.)?mbed\.(org|com)', url)
 
     def clone(url, name=None, hash=None):
         action("Cloning "+name+" from "+url)
@@ -329,6 +339,9 @@ class Git(object):
     name = 'git'
     store = '.git'
 
+    def isurl(url):
+        return re.match('\.git$', url) or re.match('^https?\:\/\/github\.com', url)
+
     def clone(url, name=None, hash=None):
         action("Cloning "+name+" from "+url)
         popen([git_cmd, 'clone', url, name])
@@ -367,9 +380,13 @@ class Git(object):
 
     def update(hash=None, clean=False):
         action("Updating repository to %s" % ("revision "+hash if hash else "latest revision in the current branch"))
-        popen([git_cmd, 'checkout'] + ([hash] if hash else []))
         if clean:
             popen([git_cmd, 'reset', '--hard'])
+
+        if hash:
+            popen([git_cmd, 'checkout'] + [hash])
+        else:
+            popen([git_cmd, 'merge'] + ['origin/master'])
 
     def status():
         popen([git_cmd, 'status', '-s'])
@@ -378,7 +395,13 @@ class Git(object):
         return pquery([git_cmd, 'diff', '--name-only', 'HEAD'])
 
     def outgoing():
-        return pquery([git_cmd, 'log', 'origin..'])
+        try:
+            pquery([git_cmd, 'log', 'origin..'])
+            return True
+        except ProcessException as e:
+            if e[0] != 1:
+                raise
+            return False
 
     def geturl(repo):
         return pquery([git_cmd, 'config', '--get', 'remote.origin.url']).strip()
@@ -448,7 +471,7 @@ class Repo(object):
         if path is None:
             path = Repo.findrepo(os.getcwd())
             if path is None:
-                error("Cannot find the root of project in your current path. Please change dir to a project", 1)
+                error('Cannot find the root repository. Hint: use "git init" or "hg init" to create one.', 1)
 
         repo.path = os.path.abspath(path)
         repo.name = os.path.basename(repo.path)
@@ -544,7 +567,7 @@ class Repo(object):
         if os.path.isfile(self.lib):
             with open(self.lib) as f:
                 if f.read().strip() == self.fullurl.strip():
-                    print self.name, 'unmodified'
+                    #print self.name, 'unmodified'
                     progress()
                     return
 
@@ -555,12 +578,18 @@ class Repo(object):
 
         
 # Clone command
-@subcommand('import', 'url', 'name?',
-    help='Import a program tree')
+@subcommand('import', 
+    dict(name='url', help='URL of the program'),
+    dict(name='path', nargs='?', help='Destination local path'),
+    help='Import a program into the current directory')
 def import_(url, path=None):
     repo = Repo.fromurl(url, path)
 
-    for scm in scms.values():
+    # Sorted so repositories that match urls are attempted first
+    sorted_scms = [(scm.isurl(url), scm) for scm in scms.values()]
+    sorted_scms = sorted(sorted_scms, key=lambda (m, _): not m)
+
+    for _, scm in sorted_scms:
         try:
             scm.clone(repo.url, repo.path, repo.hash)
             break
@@ -572,10 +601,10 @@ def import_(url, path=None):
     with cd(repo.path):
         deploy()
 
-        
+
 # Deploy command
 @subcommand('deploy',
-    help='Import library in the current program or library')
+    help='Import dependencies in the current program or library')
 def deploy():
     repo = Repo.fromrepo()
     repo.scm.ignores(repo)
@@ -584,14 +613,17 @@ def deploy():
         import_(lib.url, lib.path)
         repo.scm.ignore(repo, relpath(repo.path, lib.path))
 
+    # This has to be replaced by one time python script from tools that sets up everything the developer needs to use the tools
     if (not os.path.isfile('mbed_settings.py') and 
         os.path.isfile('mbed-os/tools/default_settings.py')):
         shutil.copy('mbed-os/tools/default_settings.py', 'mbed_settings.py')
 
         
 # Install/uninstall command
-@subcommand('add', 'url', 'path?',
-    help='Add a library to the current program or library')
+@subcommand('add', 
+    dict(name='url', help="URL of the library"),
+    dict(name='path', nargs='?', help="Destination local path"),
+    help='Add a library and its dependencies to the current directory')
 def add(url, path=None):
     repo = Repo.fromrepo()
 
@@ -604,8 +636,9 @@ def add(url, path=None):
     repo.scm.add(lib.lib)
 
     
-@subcommand('remove', 'path',
-    help='Remove a library from the current program or library')
+@subcommand('remove', 
+    dict(name='path', help="Local library name or path"),
+    help='Remove a library and its dependencies from the current directory')
 def remove(path):
     repo = Repo.fromrepo()
     lib = Repo.fromrepo(path)
@@ -617,10 +650,9 @@ def remove(path):
     
 # Publish command
 @subcommand('publish',
-    help='Publish working tree to remote repositories')
+    help='Publish program or library and its dependencies from the current directory')
 def publish(top=True):
     if top:
-        sync()
         action("Checking for modifications...")
 
     repo = Repo.fromrepo()
@@ -629,6 +661,7 @@ def publish(top=True):
             progress()
             publish(False)
 
+    sync(recursive=False)
     dirty = repo.scm.dirty()
 
     if dirty:
@@ -645,12 +678,14 @@ def publish(top=True):
 
             
 # Update command
-@subcommand('update', 'ref?',
-    help='Update current program or library and recursively update all libraries')
-def update(ref=None):
+@subcommand('update',
+    dict(name='rev', nargs='?', help="Revision hash or branch"),
+    dict(name=['-C', '--clean'], action="store_true", help="Perform a clean update and discard all local changes"),
+    help='Update program or library and its dependencies in the current directory')
+def update(rev=None,clean=False):
     repo = Repo.fromrepo()
     repo.scm.pull()
-    repo.scm.update(ref)
+    repo.scm.update(rev,clean=clean)
 
     for lib in repo.libs:
         if (not os.path.isfile(lib.lib) or 
@@ -677,10 +712,10 @@ def update(ref=None):
             
 # Synch command
 @subcommand('sync',
-    help='Synchronize library references (.lib files)')
-def sync(top=True):
-    if top:
-        action("Syncing library references...")
+    help='Synchronize dependency references (.lib files)')
+def sync(recursive=True, top=True):
+    if top and recursive:
+        action("Synchronizing dependency references...")
         
     repo = Repo.fromrepo()
     repo.scm.ignores(repo)
@@ -714,16 +749,18 @@ def sync(top=True):
 
     repo.sync()
 
-    for lib in repo.libs:
-        with cd(lib.path):
-            sync(False)
+    if recursive:
+        for lib in repo.libs:
+            with cd(lib.path):
+                sync(top=False)
 
             
-@subcommand('ls', 'opt*',
-    help='List repositories recursively.')
-def list_(opt=False, prefix=''):
+@subcommand('ls',
+    dict(name=['-a', '--all'], action='store_true', help="List repository URL and hash pairs"),
+    help='View program or library tree.')
+def list_(all=False, prefix=''):
     repo = Repo.fromrepo()
-    print prefix + repo.name, '(%s)' % (repo.url if "-a" in opt else repo.hash)
+    print prefix + repo.name, '(%s)' % (repo.url if all else repo.hash)
 
     for i, lib in enumerate(repo.libs):
         if prefix:
@@ -734,11 +771,11 @@ def list_(opt=False, prefix=''):
         nprefix += '|- ' if i < len(repo.libs)-1 else '`- '
 
         with cd(lib.path):
-            list_(opt, nprefix)
+            list_(all, nprefix)
 
             
 @subcommand('status',
-    help='Show status of nested repositories')
+    help='Show status of program or library and its dependencies in the current directory')
 def status():
     repo = Repo.fromrepo()
     if repo.scm.dirty():
@@ -750,32 +787,25 @@ def status():
             status()
 
             
-@subcommand('compile', 'args*',
-    help='Compile project using mbed OS build system')
-def compile(args):
+@subcommand('compile',
+    dict(name=['-t', '--toolchain'], help="Compile toolchain. Example: ARM, uARM, GCC_ARM, IAR"),
+    dict(name=['-m', '--mcu'], help="Compile target. Example: K64F, NUCLEO_F401RE, NRF51822..."),
+    help='Compile program using the native mbed OS build system')
+def compile(toolchain=None, mcu=None):
     if not os.path.isdir('mbed-os'):
         error('mbed-os not found?\n', -1)
 
+    args = remainder
     repo = Repo.fromrepo()
     file = os.path.join(repo.scm.store, 'neo')
-    
-    target = get_cfg(file, 'TARGET')
-    if '-m' in args:
-        target = args[args.index('-m')+1]
-        args.remove('-m')
-        args.remove(target)
 
+    target = mcu if mcu else get_cfg(file, 'TARGET')
     if target is None:
         error('Please specify compile target using the -m switch or set default target using command "target"', 1)
         
-    toolchain = get_cfg(file, 'TOOLCHAIN')
-    if '-t' in args:
-        toolchain = args[args.index('-t')+1]
-        args.remove('-t')
-        args.remove(toolchain)
-
-    if toolchain is None:
-        error('Please specify compile toolchain using the -m switch or set default toolchain using command "toolchain"', 1)
+    tchain = toolchain if toolchain else get_cfg(file, 'TOOLCHAIN')
+    if tchain is None:
+        error('Please specify compile toolchain using the -t switch or set default toolchain using command "toolchain"', 1)
 
     macros = []
     if os.path.isfile('MACROS.txt'):
@@ -786,29 +816,27 @@ def compile(args):
     env['PYTHONPATH'] = '.'
     popen(['python', 'mbed-os/tools/make.py']
         + list(chain.from_iterable(izip(repeat('-D'), macros)))
-        + ['-t', toolchain, '-m', target,
+        + ['-t', tchain, '-m', target,
            '--source=.',
-           '--build=%s' % os.path.join('.build', target, toolchain)]
+           '--build=%s' % os.path.join('.build', target, tchain)]
         + args,
         env=env)
 
         
 # Export command
-@subcommand('export', 'args*',
+@subcommand('export',
+    dict(name=['-i', '--ide'], help="IDE to create project files for. Example: UVISION,DS5,IAR", required=True),
+    dict(name=['-m', '--mcu'], help="Export for target MCU. Example: K64F, NUCLEO_F401RE, NRF51822..."),
     help='Generate project files for desktop IDEs')
-def export(args):
+def export(ide=None, mcu=None):
     if not os.path.isdir('mbed-os'):
         error('mbed-os not found?\n', -1)
 
+    args = remainder
     repo = Repo.fromrepo()
     file = os.path.join(repo.scm.store, 'neo')
     
-    target = get_cfg(file, 'TARGET')
-    if '-m' in args:
-        target = args[args.index('-m')+1]
-        args.remove('-m')
-        args.remove(target)
-
+    target = mcu if mcu else get_cfg(file, 'TARGET')
     if target is None:
         error('Please specify export target using the -m switch or set default target using command "target"', 1)
 
@@ -827,30 +855,54 @@ def export(args):
 
         
 # Build system and exporters
-@subcommand('target', 'target',
-    help='Sets default target when compiling and exporting')
-def target(target):
+@subcommand('target',
+    dict(name='name', nargs='?', help="Default target name. Example: K64F, NUCLEO_F401RE, NRF51822..."),
+    help='Set default target when compiling and exporting')
+def target(name=None):
     repo = Repo.fromrepo()
     
     file = os.path.join(repo.scm.store, 'neo')
-    set_cfg(file, 'TARGET', target)
+    if name is None:
+        name = get_cfg(file, 'TARGET')
+        if name:
+            action('The current target for this program is "%s"' % name)
+        else:
+            action('No target is specified for this program')
+    else:        
+        set_cfg(file, 'TARGET', name)
+        action('"%s" now set as default target' % name)
 
     
-@subcommand('toolchain', 'toolchain',
-    help='Sets default toolchain when compiling')
-def target(toolchain):
+@subcommand('toolchain',
+    dict(name='name', nargs='?', help="Default toolchain name. Example: ARM, uARM, GCC_ARM, IAR"),
+    help='Sets default toolchain')
+def toolchain(name=None):
     repo = Repo.fromrepo()
     
     file = os.path.join(repo.scm.store, 'neo')
-    set_cfg(file, 'TOOLCHAIN', toolchain)
+    if name is None:
+        name = get_cfg(file, 'TOOLCHAIN')
+        if name:
+            action('The current toolchain for this program is "%s"' % name)
+        else:
+            action('No toolchain is specified for this program')
+    else:
+        set_cfg(file, 'TOOLCHAIN', name)
+        action('"%s" now set as default toolchain' % name)
 
 
 # Parse/run command
+if len(sys.argv) <= 1:
+    parser.print_help()
+    sys.exit(1)
+
 args, remainder = parser.parse_known_args()
 
 try:
     status = args.command(args)
 except ProcessException as e:
-    error('Process failed! Error code %d' % e[0], e[0])
-sys.exit(status or 0)
+    error('Process exit with error code %d' % e[0], e[0])
+except KeyboardInterrupt as e:
+    error('User aborted!', 255)
 
+sys.exit(status or 0)
