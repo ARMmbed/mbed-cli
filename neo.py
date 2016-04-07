@@ -515,7 +515,7 @@ class Repo(object):
     @property
     def fullurl(self):
         if self.url:
-            return (self.url.strip('/') + '/' + 
+            return (self.url.rstrip('/') + '/' +
                 ('#'+self.hash if self.hash else ''))
 
     def sync(self):
@@ -613,7 +613,7 @@ def deploy():
     repo.scm.ignores(repo)
 
     for lib in repo.libs:
-        import_(lib.url, lib.path)
+        import_(lib.fullurl, lib.path)
         repo.scm.ignore(repo, relpath(repo.path, lib.path))
 
     # This has to be replaced by one time python script from tools that sets up everything the developer needs to use the tools
