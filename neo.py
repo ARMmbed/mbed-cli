@@ -595,6 +595,8 @@ def import_(url, path=None):
             break
         except ProcessException:
             pass
+    else:
+        error("Unable to clone repository (%s)" % url, 1)
 
     repo.sync()
 
