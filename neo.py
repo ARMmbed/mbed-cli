@@ -689,12 +689,12 @@ def update(rev=None,clean=False):
 
     for lib in repo.libs:
         if (not os.path.isfile(lib.lib) or 
-            (Repo.isrepo(lib.path) and 
-             lib.url != Repo.fromrepo(lib.path).url)):
-            with cd(lib.path):
-                if lib.cwd.dirty():
-                    error('Uncommitted changes in %s (%s)\n'
-                        % (lib.name, lib.path), 1)
+            (Repo.isrepo(lib.path) and lib.fullurl != Repo.fromrepo(lib.path).fullurl)):
+            if not clean and Repo.isrepo(lib.path):
+                with cd(lib.path):
+                    if Repo.fromrepo(lib.path).scm.dirty():
+                        error('Uncommitted changes in %s (%s)\n'
+                            % (lib.name, lib.path), 1)
 
             shutil.rmtree(lib.path)
             repo.scm.unignore(repo, relpath(repo.path, lib.path))
