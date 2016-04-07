@@ -16,21 +16,22 @@ This document covers the installation and usage of *neo*.
 
 <span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: *neo* lives in [https://github.com/ARMmbed/neo](https://github.com/ARMmbed/neo). If you don't have permissions to access the above repository, e-mail [mihail.stoyanov@arm.com](mailto:mihail.stoyanov@arm.com) or [bogdan.marinescu@arm.com](mailto:bogdan.marinescu@arm.com) with your GitHub account name.</span>
 ## Requierements
+
 * You'll need an [mbed account](https://developer.mbed.org) to access some of the code used in this document.
 
 * *neo* is a Python script, so you'll need Python installed in order to use it. *neo* was tested with [version 2.7 of Python](https://www.python.org/download/releases/2.7/).
 
 * *neo* supports both Git and Mercurial repositories, so you'll also need to install:
-	* [Mercurial](https://www.mercurial-scm.org/).
-	* [Git](https://git-scm.com/).
+    * [Mercurial](https://www.mercurial-scm.org/).
+    * [Git](https://git-scm.com/).
 	
-	<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Tip:** Remember that the directories containing the executables of `hg` and `git` need to be in your system's PATH.</span>
+<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Tip:** Remember that the directories containing the executables of `hg` and `git` need to be in your system's PATH.</span>
 
 ## Installing neo
 
 1. To get the latest version of *neo*, clone the repository [https://github.com/ARMmbed/neo](https://github.com/ARMmbed/neo):
 
-	``$ git clone https://github.com/ARMmbed/neo``
+    ``$ git clone https://github.com/ARMmbed/neo``
 
 1. Make sure that the folder with `neo.py` (`neo` in this case) is in your system's PATH.
 
@@ -137,10 +138,7 @@ To compile in debug mode (as opposed to the default *release* mode) use `-o debu
 $ neo.py compile -t GCC_ARM -m K64F -j 0 -o debug-info
 ```
 
-<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Tip:**
-<br>If you have files that you want to compile only in release mode, put them in a directory called `TARGET_RELEASE` at any level of your tree. 
-<br>
-If you have files that you want to compile only in debug mode, put them in a directory called `TARGET_DEBUG` at any level of your tree (then use `-o debug-info` as explained above).
+<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Tip:** If you have files that you want to compile only in release mode, put them in a directory called `TARGET_RELEASE` at any level of your tree. If you have files that you want to compile only in debug mode, put them in a directory called `TARGET_DEBUG` at any level of your tree (then use `-o debug-info` as explained above).
 </span>
 
 ## Adding and removing libraries
