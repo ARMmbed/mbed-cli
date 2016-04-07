@@ -707,7 +707,7 @@ def update(rev=None,clean=False):
     for lib in repo.libs:
         if os.path.isdir(lib.path):
             with cd(lib.path):
-                update(lib.hash)
+                update(lib.hash,clean)
         else:
             import_(lib.url, lib.path)
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
