@@ -77,8 +77,8 @@ The arguments to *compile* are:
 -   `-m <mcu>` to select a target for the compilation. At the moment, the only supported value for `mcu` is `K64F` for the FRDM_K64F board.
 -   `-t <toolchain>` to select a toolchain, where `toolchain` can be: ARM (armcc compiler), GCC_ARM (GNU ARM Embedded)
 -   `-j <jobs>` (optional): will use multiple threads on your machine to compile the source (use 0 to infer the number of threads from the number of cores on your machine, or an actual number to specify the maximum number of thread).
--   `-c` (optional): will start a build from scratch, e.g. clean build or rebuild.
--   
+-   `-c` (optional): will build from scratch, e.g. a clean build or rebuild.
+
 The compiled binary (and ELF image) can be found in the `.build` subdirectory of your project.
 
 If you need to debug your code, a good way to do that is to export your source tree to an IDE project file, so that you can use the IDE's debugging facilities. Currently *neo* supports exporting to Keil uVision. To export, run this command:
