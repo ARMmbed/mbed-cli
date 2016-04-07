@@ -490,8 +490,11 @@ class Repo(object):
     def isrepo(cls, path=None):
         for name, scm in scms.items():
             if os.path.isdir(os.path.join(path, '.'+name)):
-                return True
-        return False
+               break
+        else:
+            return False
+            
+        return hasattr(Repo.fromrepo(path), 'url')
         
     @classmethod
     def findrepo(cls, path=None):
@@ -519,6 +522,8 @@ class Repo(object):
                 ('#'+self.hash if self.hash else ''))
 
     def sync(self):
+        self.url = None
+        self.hash = None
         if os.path.isdir(self.path):
             try:
                 self.scm = self.getscm()
@@ -690,31 +695,53 @@ def publish(top=True):
     help='Update program or library and its dependencies in the current directory')
 def update(rev=None,clean=False):
     repo = Repo.fromrepo()
+    
     #repo.scm.pull()
     repo.scm.update(rev,clean=clean)
 
+    # Compare .lib libraries before and after update, and remove libraries that had corresponding .lib before update but not after
     for lib in repo.libs:
-        if (not os.path.isfile(lib.lib) or 
-            (Repo.isrepo(lib.path) and lib.fullurl != Repo.fromrepo(lib.path).fullurl)):
-            if not clean and Repo.isrepo(lib.path):
+        if not os.path.isfile(lib.lib):
+            if not clean:
                 with cd(lib.path):
                     if Repo.fromrepo(lib.path).scm.dirty():
-                        error('Uncommitted changes in %s (%s)\n'
+                        error('Uncommitted changes in %s (%s). Please discard or discard them first and then retry update.'
                             % (lib.name, lib.path), 1)
 
+            action("Removing leftover repository %s" % lib.path)
+            #action("Compare %s <-> %s" % (lib.url, Repo.fromrepo(lib.path).url))
             shutil.rmtree(lib.path)
             repo.scm.unignore(repo, relpath(repo.path, lib.path))
 
-    repo.sync()
+    # Reinitialize Repo to reflect the library files after update
+    repo = Repo.fromrepo()
+    
+    # Recheck libraries as their URLs might have changed
+    for lib in repo.libs:
+        if Repo.isrepo(lib.path) and Repo.fromrepo(lib.path).url and lib.url != Repo.fromrepo(lib.path).url:
+            if not clean:
+                with cd(lib.path):
+                    if Repo.fromrepo(lib.path).scm.dirty():
+                        error('Uncommitted changes in %s (%s). Please discard or discard them first and then retry update.'
+                            % (lib.name, lib.path), 1)
 
+            action("Removing repository %s due to changed URL" % lib.path)
+            #action("Compare %s <-> %s" % (lib.url, Repo.fromrepo(lib.path).url))
+            shutil.rmtree(lib.path)
+            repo.scm.unignore(repo, relpath(repo.path, lib.path))
+    
+    # Import missing repos and update to hashes
     for lib in repo.libs:
         if os.path.isdir(lib.path):
             with cd(lib.path):
                 update(lib.hash,clean)
         else:
             import_(lib.url, lib.path)
+            with cd(lib.path):
+                update(lib.hash,clean)
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
 
+    #repo.sync()
             
 # Synch command
 @subcommand('sync',
