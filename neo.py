@@ -376,7 +376,7 @@ class Git(object):
         
     def pull():
         action("Pulling from remote repository")
-        popen([git_cmd, 'fetch', 'origin'])
+        popen([git_cmd, 'fetch', '--all'])
 
     def update(hash=None, clean=False):
         action("Updating repository to %s" % ("revision "+hash if hash else "latest revision in the current branch"))
