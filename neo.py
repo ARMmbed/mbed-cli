@@ -248,6 +248,8 @@ class Hg(object):
         popen([hg_cmd, 'pull'])
 
     def update(hash=None, clean=False):
+        action("Pulling from remote repository")
+        popen([hg_cmd, 'pull'])
         action("Updating repository to %s" % ("revision "+hash if hash else "latest revision in the current branch"))
         popen([hg_cmd, 'update'] + (['-r', hash] if hash else []) + (['-C'] if clean else []))
 
@@ -384,9 +386,10 @@ class Git(object):
             popen([git_cmd, 'reset', '--hard'])
 
         if hash:
+            popen([git_cmd, 'fetch', '--all'])
             popen([git_cmd, 'checkout'] + [hash])
         else:
-            popen([git_cmd, 'merge'] + ['origin/master'])
+            popen([git_cmd, 'pull'])
 
     def status():
         popen([git_cmd, 'status', '-s'])
@@ -684,7 +687,7 @@ def publish(top=True):
     help='Update program or library and its dependencies in the current directory')
 def update(rev=None,clean=False):
     repo = Repo.fromrepo()
-    repo.scm.pull()
+    #repo.scm.pull()
     repo.scm.update(rev,clean=clean)
 
     for lib in repo.libs:
