@@ -644,6 +644,9 @@ def add(url, path=None):
     help='Remove a library and its dependencies from the current directory')
 def remove(path):
     repo = Repo.fromrepo()
+    if not Repo.isrepo(path):
+        error("Could not find library in path (%s)" % path, 1)
+
     lib = Repo.fromrepo(path)
 
     repo.scm.remove(lib.lib)
