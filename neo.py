@@ -7,6 +7,7 @@ import subprocess
 import os
 import contextlib
 import shutil
+import stat
 from collections import *
 from itertools import *
 
@@ -204,6 +205,13 @@ def staticclass(cls):
 
     return cls
 
+def rmtree_force(directory):
+
+    def remove_readonly(func, path, _):
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
+
+    shutil.rmtree(directory, onerror=remove_readonly)
     
 @scm('hg')
 @staticclass
@@ -652,7 +660,7 @@ def remove(path):
     lib = Repo.fromrepo(path)
 
     repo.scm.remove(lib.lib)
-    shutil.rmtree(lib.path)
+    rmtree_force(lib.path)
     repo.scm.unignore(repo, relpath(repo.path, lib.path))
 
     
@@ -689,8 +697,9 @@ def publish(top=True):
 @subcommand('update',
     dict(name='rev', nargs='?', help="Revision hash or branch"),
     dict(name=['-C', '--clean'], action="store_true", help="Perform a clean update and discard all local changes"),
+    dict(name=['-F', '--force'], action="store_true", help="Force the given action"),
     help='Update program or library and its dependencies in the current directory')
-def update(rev=None,clean=False):
+def update(rev=None,clean=False, force=False):
     repo = Repo.fromrepo()
     #repo.scm.pull()
     repo.scm.update(rev,clean=clean)
@@ -704,8 +713,11 @@ def update(rev=None,clean=False):
                         error('Uncommitted changes in %s (%s)\n'
                             % (lib.name, lib.path), 1)
 
-            shutil.rmtree(lib.path)
-            repo.scm.unignore(repo, relpath(repo.path, lib.path))
+            if force:
+                rmtree_force(lib.path)
+                repo.scm.unignore(repo, relpath(repo.path, lib.path))
+            else:
+                error('Need to delete repo(s) to continue.  Must use --force option\n', -1)
 
     repo.sync()
 
