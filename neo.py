@@ -697,8 +697,9 @@ def publish(top=True):
 @subcommand('update',
     dict(name='rev', nargs='?', help="Revision hash or branch"),
     dict(name=['-C', '--clean'], action="store_true", help="Perform a clean update and discard all local changes"),
+    dict(name=['-F', '--force'], action="store_true", help="Force the given action"),
     help='Update program or library and its dependencies in the current directory')
-def update(rev=None,clean=False):
+def update(rev=None,clean=False, force=False):
     repo = Repo.fromrepo()
     #repo.scm.pull()
     repo.scm.update(rev,clean=clean)
@@ -712,8 +713,11 @@ def update(rev=None,clean=False):
                         error('Uncommitted changes in %s (%s)\n'
                             % (lib.name, lib.path), 1)
 
-            rmtree_force(lib.path)
-            repo.scm.unignore(repo, relpath(repo.path, lib.path))
+            if force:
+                rmtree_force(lib.path)
+                repo.scm.unignore(repo, relpath(repo.path, lib.path))
+            else:
+                error('Need to delete repo(s) to continue.  Must use --force option\n', -1)
 
     repo.sync()
 
