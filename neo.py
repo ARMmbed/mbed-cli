@@ -7,6 +7,7 @@ import subprocess
 import os
 import contextlib
 import shutil
+import stat
 from collections import *
 from itertools import *
 
@@ -204,6 +205,13 @@ def staticclass(cls):
 
     return cls
 
+def rmtree_force(directory):
+
+    def remove_readonly(func, path, _):
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
+
+    shutil.rmtree(directory, onerror=remove_readonly)
     
 @scm('hg')
 @staticclass
@@ -652,7 +660,7 @@ def remove(path):
     lib = Repo.fromrepo(path)
 
     repo.scm.remove(lib.lib)
-    shutil.rmtree(lib.path)
+    rmtree_force(lib.path)
     repo.scm.unignore(repo, relpath(repo.path, lib.path))
 
     
@@ -704,7 +712,7 @@ def update(rev=None,clean=False):
                         error('Uncommitted changes in %s (%s)\n'
                             % (lib.name, lib.path), 1)
 
-            shutil.rmtree(lib.path)
+            rmtree_force(lib.path)
             repo.scm.unignore(repo, relpath(repo.path, lib.path))
 
     repo.sync()
