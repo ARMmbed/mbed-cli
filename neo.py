@@ -749,7 +749,7 @@ def update(rev=None,clean=False,force=False,top=True):
                 lib_repo = Repo.fromrepo(lib.path)
                 gc, msg = can_update(lib_repo,clean,force)
             if gc:
-                action("Removing leftover library %s" % lib.path)
+                action("Removing leftover library \"%s\" in \"%s\"" % (lib.name, lib.path))
                 rmtree_readonly(lib.path)
                 repo.scm.unignore(repo, relpath(repo.path, lib.path))
             else:
@@ -767,7 +767,7 @@ def update(rev=None,clean=False,force=False,top=True):
                 with cd(lib.path):
                     gc, msg = can_update(lib_repo,clean,force)
                 if gc:
-                    action("Removing library %s due to changed repository URL. Will import from the new URL." % lib.path)
+                    action("Removing library \"%s\" in \"%s\" due to changed repository URL. Will import from new URL." % (lib.name, lib.path))
                     rmtree_readonly(lib.path)
                     repo.scm.unignore(repo, relpath(repo.path, lib.path))
                 else:
