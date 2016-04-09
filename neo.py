@@ -269,7 +269,11 @@ class Hg(object):
 
     def dirty():
         return pquery([hg_cmd, 'status', '-q'])
-       
+
+    def untracked():
+        result = pquery([hg_cmd, 'status', '-u'])
+        return re.sub('^\? ', '', result).splitlines()
+
     def outgoing():
         try:
             pquery([hg_cmd, 'outgoing'])
@@ -415,6 +419,9 @@ class Git(object):
         
     def dirty():
         return pquery([git_cmd, 'diff', '--name-only', 'HEAD'])
+
+    def untracked():
+        return pquery([git_cmd, 'ls-files', '--others', '--exclude-standard']).splitlines()
 
     def outgoing():
         try:
@@ -611,7 +618,13 @@ class Repo(object):
 
         print self.name, '->', self.fullurl
 
-        
+    def rm_untracked(self):
+        untracked = self.scm.untracked()
+        for file in untracked:
+            if re.match("(.+)\.lib$", file) and os.path.isfile(file):
+                action("Remove untracked library reference \"%s\"" % file)
+                os.remove(file)
+
 # Clone command
 @subcommand('import', 
     dict(name='url', help='URL of the program'),
@@ -726,6 +739,7 @@ def update(rev=None,clean=False,force=False,top=True):
     
     # Fetch from remote repo
     repo.scm.update(repo,rev,clean)
+    repo.rm_untracked()
 
     # Compare library references (.lib) before and after update, and remove libraries that do not have references in the current revision
     for lib in repo.libs:
