@@ -411,7 +411,7 @@ class Git(object):
             action("Updating \"%s\" to %s" % (repo.name, hash))
             popen([git_cmd, 'checkout'] + [hash])
         else:
-            action("Fetching from remote repository in \"%s\" and updating to latest revision in the current branch")
+            action("Fetching from remote repository in \"%s\" and updating to latest revision in the current branch" % repo.name)
             popen([git_cmd, 'pull', '-v', '--all'])
 
     def status():
@@ -566,6 +566,7 @@ class Repo(object):
 
             try:
                 self.url = self.geturl()
+                print 'test '+self.url
             except ProcessException:
                 pass
 
