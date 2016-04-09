@@ -250,10 +250,10 @@ class Hg(object):
         action("Pulling from remote repository")
         popen([hg_cmd, 'pull'])
 
-    def update(hash=None, clean=False):
-        action("Pulling from remote repository")
+    def update(repo, hash=None, clean=False):
+        action("Pulling from remote repository in \"%s\"" % repo.name)
         popen([hg_cmd, 'pull'])
-        action("Updating repository to %s" % ("revision "+hash if hash else "latest revision in the current branch"))
+        action("Updating \"%s\" to %s" % (repo.name, "revision "+hash if hash else "latest revision in the current branch"))
         popen([hg_cmd, 'update'] + (['-r', hash] if hash else []) + (['-C'] if clean else []))
 
     def status():
@@ -389,16 +389,18 @@ class Git(object):
         action("Pulling from remote repository")
         popen([git_cmd, 'fetch', '--all'])
 
-    def update(hash=None, clean=False):
-        action("Updating repository to %s" % ("revision "+hash if hash else "latest revision in the current branch"))
+    def update(repo, hash=None, clean=False):
         if clean:
+            action("Discarding local changes in \"%s\"" % repo.name)
             popen([git_cmd, 'reset', '--hard'])
-
         if hash:
-            popen([git_cmd, 'fetch', '--all'])
+            action("Fetching from remote repository in \"%s\"" % repo.name)
+            popen([git_cmd, 'fetch', '-v', '--all'])
+            action("Updating \"%s\" to %s" % (repo.name, hash))
             popen([git_cmd, 'checkout'] + [hash])
         else:
-            popen([git_cmd, 'pull'])
+            action("Fetching from remote repository in \"%s\" and updating to latest revision in the current branch")
+            popen([git_cmd, 'pull', '-v', '--all'])
 
     def status():
         return pquery([git_cmd, 'status', '-s'])
@@ -507,11 +509,11 @@ class Repo(object):
     def isrepo(cls, path=None):
         for name, scm in scms.items():
             if os.path.isdir(os.path.join(path, '.'+name)):
-               break
+               return True
         else:
             return False
             
-        return hasattr(Repo.fromrepo(path), 'url')
+        return False
         
     @classmethod
     def findrepo(cls, path=None):
@@ -707,52 +709,68 @@ def publish(top=True):
 @subcommand('update',
     dict(name='rev', nargs='?', help="Revision hash or branch"),
     dict(name=['-C', '--clean'], action="store_true", help="Perform a clean update and discard all local changes"),
+    dict(name=['-F', '--force'], action="store_true", help="WARNING: This will enforce the original layout and will remove any local libraries and also libraries containing uncommitted or unpublished changes."),
     help='Update program or library and its dependencies in the current directory')
-def update(rev=None,clean=False):
+def update(rev=None,clean=False,force=False,top=True):
+    if top:
+        sync()
     repo = Repo.fromrepo()
     
     # Fetch from remote repo
-    repo.scm.update(rev,clean=clean)
+    repo.scm.update(repo,rev,clean)
 
     # Compare library references (.lib) before and after update, and remove libraries that do not have references in the current revision
     for lib in repo.libs:
-        if not os.path.isfile(lib.lib):
-            if not clean:
-                with cd(lib.path):
-                    if Repo.fromrepo(lib.path).scm.dirty():
-                        error('Uncommitted changes in %s (%s). Please discard or stash them first and then retry update.'
-                            % (lib.name, lib.path), 1)
-
-            action("Removing leftover library %s" % lib.path)
-            shutil.rmtree(lib.path)
-            repo.scm.unignore(repo, relpath(repo.path, lib.path))
+        if not os.path.isfile(lib.lib) and os.path.isdir(lib.path):
+            # Library reference doesn't exist in the new revision. Will try to remove library to reproduce original structure
+            with cd(lib.path):
+                lib_repo = Repo.fromrepo(lib.path)
+                gc, msg = can_update(lib_repo,clean,force)
+                if gc:
+                    action("Removing leftover library %s" % lib.path)
+                    shutil.rmtree(lib.path)
+                    repo.scm.unignore(repo, relpath(repo.path, lib.path))
+                else:
+                    error(msg, 1)
 
     # Reinitialize Repo to reflect the library files after update
     repo = Repo.fromrepo()
     
     # Recheck libraries as their URLs might have changed
     for lib in repo.libs:
-        if Repo.isrepo(lib.path) and Repo.fromrepo(lib.path).url and lib.url != Repo.fromrepo(lib.path).url:
-            if not clean:
+        if os.path.isdir(lib.path) and Repo.isrepo(lib.path):
+            lib_repo = Repo.fromrepo(lib.path)
+            if lib.url != lib_repo.url:
+                # Repository URL has changed
                 with cd(lib.path):
-                    if Repo.fromrepo(lib.path).scm.dirty():
-                        error('Uncommitted changes in %s (%s). Please discard or stash them first and then retry update.'
-                            % (lib.name, lib.path), 1)
+                    gc, msg = can_update(lib_repo,clean,force)
+                    if gc:
+                        action("Removing library %s due to changed repository URL. Will import from the new URL." % lib.path)
+                        shutil.rmtree(lib.path)
+                        repo.scm.unignore(repo, relpath(repo.path, lib.path))
+                    else:
+                        error(msg, 1)
 
-            action("Removing library %s due to changed repository URL" % lib.path)
-            shutil.rmtree(lib.path)
-            repo.scm.unignore(repo, relpath(repo.path, lib.path))
-    
     # Import missing repos and update to hashes
     for lib in repo.libs:
         if os.path.isdir(lib.path):
             with cd(lib.path):
-                update(lib.hash,clean)
+                update(lib.hash,clean,force,top=False)
         else:
             import_(lib.url, lib.path)
             with cd(lib.path):
-                update(lib.hash,clean)
+                update(lib.hash,clean,force,top=False)
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
+
+def can_update(repo,clean=False,force=False):
+    if repo.url is None and not force:
+        return False, "Preserving local repository \"%s\" in \"%s\". Please publish the library to a remote URL to be able to restore it at any time. You can also use --force switch to remove the local libraries.\nWARNING: This action cannot be undone." % (repo.name, repo.path)
+    if not clean and repo.scm.dirty():
+        return False, "Uncommitted changes in \"%s\" in \"%s\". Please discard or stash them first and then retry update. You can also use --clean switch to discard all uncommitted changes.\nWARNING: This action cannot be undone." % (repo.name, repo.path)
+    if not force and repo.scm.outgoing():
+        return False, "Unpublished changes in \"%s\" in \"%s\". Please publish them first using the \"publish\" command. You can also use --force to discard all local commits and replace the library with the one included in this revision.\nWARNING: This action cannot be undone." % (repo.name, repo.path)
+
+    return True, "OK"
             
 # Synch command
 @subcommand('sync',
@@ -945,7 +963,7 @@ args, remainder = parser.parse_known_args()
 try:
     status = args.command(args)
 except ProcessException as e:
-    error('Process exit with error code %d' % e[0], e[0])
+    error('Subrocess exit with error code %d' % e[0], e[0])
 except KeyboardInterrupt as e:
     error('User aborted!', 255)
 
