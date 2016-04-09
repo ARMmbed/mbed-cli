@@ -426,7 +426,7 @@ class Git(object):
 
         if not exists:
             with open(exclude, 'a') as f:
-                f.write(file + '\n')
+                f.write(file.replace("\\", "/") + '\n')
 
     def unignore(repo, file):
         exclude = os.path.join(repo.path, '.git/info/exclude')
