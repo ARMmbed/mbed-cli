@@ -71,7 +71,7 @@ subparsers = parser.add_subparsers(
 
 # Logging and output
 def message(msg):
-    return "["+os.path.basename(sys.argv[0])+"] "+msg+"\n"
+    return "[%s] %s\n" % (os.path.basename(sys.argv[0]), msg)
 
 def log(msg):
     sys.stderr.write(message(msg))
@@ -80,10 +80,10 @@ def action(msg):
     sys.stderr.write(message(msg))
 
 def warning(msg, code):
-    sys.stderr.write("---\n["+os.path.basename(sys.argv[0])+" WARNING] "+msg+"\n---\n")
+    sys.stderr.write("---\n[%s WARNING] %s\n---\n" % (os.path.basename(sys.argv[0]), msg))
 
 def error(msg, code):
-    sys.stderr.write("---\n["+os.path.basename(sys.argv[0])+" ERROR] "+msg+"\n---\n")
+    sys.stderr.write("---\n[%s ERROR] %s\n---\n" % (os.path.basename(sys.argv[0]), msg))
     sys.exit(code)
 
 def progress_cursor():
