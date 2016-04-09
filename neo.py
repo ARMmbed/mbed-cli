@@ -424,12 +424,11 @@ class Git(object):
 
     def outgoing():
         try:
-            pquery([git_cmd, 'log', 'origin..'])
-            return True
+            return True if pquery([git_cmd, 'log', 'origin..']) else False
         except ProcessException as e:
             if e[0] != 1:
                 raise
-            return False
+            return True
 
     def geturl(repo):
         url = ""
@@ -565,7 +564,6 @@ class Repo(object):
 
             try:
                 self.url = self.geturl()
-                print 'test '+self.url
             except ProcessException:
                 pass
 
