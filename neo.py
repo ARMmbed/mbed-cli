@@ -610,9 +610,7 @@ def import_(url, path=None):
         deploy()
 
 
-# Deploy command
-@subcommand('deploy',
-    help='Import dependencies in the current program or library')
+# Deploy routine. Shouldn't be called directly
 def deploy():
     repo = Repo.fromrepo()
     repo.scm.ignores(repo)
