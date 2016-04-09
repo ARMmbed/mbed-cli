@@ -696,20 +696,19 @@ def publish(top=True):
 def update(rev=None,clean=False):
     repo = Repo.fromrepo()
     
-    #repo.scm.pull()
+    # Fetch from remote repo
     repo.scm.update(rev,clean=clean)
 
-    # Compare .lib libraries before and after update, and remove libraries that had corresponding .lib before update but not after
+    # Compare library references (.lib) before and after update, and remove libraries that do not have references in the current revision
     for lib in repo.libs:
         if not os.path.isfile(lib.lib):
             if not clean:
                 with cd(lib.path):
                     if Repo.fromrepo(lib.path).scm.dirty():
-                        error('Uncommitted changes in %s (%s). Please discard or discard them first and then retry update.'
+                        error('Uncommitted changes in %s (%s). Please discard or stash them first and then retry update.'
                             % (lib.name, lib.path), 1)
 
-            action("Removing leftover repository %s" % lib.path)
-            #action("Compare %s <-> %s" % (lib.url, Repo.fromrepo(lib.path).url))
+            action("Removing leftover library %s" % lib.path)
             shutil.rmtree(lib.path)
             repo.scm.unignore(repo, relpath(repo.path, lib.path))
 
@@ -722,11 +721,10 @@ def update(rev=None,clean=False):
             if not clean:
                 with cd(lib.path):
                     if Repo.fromrepo(lib.path).scm.dirty():
-                        error('Uncommitted changes in %s (%s). Please discard or discard them first and then retry update.'
+                        error('Uncommitted changes in %s (%s). Please discard or stash them first and then retry update.'
                             % (lib.name, lib.path), 1)
 
-            action("Removing repository %s due to changed URL" % lib.path)
-            #action("Compare %s <-> %s" % (lib.url, Repo.fromrepo(lib.path).url))
+            action("Removing library %s due to changed repository URL" % lib.path)
             shutil.rmtree(lib.path)
             repo.scm.unignore(repo, relpath(repo.path, lib.path))
     
@@ -740,8 +738,6 @@ def update(rev=None,clean=False):
             with cd(lib.path):
                 update(lib.hash,clean)
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
-
-    #repo.sync()
             
 # Synch command
 @subcommand('sync',
