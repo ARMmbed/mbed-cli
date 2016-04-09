@@ -407,7 +407,15 @@ class Git(object):
             return False
 
     def geturl(repo):
-        return pquery([git_cmd, 'config', '--get', 'remote.origin.url']).strip()
+        url = ""
+        remotes = pquery([git_cmd, 'remote', '-v']).strip().splitlines()
+        for remote in remotes:
+            remote = re.split("\s", remote)
+            if "(fetch)" in remote:
+                url = remote[1]
+                if remote[0] == "origin": # Prefer origin URL
+                    return url
+        return url
 
     def gethash(repo):
         return pquery([git_cmd, 'rev-parse', '--short=12', 'HEAD']).strip()
