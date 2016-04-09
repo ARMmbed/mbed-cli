@@ -257,7 +257,7 @@ class Hg(object):
         popen([hg_cmd, 'update'] + (['-r', hash] if hash else []) + (['-C'] if clean else []))
 
     def status():
-        popen([hg_cmd, 'status'])
+        return pquery([hg_cmd, 'status'])
 
     def dirty():
         return pquery([hg_cmd, 'status', '-q'])
@@ -401,7 +401,7 @@ class Git(object):
             popen([git_cmd, 'pull'])
 
     def status():
-        popen([git_cmd, 'status', '-s'])
+        return pquery([git_cmd, 'status', '-s'])
         
     def dirty():
         return pquery([git_cmd, 'diff', '--name-only', 'HEAD'])
@@ -823,8 +823,8 @@ def list_(all=False, prefix=''):
 def status():
     repo = Repo.fromrepo()
     if repo.scm.dirty():
-        print '---', repo.name, '---'
-        repo.scm.status()
+        action("Status for \"%s\":" % repo.name)
+        print repo.scm.status()
 
     for lib in repo.libs:
         with cd(lib.path):
