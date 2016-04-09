@@ -79,6 +79,9 @@ def log(msg):
 def action(msg):
     sys.stderr.write(message(msg))
 
+def warning(msg, code):
+    sys.stderr.write("---\n["+os.path.basename(sys.argv[0])+" WARNING] "+msg+"\n---\n")
+
 def error(msg, code):
     sys.stderr.write("---\n["+os.path.basename(sys.argv[0])+" ERROR] "+msg+"\n---\n")
     sys.exit(code)
