@@ -250,12 +250,12 @@ class Hg(object):
     def commit():
         popen([hg_cmd, 'commit'])
         
-    def push():
-        action("Pushing to remote repository")
+    def push(repo):
+        action("Pushing to remote repository \"%s\" at \"%s\"" % (repo.name, repo.url))
         popen([hg_cmd, 'push'])
         
-    def pull():
-        action("Pulling from remote repository")
+    def pull(repo):
+        action("Pulling from remote repository \"%s\" at \"%s\"" % (repo.name, repo.url))
         popen([hg_cmd, 'pull'])
 
     def update(repo, hash=None, clean=False):
@@ -297,7 +297,6 @@ class Hg(object):
                         default_url = m.group(2)
                     else:
                         url = m.group(2)
-
         if default_url:
             url = default_url
         return url if url else pquery([hg_cmd, 'paths', 'default']).strip()
@@ -393,12 +392,12 @@ class Git(object):
     def commit():
         popen([git_cmd, 'commit', '-a'])
         
-    def push():
-        action("Pushing to remote repository")
+    def push(repo):
+        action("Pushing to remote repository \"%s\" at \"%s\"" % (repo.name, repo.url))
         popen([git_cmd, 'push', '--all'])
         
-    def pull():
-        action("Pulling from remote repository")
+    def pull(repo):
+        action("Pulling from remote repository \"%s\" at \"%s\"" % (repo.name, repo.url))
         popen([git_cmd, 'fetch', '--all'])
 
     def update(repo, hash=None, clean=False):
@@ -721,7 +720,7 @@ def publish(top=True):
 
     try:
         if repo.scm.outgoing():
-            repo.scm.push()
+            repo.scm.push(repo)
     except ProcessException as e:
         if e[0] != 1:
             raise
