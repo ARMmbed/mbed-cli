@@ -16,50 +16,50 @@ git_cmd = 'git'
 
 ignores = [
     # Version control folders
-    "\.hg$",
-    "\.git$",
-    "\.svn$",
-    "\.CVS$",
-    "\.cvs$",
+    ".hg",
+    ".git",
+    ".svn",
+    ".CVS",
+    ".cvs",
     
     # Version control fallout
-    "\.orig$",
+    "*.orig",
     
     # mbed Tools
-    "\.build$",
-    "\.export$",
+    ".build",
+    ".export",
     
     # Online IDE caches
-    "\.msub$",
-    "\.meta$",
-    "\.ctags",
+    ".msub$",
+    ".meta$",
+    ".ctags*",
     
     # uVision project files
-    "\.uvproj$",
-    "\.uvopt$",
+    "*.uvproj",
+    "*.uvopt",
     
     # Eclipse project files
-    "\.project$",
-    "\.cproject$",
-    "\.launch$",
+    "*.project",
+    "*.cproject",
+    "*.launch",
     
     # IAR project files
-    "\.ewp$",
-    "\.eww$",
+    "*.ewp",
+    "*.eww",
     
     # GCC make
-    "Makefile$",
-    "Debug$",
+    "Makefile",
+    "Debug",
     
     # HTML files
-    "\.htm$",
+    "*.htm",
     
     # Settings files
-    ".settings$",
-    "mbed_settings.py$",
+    "*.settings",
+    "mbed_settings.py",
     
     # Python 
-    ".py[cod]",
+    "*.py[cod]",
     "# subrepo ignores",
     ]
 
@@ -295,7 +295,7 @@ class Hg(object):
 
         exclude = os.path.join(repo.path, '.hg/hgignore')
         with open(exclude, 'w') as f:
-            f.write("syntax: regexp\n"+'\n'.join(ignores)+'\n')
+            f.write("syntax: glob\n"+'\n'.join(ignores)+'\n')
 
     def ignore(repo, file):
         hook = 'ignore.local = .hg/hgignore'
