@@ -263,7 +263,13 @@ class Hg(object):
         return pquery([hg_cmd, 'status', '-q'])
        
     def outgoing():
-        return pquery([hg_cmd, 'outgoing'])
+        try:
+            pquery([hg_cmd, 'outgoing'])
+            return True
+        except ProcessException as e:
+            if e[0] != 1:
+                raise
+            return False
         
     def geturl(repo):
         tagpaths = '[paths]'
