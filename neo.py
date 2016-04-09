@@ -7,6 +7,7 @@ import subprocess
 import os
 import contextlib
 import shutil
+import stat
 from collections import *
 from itertools import *
 
@@ -148,6 +149,13 @@ def pquery(command, stdin=None, **kwargs):
         raise ProcessException(proc.returncode)
 
     return stdout
+
+def rmtree_readonly(directory):
+    def remove_readonly(func, path, _):
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
+
+    shutil.rmtree(directory, onerror=remove_readonly)
 
 # Defaults config file
 def set_cfg(file, var, val):
@@ -672,7 +680,7 @@ def remove(path):
     lib = Repo.fromrepo(path)
 
     repo.scm.remove(lib.lib)
-    shutil.rmtree(lib.path)
+    rmtree_readonly(lib.path)
     repo.scm.unignore(repo, relpath(repo.path, lib.path))
 
     
@@ -721,17 +729,17 @@ def update(rev=None,clean=False,force=False,top=True):
 
     # Compare library references (.lib) before and after update, and remove libraries that do not have references in the current revision
     for lib in repo.libs:
-        if not os.path.isfile(lib.lib) and os.path.isdir(lib.path):
-            # Library reference doesn't exist in the new revision. Will try to remove library to reproduce original structure
+        if not os.path.isfile(lib.lib) and os.path.isdir(lib.path): # Library reference doesn't exist in the new revision. Will try to remove library to reproduce original structure
+            gc = False
             with cd(lib.path):
                 lib_repo = Repo.fromrepo(lib.path)
                 gc, msg = can_update(lib_repo,clean,force)
-                if gc:
-                    action("Removing leftover library %s" % lib.path)
-                    shutil.rmtree(lib.path)
-                    repo.scm.unignore(repo, relpath(repo.path, lib.path))
-                else:
-                    error(msg, 1)
+            if gc:
+                action("Removing leftover library %s" % lib.path)
+                rmtree_readonly(lib.path)
+                repo.scm.unignore(repo, relpath(repo.path, lib.path))
+            else:
+                error(msg, 1)
 
     # Reinitialize Repo to reflect the library files after update
     repo = Repo.fromrepo()
@@ -740,16 +748,16 @@ def update(rev=None,clean=False,force=False,top=True):
     for lib in repo.libs:
         if os.path.isdir(lib.path) and Repo.isrepo(lib.path):
             lib_repo = Repo.fromrepo(lib.path)
-            if lib.url != lib_repo.url:
-                # Repository URL has changed
+            if lib.url != lib_repo.url: # Repository URL has changed
+                gc = False
                 with cd(lib.path):
                     gc, msg = can_update(lib_repo,clean,force)
-                    if gc:
-                        action("Removing library %s due to changed repository URL. Will import from the new URL." % lib.path)
-                        shutil.rmtree(lib.path)
-                        repo.scm.unignore(repo, relpath(repo.path, lib.path))
-                    else:
-                        error(msg, 1)
+                if gc:
+                    action("Removing library %s due to changed repository URL. Will import from the new URL." % lib.path)
+                    rmtree_readonly(lib.path)
+                    repo.scm.unignore(repo, relpath(repo.path, lib.path))
+                else:
+                    error(msg, 1)
 
     # Import missing repos and update to hashes
     for lib in repo.libs:
