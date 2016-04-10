@@ -200,13 +200,6 @@ def cd(newdir):
 def relpath(root, path):
     return path[len(root)+1:]
 
-# Handling for multiple version controls
-scms = {}
-def scm(name):
-    def scm(cls):
-        scms[name] = cls()
-        return cls
-    return scm
 
 def staticclass(cls):
     for k, v in cls.__dict__.items():
@@ -215,7 +208,15 @@ def staticclass(cls):
 
     return cls
 
-    
+
+# Handling for multiple version controls
+scms = {}
+def scm(name):
+    def scm(cls):
+        scms[name] = cls()
+        return cls
+    return scm
+
 @scm('hg')
 @staticclass
 class Hg(object):
@@ -224,6 +225,10 @@ class Hg(object):
 
     def isurl(url):
         return re.match('^https?\:\/\/(developer\.)?mbed\.(org|com)', url)
+
+    def init(path=None):
+        action("Initializing repository")
+        popen([hg_cmd, 'init'] + ([path] if path else []))
 
     def clone(url, name=None, hash=None):
         action("Cloning "+name+" from "+url)
@@ -363,6 +368,10 @@ class Git(object):
 
     def isurl(url):
         return re.match('\.git$', url) or re.match('^https?\:\/\/github\.com', url)
+
+    def init(path=None):
+        action("Initializing repository")
+        popen([git_cmd, 'init'] + ([path] if path else []))
 
     def clone(url, name=None, hash=None):
         action("Cloning "+name+" from "+url)
@@ -537,7 +546,7 @@ class Repo(object):
         
     @classmethod
     def findrepo(cls, path=None):
-        path = path or os.getcwd()
+        path = os.path.abspath(path or os.getcwd())
 
         while cd(path):
             if Repo.isrepo(path):
@@ -633,6 +642,36 @@ class Repo(object):
             if re.match("(.+)\.lib$", file) and os.path.isfile(file):
                 action("Remove untracked library reference \"%s\"" % file)
                 os.remove(file)
+
+
+# Clone command
+@subcommand('new', 
+    dict(name='scm', help='Source control management. Currently supported: %s' % ', '.join([s.name for s in scms.values()])),
+    dict(name='path', nargs='?', help='Destination local path. Default: current folder.'),
+    help='Create new program or library based on the specified source control management system. Currently supported: %s' % ', '.join([s.name for s in scms.values()]))
+def new(scm, path=None):
+    repo_scm = [s for s in scms.values() if s.name == scm]
+    if not repo_scm:
+        error("Please specify one of the supported source control management: %s" % ', '.join([s.name for s in scms.values()]), 1)
+
+    d_path = path or os.getcwd()
+    if os.path.isdir(d_path) and len(os.listdir(d_path)) > 1:
+        error("Directory \"%s\" is not empty. Please select different path or manually remove all files." % d_path, 1)
+
+    if Repo.isrepo(d_path):
+        error("Repository already initialized in \"%s\". Please select different path or manually remove all files." % d_path, 1)
+
+    p_path = Repo.findrepo(path)    # Find parent repository
+    repo_scm[0].init(d_path)        # Initialize repository
+    
+    if p_path:  # It's a library
+        with cd(p_path):
+            sync()
+    else:       # It's a program. Add mbed-os
+        with cd(d_path):
+            add("https://github.com/ARMmbed/mbed-os")
+        if path:
+            os.chdir(path)
 
 
 # Clone command
