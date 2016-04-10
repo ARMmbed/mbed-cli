@@ -64,10 +64,6 @@ ignores = [
     "# subrepo ignores",
     ]
 
-# Subparser handling
-parser = argparse.ArgumentParser(description="A command-line code management tool for ARM mbed OS - http://www.mbed.com\n%s uses current directory as a working context." % os.path.basename(sys.argv[0]))
-subparsers = parser.add_subparsers(title="Commands", metavar="           ")
-
 # Logging and output
 def message(msg):
     return "[%s] %s\n" % (os.path.basename(sys.argv[0]), msg)
@@ -100,34 +96,6 @@ def progress():
     sys.stdout.write(progress_spinner.next())
     sys.stdout.flush()
     sys.stdout.write('\b')
-
-# Process handling
-def subcommand(name, *args, **kwargs):
-    def subcommand(command):
-        subparser = subparsers.add_parser(name, **kwargs)
-    
-        for arg in args:
-            arg = dict(arg)
-            opt = arg['name']
-            del arg['name']
-
-            if isinstance(opt, basestring):
-                subparser.add_argument(opt, **arg)
-            else:
-                subparser.add_argument(*opt, **arg)
-    
-        def thunk(parsed_args):
-            argv = [arg['name'] for arg in args]
-            argv = [(arg if isinstance(arg, basestring) else arg[-1]).strip('-')
-                    for arg in argv]
-            argv = {arg: vars(parsed_args)[arg] for arg in argv
-                    if vars(parsed_args)[arg]}
-
-            return command(**argv)
-    
-        subparser.set_defaults(command=thunk)
-        return command
-    return subcommand
 
 
 # Process execution
@@ -524,7 +492,7 @@ class Repo(object):
         if path is None:
             path = Repo.findrepo(os.getcwd())
             if path is None:
-                error('Cannot find the root repository. Hint: use "git init" or "hg init" to create one.', 1)
+                error('Cannot find the program or library in the current path \"%s\".\nPlease change your working directory to a different location or use command \"new\" to create a new program.' % os.getcwd(), 1)
 
         repo.path = os.path.abspath(path)
         repo.name = os.path.basename(repo.path)
@@ -668,6 +636,38 @@ class Repo(object):
 cwd_type = Repo.typerepo()
 cwd_dest = "program" if cwd_type == "directory" else "library"
 
+# Subparser handling
+parser = argparse.ArgumentParser(description="A command-line code management tool for ARM mbed OS - http://www.mbed.com\n%s uses current directory as a working context." % os.path.basename(sys.argv[0]))
+subparsers = parser.add_subparsers(title="Commands", metavar="           ")
+
+# Process handling
+def subcommand(name, *args, **kwargs):
+    def subcommand(command):
+        subparser = subparsers.add_parser(name, **kwargs)
+    
+        for arg in args:
+            arg = dict(arg)
+            opt = arg['name']
+            del arg['name']
+
+            if isinstance(opt, basestring):
+                subparser.add_argument(opt, **arg)
+            else:
+                subparser.add_argument(*opt, **arg)
+    
+        def thunk(parsed_args):
+            argv = [arg['name'] for arg in args]
+            argv = [(arg if isinstance(arg, basestring) else arg[-1]).strip('-')
+                    for arg in argv]
+            argv = {arg: vars(parsed_args)[arg] for arg in argv
+                    if vars(parsed_args)[arg]}
+
+            return command(**argv)
+    
+        subparser.set_defaults(command=thunk)
+        return command
+    return subcommand
+
 # Clone command
 @subcommand('new', 
     dict(name='scm', help='Source control management. Currently supported: %s' % ', '.join([s.name for s in scms.values()])),
@@ -703,10 +703,10 @@ def new(scm, path=None):
     dict(name='url', help='URL of the %s' % cwd_dest),
     dict(name='path', nargs='?', help='Destination name or path. Default: current %s.' % cwd_type),
     help='Import a program and its dependencies into the current directory or specified destination path.')
-def import_(url, path=None):
+def import_(url, path=None, top=True):
     repo = Repo.fromurl(url, path)
 
-    if cwd_type != "directory":
+    if top and cwd_type != "directory":
         d_path = os.path.abspath(path or os.getcwd())
         error("Cannot import program in the specified location \"%s\" because it's already part of a program.\nPlease change your working directory to a different location or use command \"add\" to import the URL as a library." % d_path, 1)
 
@@ -732,7 +732,7 @@ def deploy():
     repo.scm.ignores(repo)
 
     for lib in repo.libs:
-        import_(lib.fullurl, lib.path)
+        import_(lib.fullurl, lib.path, top=False)
         repo.scm.ignore(repo, relpath(repo.path, lib.path))
 
     # This has to be replaced by one time python script from tools that sets up everything the developer needs to use the tools
@@ -750,7 +750,7 @@ def add(url, path=None):
     repo = Repo.fromrepo()
 
     lib = Repo.fromurl(url, path)
-    import_(lib.url, lib.path)
+    import_(lib.url, lib.path, top=False)
     repo.scm.ignore(repo, relpath(repo.path, lib.path))
     lib.sync()
 
@@ -811,13 +811,13 @@ def publish(top=True):
     dict(name=['-C', '--clean'], action="store_true", help="Perform a clean update and discard all local changes"),
     dict(name=['-F', '--force'], action="store_true", help="WARNING: This will enforce the original layout and will remove any local libraries and also libraries containing uncommitted or unpublished changes."),
     help='Update current %s and its dependencies from associated remote repository URLs.' % cwd_type)
-def update(rev=None,clean=False,force=False,top=True):
+def update(rev=None, clean=False, force=False, top=True):
     if top:
         sync()
     repo = Repo.fromrepo()
     
     # Fetch from remote repo
-    repo.scm.update(repo,rev,clean)
+    repo.scm.update(repo, rev, clean)
     repo.rm_untracked()
 
     # Compare library references (.lib) before and after update, and remove libraries that do not have references in the current revision
@@ -826,7 +826,7 @@ def update(rev=None,clean=False,force=False,top=True):
             gc = False
             with cd(lib.path):
                 lib_repo = Repo.fromrepo(lib.path)
-                gc, msg = can_update(lib_repo,clean,force)
+                gc, msg = can_update(lib_repo, clean, force)
             if gc:
                 action("Removing leftover library \"%s\" in \"%s\"" % (lib.name, lib.path))
                 rmtree_readonly(lib.path)
@@ -844,7 +844,7 @@ def update(rev=None,clean=False,force=False,top=True):
             if lib.url != lib_repo.url: # Repository URL has changed
                 gc = False
                 with cd(lib.path):
-                    gc, msg = can_update(lib_repo,clean,force)
+                    gc, msg = can_update(lib_repo, clean, force)
                 if gc:
                     action("Removing library \"%s\" in \"%s\" due to changed repository URL. Will import from new URL." % (lib.name, lib.path))
                     rmtree_readonly(lib.path)
@@ -856,14 +856,14 @@ def update(rev=None,clean=False,force=False,top=True):
     for lib in repo.libs:
         if os.path.isdir(lib.path):
             with cd(lib.path):
-                update(lib.hash,clean,force,top=False)
+                update(lib.hash, clean, force, top=False)
         else:
-            import_(lib.url, lib.path)
+            import_(lib.url, lib.path, top=False)
             with cd(lib.path):
-                update(lib.hash,clean,force,top=False)
+                update(lib.hash, clean, force, top=False)
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
 
-def can_update(repo,clean=False,force=False):
+def can_update(repo, clean=False, force=False):
     if repo.url is None and not force:
         return False, "Preserving local repository \"%s\" in \"%s\". Please publish the library to a remote URL to be able to restore it at any time. You can also use --force switch to remove the local libraries.\nWARNING: This action cannot be undone." % (repo.name, repo.path)
     if not clean and repo.scm.dirty():
