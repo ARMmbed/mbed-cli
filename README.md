@@ -60,7 +60,7 @@ $ mkdir myprog
 $ cd myprog
 $ "git init" or "hg init"
 <add your source files>
-$ neo.py import https://developer.mbed.org/teams/Morpheus/code/mbed-os/ # this adds the latest revision of mbed-os dependency to your project tree
+$ neo.py add https://developer.mbed.org/teams/Morpheus/code/mbed-os/ # this adds the latest revision of mbed-os dependency to your project tree
 ```
 
 `add` above works a lot like `clone`, except it adds an explicit dependency to the program that already exists on your local machine. You can get a list of all the dependencies of your program by running `neo.py ls`.
