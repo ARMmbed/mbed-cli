@@ -7,6 +7,7 @@ import subprocess
 import os
 import contextlib
 import shutil
+import stat
 from collections import *
 from itertools import *
 
@@ -16,50 +17,50 @@ git_cmd = 'git'
 
 ignores = [
     # Version control folders
-    "\.hg$",
-    "\.git$",
-    "\.svn$",
-    "\.CVS$",
-    "\.cvs$",
+    ".hg",
+    ".git",
+    ".svn",
+    ".CVS",
+    ".cvs",
     
     # Version control fallout
-    "\.orig$",
+    "*.orig",
     
     # mbed Tools
-    "\.build$",
-    "\.export$",
+    ".build",
+    ".export",
     
     # Online IDE caches
-    "\.msub$",
-    "\.meta$",
-    "\.ctags",
+    ".msub$",
+    ".meta$",
+    ".ctags*",
     
     # uVision project files
-    "\.uvproj$",
-    "\.uvopt$",
+    "*.uvproj",
+    "*.uvopt",
     
     # Eclipse project files
-    "\.project$",
-    "\.cproject$",
-    "\.launch$",
+    "*.project",
+    "*.cproject",
+    "*.launch",
     
     # IAR project files
-    "\.ewp$",
-    "\.eww$",
+    "*.ewp",
+    "*.eww",
     
     # GCC make
-    "Makefile$",
-    "Debug$",
+    "Makefile",
+    "Debug",
     
     # HTML files
-    "\.htm$",
+    "*.htm",
     
     # Settings files
-    ".settings$",
-    "mbed_settings.py$",
+    "*.settings",
+    "mbed_settings.py",
     
     # Python 
-    ".py[cod]",
+    "*.py[cod]",
     "# subrepo ignores",
     ]
 
@@ -71,7 +72,7 @@ subparsers = parser.add_subparsers(
 
 # Logging and output
 def message(msg):
-    return "["+os.path.basename(sys.argv[0])+"] "+msg+"\n"
+    return "[%s] %s\n" % (os.path.basename(sys.argv[0]), msg)
 
 def log(msg):
     sys.stderr.write(message(msg))
@@ -79,8 +80,11 @@ def log(msg):
 def action(msg):
     sys.stderr.write(message(msg))
 
+def warning(msg, code):
+    sys.stderr.write("---\n[%s WARNING] %s\n---\n" % (os.path.basename(sys.argv[0]), msg))
+
 def error(msg, code):
-    sys.stderr.write("---\n["+os.path.basename(sys.argv[0])+" ERROR] "+msg+"\n---\n")
+    sys.stderr.write("---\n[%s ERROR] %s\n---\n" % (os.path.basename(sys.argv[0]), msg))
     sys.exit(code)
 
 def progress_cursor():
@@ -145,6 +149,13 @@ def pquery(command, stdin=None, **kwargs):
         raise ProcessException(proc.returncode)
 
     return stdout
+
+def rmtree_readonly(directory):
+    def remove_readonly(func, path, _):
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
+
+    shutil.rmtree(directory, onerror=remove_readonly)
 
 # Defaults config file
 def set_cfg(file, var, val):
@@ -239,28 +250,38 @@ class Hg(object):
     def commit():
         popen([hg_cmd, 'commit'])
         
-    def push():
-        action("Pushing to remote repository")
+    def push(repo):
+        action("Pushing to remote repository \"%s\" at \"%s\"" % (repo.name, repo.url))
         popen([hg_cmd, 'push'])
         
-    def pull():
-        action("Pulling from remote repository")
+    def pull(repo):
+        action("Pulling from remote repository \"%s\" at \"%s\"" % (repo.name, repo.url))
         popen([hg_cmd, 'pull'])
 
-    def update(hash=None, clean=False):
-        action("Pulling from remote repository")
+    def update(repo, hash=None, clean=False):
+        action("Pulling from remote repository in \"%s\"" % repo.name)
         popen([hg_cmd, 'pull'])
-        action("Updating repository to %s" % ("revision "+hash if hash else "latest revision in the current branch"))
+        action("Updating \"%s\" to %s" % (repo.name, "revision "+hash if hash else "latest revision in the current branch"))
         popen([hg_cmd, 'update'] + (['-r', hash] if hash else []) + (['-C'] if clean else []))
 
     def status():
-        popen([hg_cmd, 'status'])
+        return pquery([hg_cmd, 'status'])
 
     def dirty():
         return pquery([hg_cmd, 'status', '-q'])
-       
+
+    def untracked():
+        result = pquery([hg_cmd, 'status', '-u'])
+        return re.sub('^\? ', '', result).splitlines()
+
     def outgoing():
-        return pquery([hg_cmd, 'outgoing'])
+        try:
+            pquery([hg_cmd, 'outgoing'])
+            return True
+        except ProcessException as e:
+            if e[0] != 1:
+                raise
+            return False
         
     def geturl(repo):
         tagpaths = '[paths]'
@@ -276,7 +297,6 @@ class Hg(object):
                         default_url = m.group(2)
                     else:
                         url = m.group(2)
-
         if default_url:
             url = default_url
         return url if url else pquery([hg_cmd, 'paths', 'default']).strip()
@@ -295,7 +315,7 @@ class Hg(object):
 
         exclude = os.path.join(repo.path, '.hg/hgignore')
         with open(exclude, 'w') as f:
-            f.write("syntax: regexp\n"+'\n'.join(ignores)+'\n')
+            f.write("syntax: glob\n"+'\n'.join(ignores)+'\n')
 
     def ignore(repo, file):
         hook = 'ignore.local = .hg/hgignore'
@@ -372,45 +392,57 @@ class Git(object):
     def commit():
         popen([git_cmd, 'commit', '-a'])
         
-    def push():
-        action("Pushing to remote repository")
+    def push(repo):
+        action("Pushing to remote repository \"%s\" at \"%s\"" % (repo.name, repo.url))
         popen([git_cmd, 'push', '--all'])
         
-    def pull():
-        action("Pulling from remote repository")
+    def pull(repo):
+        action("Pulling from remote repository \"%s\" at \"%s\"" % (repo.name, repo.url))
         popen([git_cmd, 'fetch', '--all'])
 
-    def update(hash=None, clean=False):
-        action("Updating repository to %s" % ("revision "+hash if hash else "latest revision in the current branch"))
+    def update(repo, hash=None, clean=False):
         if clean:
+            action("Discarding local changes in \"%s\"" % repo.name)
             popen([git_cmd, 'reset', '--hard'])
-
         if hash:
-            popen([git_cmd, 'fetch', '--all'])
+            action("Fetching from remote repository in \"%s\"" % repo.name)
+            popen([git_cmd, 'fetch', '-v', '--all'])
+            action("Updating \"%s\" to %s" % (repo.name, hash))
             popen([git_cmd, 'checkout'] + [hash])
         else:
-            popen([git_cmd, 'pull'])
+            action("Fetching from remote repository in \"%s\" and updating to latest revision in the current branch" % repo.name)
+            popen([git_cmd, 'pull', '-v', '--all'])
 
     def status():
-        popen([git_cmd, 'status', '-s'])
+        return pquery([git_cmd, 'status', '-s'])
         
     def dirty():
         return pquery([git_cmd, 'diff', '--name-only', 'HEAD'])
 
+    def untracked():
+        return pquery([git_cmd, 'ls-files', '--others', '--exclude-standard']).splitlines()
+
     def outgoing():
         try:
-            pquery([git_cmd, 'log', 'origin..'])
-            return True
+            return True if pquery([git_cmd, 'log', 'origin..']) else False
         except ProcessException as e:
             if e[0] != 1:
                 raise
-            return False
+            return True
 
     def geturl(repo):
-        return pquery([git_cmd, 'config', '--get', 'remote.origin.url']).strip()
+        url = ""
+        remotes = pquery([git_cmd, 'remote', '-v']).strip().splitlines()
+        for remote in remotes:
+            remote = re.split("\s", remote)
+            if "(fetch)" in remote:
+                url = remote[1]
+                if remote[0] == "origin": # Prefer origin URL
+                    return url
+        return url
 
     def gethash(repo):
-        return pquery([git_cmd, 'rev-parse', '--short', 'HEAD']).strip()
+        return pquery([git_cmd, 'rev-parse', '--short=12', 'HEAD']).strip()
 
     def ignores(repo):
         with open(os.path.join(repo.path, '.git/info/exclude'), 'w') as f:
@@ -426,7 +458,7 @@ class Git(object):
 
         if not exists:
             with open(exclude, 'a') as f:
-                f.write(file + '\n')
+                f.write(file.replace("\\", "/") + '\n')
 
     def unignore(repo, file):
         exclude = os.path.join(repo.path, '.git/info/exclude')
@@ -490,11 +522,11 @@ class Repo(object):
     def isrepo(cls, path=None):
         for name, scm in scms.items():
             if os.path.isdir(os.path.join(path, '.'+name)):
-               break
+               return True
         else:
             return False
             
-        return hasattr(Repo.fromrepo(path), 'url')
+        return False
         
     @classmethod
     def findrepo(cls, path=None):
@@ -584,7 +616,13 @@ class Repo(object):
 
         print self.name, '->', self.fullurl
 
-        
+    def rm_untracked(self):
+        untracked = self.scm.untracked()
+        for file in untracked:
+            if re.match("(.+)\.lib$", file) and os.path.isfile(file):
+                action("Remove untracked library reference \"%s\"" % file)
+                os.remove(file)
+
 # Clone command
 @subcommand('import', 
     dict(name='url', help='URL of the program'),
@@ -612,9 +650,7 @@ def import_(url, path=None):
         deploy()
 
 
-# Deploy command
-@subcommand('deploy',
-    help='Import dependencies in the current program or library')
+# Deploy routine. Shouldn't be called directly
 def deploy():
     repo = Repo.fromrepo()
     repo.scm.ignores(repo)
@@ -657,7 +693,7 @@ def remove(path):
     lib = Repo.fromrepo(path)
 
     repo.scm.remove(lib.lib)
-    shutil.rmtree(lib.path)
+    rmtree_readonly(lib.path)
     repo.scm.unignore(repo, relpath(repo.path, lib.path))
 
     
@@ -684,7 +720,7 @@ def publish(top=True):
 
     try:
         if repo.scm.outgoing():
-            repo.scm.push()
+            repo.scm.push(repo)
     except ProcessException as e:
         if e[0] != 1:
             raise
@@ -694,52 +730,69 @@ def publish(top=True):
 @subcommand('update',
     dict(name='rev', nargs='?', help="Revision hash or branch"),
     dict(name=['-C', '--clean'], action="store_true", help="Perform a clean update and discard all local changes"),
+    dict(name=['-F', '--force'], action="store_true", help="WARNING: This will enforce the original layout and will remove any local libraries and also libraries containing uncommitted or unpublished changes."),
     help='Update program or library and its dependencies in the current directory')
-def update(rev=None,clean=False):
+def update(rev=None,clean=False,force=False,top=True):
+    if top:
+        sync()
     repo = Repo.fromrepo()
     
     # Fetch from remote repo
-    repo.scm.update(rev,clean=clean)
+    repo.scm.update(repo,rev,clean)
+    repo.rm_untracked()
 
     # Compare library references (.lib) before and after update, and remove libraries that do not have references in the current revision
     for lib in repo.libs:
-        if not os.path.isfile(lib.lib):
-            if not clean:
-                with cd(lib.path):
-                    if Repo.fromrepo(lib.path).scm.dirty():
-                        error('Uncommitted changes in %s (%s). Please discard or stash them first and then retry update.'
-                            % (lib.name, lib.path), 1)
-
-            action("Removing leftover library %s" % lib.path)
-            shutil.rmtree(lib.path)
-            repo.scm.unignore(repo, relpath(repo.path, lib.path))
+        if not os.path.isfile(lib.lib) and os.path.isdir(lib.path): # Library reference doesn't exist in the new revision. Will try to remove library to reproduce original structure
+            gc = False
+            with cd(lib.path):
+                lib_repo = Repo.fromrepo(lib.path)
+                gc, msg = can_update(lib_repo,clean,force)
+            if gc:
+                action("Removing leftover library \"%s\" in \"%s\"" % (lib.name, lib.path))
+                rmtree_readonly(lib.path)
+                repo.scm.unignore(repo, relpath(repo.path, lib.path))
+            else:
+                error(msg, 1)
 
     # Reinitialize Repo to reflect the library files after update
     repo = Repo.fromrepo()
     
     # Recheck libraries as their URLs might have changed
     for lib in repo.libs:
-        if Repo.isrepo(lib.path) and Repo.fromrepo(lib.path).url and lib.url != Repo.fromrepo(lib.path).url:
-            if not clean:
+        if os.path.isdir(lib.path) and Repo.isrepo(lib.path):
+            lib_repo = Repo.fromrepo(lib.path)
+            if lib.url != lib_repo.url: # Repository URL has changed
+                gc = False
                 with cd(lib.path):
-                    if Repo.fromrepo(lib.path).scm.dirty():
-                        error('Uncommitted changes in %s (%s). Please discard or stash them first and then retry update.'
-                            % (lib.name, lib.path), 1)
+                    gc, msg = can_update(lib_repo,clean,force)
+                if gc:
+                    action("Removing library \"%s\" in \"%s\" due to changed repository URL. Will import from new URL." % (lib.name, lib.path))
+                    rmtree_readonly(lib.path)
+                    repo.scm.unignore(repo, relpath(repo.path, lib.path))
+                else:
+                    error(msg, 1)
 
-            action("Removing library %s due to changed repository URL" % lib.path)
-            shutil.rmtree(lib.path)
-            repo.scm.unignore(repo, relpath(repo.path, lib.path))
-    
     # Import missing repos and update to hashes
     for lib in repo.libs:
         if os.path.isdir(lib.path):
             with cd(lib.path):
-                update(lib.hash,clean)
+                update(lib.hash,clean,force,top=False)
         else:
             import_(lib.url, lib.path)
             with cd(lib.path):
-                update(lib.hash,clean)
+                update(lib.hash,clean,force,top=False)
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
+
+def can_update(repo,clean=False,force=False):
+    if repo.url is None and not force:
+        return False, "Preserving local repository \"%s\" in \"%s\". Please publish the library to a remote URL to be able to restore it at any time. You can also use --force switch to remove the local libraries.\nWARNING: This action cannot be undone." % (repo.name, repo.path)
+    if not clean and repo.scm.dirty():
+        return False, "Uncommitted changes in \"%s\" in \"%s\". Please discard or stash them first and then retry update. You can also use --clean switch to discard all uncommitted changes.\nWARNING: This action cannot be undone." % (repo.name, repo.path)
+    if not force and repo.scm.outgoing():
+        return False, "Unpublished changes in \"%s\" in \"%s\". Please publish them first using the \"publish\" command. You can also use --force to discard all local commits and replace the library with the one included in this revision.\nWARNING: This action cannot be undone." % (repo.name, repo.path)
+
+    return True, "OK"
             
 # Synch command
 @subcommand('sync',
@@ -810,8 +863,8 @@ def list_(all=False, prefix=''):
 def status():
     repo = Repo.fromrepo()
     if repo.scm.dirty():
-        print '---', repo.name, '---'
-        repo.scm.status()
+        action("Status for \"%s\":" % repo.name)
+        print repo.scm.status()
 
     for lib in repo.libs:
         with cd(lib.path):
@@ -932,7 +985,7 @@ args, remainder = parser.parse_known_args()
 try:
     status = args.command(args)
 except ProcessException as e:
-    error('Process exit with error code %d' % e[0], e[0])
+    error('Subrocess exit with error code %d' % e[0], e[0])
 except KeyboardInterrupt as e:
     error('User aborted!', 255)
 
