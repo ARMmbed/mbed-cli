@@ -530,6 +530,24 @@ class Repo(object):
         return None
 
     @classmethod
+    def findroot(cls, path=None):
+        path = os.path.abspath(path or os.getcwd())
+        rpath = None
+
+        while cd(path):
+            tpath = path
+            path = Repo.findrepo(path)
+            if path:
+                rpath = path
+                path = os.path.split(path)[0]
+                if tpath == path:       # Reached root.
+                    break
+            else:
+                break
+
+        return rpath
+
+    @classmethod
     def typerepo(cls, path=None):
         path = os.path.abspath(path or os.getcwd())
 
@@ -668,6 +686,7 @@ def subcommand(name, *args, **kwargs):
         return command
     return subcommand
 
+
 # Clone command
 @subcommand('new', 
     dict(name='scm', help='Source control management. Currently supported: %s' % ', '.join([s.name for s in scms.values()])),
@@ -757,7 +776,7 @@ def add(url, path=None):
     lib.write()
     repo.scm.add(lib.lib)
 
-    
+
 @subcommand('remove', 
     dict(name='path', help="Local library name or path"),
     help='Remove specified library and its dependencies from the current %s.' % cwd_type)
@@ -772,7 +791,7 @@ def remove(path):
     rmtree_readonly(lib.path)
     repo.scm.unignore(repo, relpath(repo.path, lib.path))
 
-    
+
 # Publish command
 @subcommand('publish',
     help='Publish current %s and its dependencies to associated remote repository URLs.' % cwd_type)
@@ -790,9 +809,8 @@ def publish(top=True):
             publish(False)
 
     sync(recursive=False)
-    dirty = repo.scm.dirty()
 
-    if dirty:
+    if repo.scm.dirty():
         action('Uncommitted changes in %s (%s)' % (repo.name, repo.path))
         raw_input('Press enter to commit and push: ')
         repo.scm.commit()
@@ -804,7 +822,7 @@ def publish(top=True):
         if e[0] != 1:
             raise
 
-            
+
 # Update command
 @subcommand('update',
     dict(name='rev', nargs='?', help="Revision hash or branch"),
@@ -812,6 +830,16 @@ def publish(top=True):
     dict(name=['-F', '--force'], action="store_true", help="WARNING: This will enforce the original layout and will remove any local libraries and also libraries containing uncommitted or unpublished changes."),
     help='Update current %s and its dependencies from associated remote repository URLs.' % cwd_type)
 def update(rev=None, clean=False, force=False, top=True):
+    def can_update(repo, clean=False, force=False):
+        if repo.url is None and not force:
+            return False, "Preserving local repository \"%s\" in \"%s\". Please publish the library to a remote URL to be able to restore it at any time. You can also use --force switch to remove the local libraries.\nWARNING: This action cannot be undone." % (repo.name, repo.path)
+        if not clean and repo.scm.dirty():
+            return False, "Uncommitted changes in \"%s\" in \"%s\". Please discard or stash them first and then retry update. You can also use --clean switch to discard all uncommitted changes.\nWARNING: This action cannot be undone." % (repo.name, repo.path)
+        if not force and repo.scm.outgoing():
+            return False, "Unpublished changes in \"%s\" in \"%s\". Please publish them first using the \"publish\" command. You can also use --force to discard all local commits and replace the library with the one included in this revision.\nWARNING: This action cannot be undone." % (repo.name, repo.path)
+
+        return True, "OK"
+
     if top:
         sync()
     repo = Repo.fromrepo()
@@ -834,8 +862,8 @@ def update(rev=None, clean=False, force=False, top=True):
             else:
                 error(msg, 1)
 
-    # Reinitialize Repo to reflect the library files after update
-    repo = Repo.fromrepo()
+    # Reinitialize repo.libs() to reflect the library files after update
+    repo.sync()
     
     # Recheck libraries as their URLs might have changed
     for lib in repo.libs:
@@ -863,15 +891,6 @@ def update(rev=None, clean=False, force=False, top=True):
                 update(lib.hash, clean, force, top=False)
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
 
-def can_update(repo, clean=False, force=False):
-    if repo.url is None and not force:
-        return False, "Preserving local repository \"%s\" in \"%s\". Please publish the library to a remote URL to be able to restore it at any time. You can also use --force switch to remove the local libraries.\nWARNING: This action cannot be undone." % (repo.name, repo.path)
-    if not clean and repo.scm.dirty():
-        return False, "Uncommitted changes in \"%s\" in \"%s\". Please discard or stash them first and then retry update. You can also use --clean switch to discard all uncommitted changes.\nWARNING: This action cannot be undone." % (repo.name, repo.path)
-    if not force and repo.scm.outgoing():
-        return False, "Unpublished changes in \"%s\" in \"%s\". Please publish them first using the \"publish\" command. You can also use --force to discard all local commits and replace the library with the one included in this revision.\nWARNING: This action cannot be undone." % (repo.name, repo.path)
-
-    return True, "OK"
 
 
 # Synch command
@@ -932,13 +951,12 @@ def list_(all=False, prefix=''):
             nprefix = prefix[:-3] + ('|  ' if prefix[-3] == '|' else '   ')
         else:
             nprefix = ''
-
         nprefix += '|- ' if i < len(repo.libs)-1 else '`- '
 
         with cd(lib.path):
             list_(all, nprefix)
 
-            
+
 @subcommand('status',
     help='Show status of the current %s and its dependencies.' % cwd_type)
 def status():
@@ -951,41 +969,43 @@ def status():
         with cd(lib.path):
             status()
 
-            
+
 @subcommand('compile',
     dict(name=['-t', '--toolchain'], help="Compile toolchain. Example: ARM, uARM, GCC_ARM, IAR"),
     dict(name=['-m', '--mcu'], help="Compile target. Example: K64F, NUCLEO_F401RE, NRF51822..."),
     help='Compile program using the native mbed OS build system.')
 def compile(toolchain=None, mcu=None):
-    if not os.path.isdir('mbed-os'):
-        error('mbed-os not found?\n', -1)
+    root_path = Repo.findroot(os.getcwd())
+    if not root_path:
+        Repo.fromrepo()
+    with cd(root_path):
+        if not os.path.isdir('mbed-os'):
+            error('The mbed-os codebase and tools were not found in this program.', -1)
 
-    args = remainder
-    repo = Repo.fromrepo()
-    file = os.path.join(repo.scm.store, 'neo')
+        args = remainder
+        repo = Repo.fromrepo()
+        file = os.path.join(repo.scm.store, 'neo')
 
-    target = mcu if mcu else get_cfg(file, 'TARGET')
-    if target is None:
-        error('Please specify compile target using the -m switch or set default target using command "target"', 1)
-        
-    tchain = toolchain if toolchain else get_cfg(file, 'TOOLCHAIN')
-    if tchain is None:
-        error('Please specify compile toolchain using the -t switch or set default toolchain using command "toolchain"', 1)
+        target = mcu if mcu else get_cfg(file, 'TARGET')
+        if target is None:
+            error('Please specify compile target using the -m switch or set default target using command "target"', 1)
+            
+        tchain = toolchain if toolchain else get_cfg(file, 'TOOLCHAIN')
+        if tchain is None:
+            error('Please specify compile toolchain using the -t switch or set default toolchain using command "toolchain"', 1)
 
-    macros = []
-    if os.path.isfile('MACROS.txt'):
-        with open('MACROS.txt') as f:
-            macros = f.read().splitlines()
+        macros = []
+        if os.path.isfile('MACROS.txt'):
+            with open('MACROS.txt') as f:
+                macros = f.read().splitlines()
 
-    env = os.environ.copy()
-    env['PYTHONPATH'] = '.'
-    popen(['python', 'mbed-os/tools/make.py']
-        + list(chain.from_iterable(izip(repeat('-D'), macros)))
-        + ['-t', tchain, '-m', target,
-           '--source=.',
-           '--build=%s' % os.path.join('.build', target, tchain)]
-        + args,
-        env=env)
+        env = os.environ.copy()
+        env['PYTHONPATH'] = '.'
+        popen(['python', 'mbed-os/tools/make.py']
+            + list(chain.from_iterable(izip(repeat('-D'), macros)))
+            + ['-t', tchain, '-m', target, '--source=.', '--build=%s' % os.path.join('.build', target, tchain)]
+            + args,
+            env=env)
 
         
 # Export command
@@ -994,29 +1014,33 @@ def compile(toolchain=None, mcu=None):
     dict(name=['-m', '--mcu'], help="Export for target MCU. Example: K64F, NUCLEO_F401RE, NRF51822..."),
     help='Generate project files for desktop IDEs for the current program.')
 def export(ide=None, mcu=None):
-    if not os.path.isdir('mbed-os'):
-        error('mbed-os not found?\n', -1)
+    root_path = Repo.findroot(os.getcwd())
+    if not root_path:
+        Repo.fromrepo()
+    with cd(root_path):
+        if not os.path.isdir('mbed-os'):
+            error('The mbed-os codebase and tools were not found in this program.', -1)
 
-    args = remainder
-    repo = Repo.fromrepo()
-    file = os.path.join(repo.scm.store, 'neo')
-    
-    target = mcu if mcu else get_cfg(file, 'TARGET')
-    if target is None:
-        error('Please specify export target using the -m switch or set default target using command "target"', 1)
+        args = remainder
+        repo = Repo.fromrepo()
+        file = os.path.join(repo.scm.store, 'neo')
+        
+        target = mcu if mcu else get_cfg(file, 'TARGET')
+        if target is None:
+            error('Please specify export target using the -m switch or set default target using command "target"', 1)
 
-    macros = []
-    if os.path.isfile('MACROS.txt'):
-        with open('MACROS.txt') as f:
-            macros = f.read().splitlines()
+        macros = []
+        if os.path.isfile('MACROS.txt'):
+            with open('MACROS.txt') as f:
+                macros = f.read().splitlines()
 
-    env = os.environ.copy()
-    env['PYTHONPATH'] = '.'
-    popen(['python', 'mbed-os/tools/project.py']
-        + list(chain.from_iterable(izip(repeat('-D'), macros)))
-        + ['-m', target, '--source=%s' % repo.path]
-        + args,
-        env=env)
+        env = os.environ.copy()
+        env['PYTHONPATH'] = '.'
+        popen(['python', 'mbed-os/tools/project.py']
+            + list(chain.from_iterable(izip(repeat('-D'), macros)))
+            + ['-m', target, '--source=%s' % repo.path]
+            + args,
+            env=env)
 
         
 # Build system and exporters
@@ -1024,36 +1048,32 @@ def export(ide=None, mcu=None):
     dict(name='name', nargs='?', help="Default target name. Example: K64F, NUCLEO_F401RE, NRF51822..."),
     help='Set default target for the current program.')
 def target(name=None):
-    repo = Repo.fromrepo()
-    
-    file = os.path.join(repo.scm.store, 'neo')
-    if name is None:
-        name = get_cfg(file, 'TARGET')
-        if name:
-            action('The current target for this program is "%s"' % name)
-        else:
-            action('No target is specified for this program')
-    else:        
-        set_cfg(file, 'TARGET', name)
-        action('"%s" now set as default target' % name)
+    root_path = Repo.findroot(os.getcwd())
+    with cd(root_path):
+        repo = Repo.fromrepo()
+        file = os.path.join(repo.scm.store, 'neo')
+        if name is None:
+            name = get_cfg(file, 'TARGET')
+            action(('The default target for program "%s" is "%s"' % (repo.name, name)) if name else 'No default target is specified for program "%s"' % repo.name)
+        else:        
+            set_cfg(file, 'TARGET', name)
+            action('"%s" now set as default target for program "%s"' % (name, repo.name))
 
     
 @subcommand('toolchain',
     dict(name='name', nargs='?', help="Default toolchain name. Example: ARM, uARM, GCC_ARM, IAR"),
     help='Sets default toolchain for the current program.')
 def toolchain(name=None):
-    repo = Repo.fromrepo()
-    
-    file = os.path.join(repo.scm.store, 'neo')
-    if name is None:
-        name = get_cfg(file, 'TOOLCHAIN')
-        if name:
-            action('The current toolchain for this program is "%s"' % name)
+    root_path = Repo.findroot(os.getcwd())
+    with cd(root_path):
+        repo = Repo.fromrepo()        
+        file = os.path.join(repo.scm.store, 'neo')
+        if name is None:
+            name = get_cfg(file, 'TOOLCHAIN')
+            action(('The default toolchain for program "%s" is "%s"' % (repo.name, name)) if name else 'No default toolchain is specified for program "%s"' % repo.name)
         else:
-            action('No toolchain is specified for this program')
-    else:
-        set_cfg(file, 'TOOLCHAIN', name)
-        action('"%s" now set as default toolchain' % name)
+            set_cfg(file, 'TOOLCHAIN', name)
+            action('"%s" now set as default toolchain for program "%s"' % (name, repo.name))
 
 
 # Parse/run command
