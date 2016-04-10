@@ -141,7 +141,7 @@ def popen(command, stdin=None, **kwargs):
         raise ProcessException(proc.returncode)
 
 def pquery(command, stdin=None, **kwargs):
-    #log("Query "+' '.join(command))
+    #log("Query "+' '.join(command)+" in "+os.getcwd())
     proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
     stdout, _ = proc.communicate(stdin)
 
@@ -479,19 +479,26 @@ class Git(object):
 
 # Repository object
 class Repo(object):
+    is_local = False
+    
     @classmethod
     def fromurl(cls, url, path=None):
         repo = cls()
-
-        m = re.match('^(.*/([\w+-]+)(?:\.\w+)?)/?(?:#(.*))?$', url.strip())
-        if not m:
+        m_local = re.match('^([\w./+-]+)/?(?:#(.*))?$', url.strip())
+        m_url = re.match('^(.*/([\w+-]+)(?:\.\w+)?)/?(?:#(.*))?$', url.strip())
+        if m_local:
+            repo.name = os.path.basename(path or m_local.group(1))
+            repo.path = os.path.abspath(path or os.path.join(os.getcwd(), m_local.group(1)))
+            repo.url = m_local.group(1)
+            repo.hash = m_local.group(2)
+            repo.is_local = True
+        elif m_url:
+            repo.name = os.path.basename(path or m_url.group(2))
+            repo.path = os.path.abspath(path or os.path.join(os.getcwd(), repo.name))
+            repo.url = m_url.group(1)
+            repo.hash = m_url.group(3)
+        else:
             error('Invalid repository (%s)' % url.strip(), -1)
-
-        repo.name = os.path.basename(path or m.group(2))
-        repo.path = os.path.abspath(path or os.path.join(os.getcwd(), repo.name))
-
-        repo.url = m.group(1)
-        repo.hash = m.group(3)
         return repo
 
     @classmethod
@@ -564,6 +571,10 @@ class Repo(object):
 
             try:
                 self.url = self.geturl()
+                if not self.url:
+                    self.is_local = True
+                    ppath = self.findrepo(os.path.split(self.path)[0])
+                    self.url = relpath(ppath, self.path).replace("\\", "/") if ppath else os.path.basename(self.path)
             except ProcessException:
                 pass
 
@@ -614,7 +625,7 @@ class Repo(object):
         with open(self.lib, 'wb') as f:
             f.write(self.fullurl + '\n')
 
-        print self.name, '->', self.fullurl
+        action("Update reference \"%s\" -> \"%s\"" % (self.name, self.fullurl))
 
     def rm_untracked(self):
         untracked = self.scm.untracked()
@@ -622,6 +633,7 @@ class Repo(object):
             if re.match("(.+)\.lib$", file) and os.path.isfile(file):
                 action("Remove untracked library reference \"%s\"" % file)
                 os.remove(file)
+
 
 # Clone command
 @subcommand('import', 
@@ -703,6 +715,9 @@ def publish(top=True):
         action("Checking for modifications...")
 
     repo = Repo.fromrepo()
+    if repo.is_local:
+        error("%s \"%s\" in \"%s\" is a local repository.\nPlease associate it with a remote repository URL before attempting to publish.\nRead more about %s repositories here:\nhttp://developer.mbed.org/handbook/how-to-publish-with-%s/" % ("Program" if top else "Library", repo.name, repo.path, repo.scm.name, repo.scm.name), 1)
+
     for lib in repo.libs:
         with cd(lib.path):
             progress()
@@ -808,6 +823,7 @@ def sync(recursive=True, top=True):
             lib.write()
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
         else:
+            action("Remove reference \"%s\" -> \"%s\"" % (lib.name, lib.fullurl))
             repo.scm.remove(lib.lib)
             repo.scm.unignore(repo, relpath(repo.path, lib.path))
 
