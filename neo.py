@@ -828,7 +828,7 @@ def publish(top=True):
     dict(name='rev', nargs='?', help="Revision hash, tag or branch"),
     dict(name=['-C', '--clean'], action="store_true", help="Perform a clean update and discard all local changes. WARNING: This action cannot be undone. Use with caution."),
     dict(name=['-F', '--force'], action="store_true", help="Enforce the original layout and will remove any local libraries and also libraries containing uncommitted or unpublished changes. WARNING: This action cannot be undone. Use with caution."),
-    dict(name=['-I', '--ignore'], action="store_true", help="Ignore local libraries and attempt to update from associated remote repository URLs."),
+    dict(name=['-I', '--ignore'], action="store_true", help="Ignore errors regarding unpiblished libraries, unpublished or uncommitted changes, and attempt to update from associated remote repository URLs."),
     help='Update current %s and its dependencies from associated remote repository URLs.' % cwd_type)
 def update(rev=None, clean=False, force=False, ignore=False, top=True):
     def can_update(repo, clean, force):
@@ -861,7 +861,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True):
                 rmtree_readonly(lib.path)
                 repo.scm.unignore(repo, relpath(repo.path, lib.path))
             else:
-                if lib.is_local and ignore:
+                if ignore:
                     warning(msg, 1)
                 else:
                     error(msg, 1)
@@ -882,7 +882,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True):
                     rmtree_readonly(lib.path)
                     repo.scm.unignore(repo, relpath(repo.path, lib.path))
                 else:
-                    if lib.is_local and ignore:
+                    if ignore:
                         warning(msg, 1)
                     else:
                         error(msg, 1)
