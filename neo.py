@@ -226,15 +226,15 @@ class Hg(object):
         popen([hg_cmd, 'commit'])
         
     def push(repo):
-        action("Pushing to remote repository \"%s\" at \"%s\"" % (repo.name, repo.url))
+        action("Pushing local repository \"%s\" to remote \"%s\"" % (repo.name, repo.url))
         popen([hg_cmd, 'push'])
         
     def pull(repo):
-        action("Pulling from remote repository \"%s\" at \"%s\"" % (repo.name, repo.url))
+        action("Pulling remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
         popen([hg_cmd, 'pull'])
 
     def update(repo, hash=None, clean=False):
-        action("Pulling from remote repository in \"%s\"" % repo.name)
+        action("Pulling remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
         popen([hg_cmd, 'pull'])
         action("Updating \"%s\" to %s" % (repo.name, "revision "+hash if hash else "latest revision in the current branch"))
         popen([hg_cmd, 'update'] + (['-r', hash] if hash else []) + (['-C'] if clean else []))
@@ -372,11 +372,11 @@ class Git(object):
         popen([git_cmd, 'commit', '-a'])
         
     def push(repo):
-        action("Pushing to remote repository \"%s\" at \"%s\"" % (repo.name, repo.url))
+        action("Pushing local repository \"%s\" to remote \"%s\"" % (repo.name, repo.url))
         popen([git_cmd, 'push', '--all'])
         
     def pull(repo):
-        action("Pulling from remote repository \"%s\" at \"%s\"" % (repo.name, repo.url))
+        action("Pulling remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
         popen([git_cmd, 'fetch', '--all'])
 
     def update(repo, hash=None, clean=False):
@@ -384,12 +384,12 @@ class Git(object):
             action("Discarding local changes in \"%s\"" % repo.name)
             popen([git_cmd, 'reset', '--hard'])
         if hash:
-            action("Fetching from remote repository in \"%s\"" % repo.name)
+            action("Fetching remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
             popen([git_cmd, 'fetch', '-v', '--all'])
             action("Updating \"%s\" to %s" % (repo.name, hash))
             popen([git_cmd, 'checkout'] + [hash])
         else:
-            action("Fetching from remote repository in \"%s\" and updating to latest revision in the current branch" % repo.name)
+            action("Fetching remote repository \"%s\" to local \"%s\" and updating to latest revision in the current branch" % (repo.url, repo.name))
             popen([git_cmd, 'pull', '-v', '--all'])
 
     def status():
