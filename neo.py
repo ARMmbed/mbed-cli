@@ -891,11 +891,11 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True):
     for lib in repo.libs:
         if os.path.isdir(lib.path):
             with cd(lib.path):
-                update(lib.hash, clean, force, top=False)
+                update(lib.hash, clean, force, ignore, top=False)
         else:
             import_(lib.url, lib.path, top=False)
             with cd(lib.path):
-                update(lib.hash, clean, force, top=False)
+                update(lib.hash, clean, force, ignore, top=False)
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
 
 
