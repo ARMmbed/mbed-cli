@@ -65,10 +65,8 @@ ignores = [
     ]
 
 # Subparser handling
-parser = argparse.ArgumentParser(
-    description="ARM mbed neo.py")
-subparsers = parser.add_subparsers(
-    title="Commands", metavar="")
+parser = argparse.ArgumentParser(description="A command-line code management tool for ARM mbed OS - http://www.mbed.com\n%s uses current directory as a working context." % os.path.basename(sys.argv[0]))
+subparsers = parser.add_subparsers(title="Commands", metavar="           ")
 
 # Logging and output
 def message(msg):
@@ -81,10 +79,14 @@ def action(msg):
     sys.stderr.write(message(msg))
 
 def warning(msg, code):
-    sys.stderr.write("---\n[%s WARNING] %s\n---\n" % (os.path.basename(sys.argv[0]), msg))
+    for line in msg.splitlines():
+        sys.stderr.write("[%s WARNING] %s\n" % (os.path.basename(sys.argv[0]), line))
+    sys.stderr.write("---\n")
 
 def error(msg, code):
-    sys.stderr.write("---\n[%s ERROR] %s\n---\n" % (os.path.basename(sys.argv[0]), msg))
+    for line in msg.splitlines():
+        sys.stderr.write("[%s ERROR] %s\n" % (os.path.basename(sys.argv[0]), line))
+    sys.stderr.write("---\n")
     sys.exit(code)
 
 def progress_cursor():
@@ -543,7 +545,7 @@ class Repo(object):
             return False
             
         return False
-        
+
     @classmethod
     def findrepo(cls, path=None):
         path = os.path.abspath(path or os.getcwd())
@@ -558,6 +560,24 @@ class Repo(object):
                 break
 
         return None
+
+    @classmethod
+    def typerepo(cls, path=None):
+        path = os.path.abspath(path or os.getcwd())
+
+        depth = 0
+        while cd(path):
+            tpath = path
+            path = Repo.findrepo(path)
+            if path:
+                depth += 1
+                path = os.path.split(path)[0]
+                if tpath == path:       # Reached root.
+                    break
+            else:
+                break
+
+        return "directory" if depth == 0 else ("program" if depth == 1 else "library")
 
     @property
     def lib(self):
@@ -644,22 +664,26 @@ class Repo(object):
                 os.remove(file)
 
 
+# Help messages adapt based on current dir
+cwd_type = Repo.typerepo()
+cwd_dest = "program" if cwd_type == "directory" else "library"
+
 # Clone command
 @subcommand('new', 
     dict(name='scm', help='Source control management. Currently supported: %s' % ', '.join([s.name for s in scms.values()])),
-    dict(name='path', nargs='?', help='Destination local path. Default: current folder.'),
-    help='Create new program or library based on the specified source control management system. Currently supported: %s' % ', '.join([s.name for s in scms.values()]))
+    dict(name='path', nargs='?', help='Destination name or path. Default: current folder.'),
+    help='Create a new program based on the specified source control management. Will create a new library when called from inside a local program. Supported SCMs: %s.' % (', '.join([s.name for s in scms.values()])))
 def new(scm, path=None):
-    repo_scm = [s for s in scms.values() if s.name == scm]
+    repo_scm = [s for s in scms.values() if s.name == scm.lower()]
     if not repo_scm:
-        error("Please specify one of the supported source control management: %s" % ', '.join([s.name for s in scms.values()]), 1)
+        error("Please specify one of the following source control management systems: %s" % ', '.join([s.name for s in scms.values()]), 1)
 
     d_path = path or os.getcwd()
     if os.path.isdir(d_path) and len(os.listdir(d_path)) > 1:
         error("Directory \"%s\" is not empty. Please select different path or manually remove all files." % d_path, 1)
 
     if Repo.isrepo(d_path):
-        error("Repository already initialized in \"%s\". Please select different path or manually remove all files." % d_path, 1)
+        error("A %s is already initialized in \"%s\". Please select different path or manually remove all files." % (cwd_dest, d_path), 1)
 
     p_path = Repo.findrepo(path)    # Find parent repository
     repo_scm[0].init(d_path)        # Initialize repository
@@ -676,11 +700,15 @@ def new(scm, path=None):
 
 # Clone command
 @subcommand('import', 
-    dict(name='url', help='URL of the program'),
-    dict(name='path', nargs='?', help='Destination local path'),
-    help='Import a program into the current directory')
+    dict(name='url', help='URL of the %s' % cwd_dest),
+    dict(name='path', nargs='?', help='Destination name or path. Default: current %s.' % cwd_type),
+    help='Import a program and its dependencies into the current directory or specified destination path.')
 def import_(url, path=None):
     repo = Repo.fromurl(url, path)
+
+    if cwd_type != "directory":
+        d_path = os.path.abspath(path or os.getcwd())
+        error("Cannot import program in the specified location \"%s\" because it's already part of a program.\nPlease change your working directory to a different location or use command \"add\" to import the URL as a library." % d_path, 1)
 
     # Sorted so repositories that match urls are attempted first
     sorted_scms = [(scm.isurl(url), scm) for scm in scms.values()]
@@ -698,7 +726,6 @@ def import_(url, path=None):
     with cd(repo.path):
         deploy()
 
-
 # Deploy routine. Shouldn't be called directly
 def deploy():
     repo = Repo.fromrepo()
@@ -713,12 +740,12 @@ def deploy():
         os.path.isfile('mbed-os/tools/default_settings.py')):
         shutil.copy('mbed-os/tools/default_settings.py', 'mbed_settings.py')
 
-        
+
 # Install/uninstall command
 @subcommand('add', 
     dict(name='url', help="URL of the library"),
-    dict(name='path', nargs='?', help="Destination local path"),
-    help='Add a library and its dependencies to the current directory')
+    dict(name='path', nargs='?', help="Destination name or path. Default: current folder."),
+    help='Add a library and its dependencies into the current %s or specified destination path.' % cwd_type)
 def add(url, path=None):
     repo = Repo.fromrepo()
 
@@ -733,7 +760,7 @@ def add(url, path=None):
     
 @subcommand('remove', 
     dict(name='path', help="Local library name or path"),
-    help='Remove a library and its dependencies from the current directory')
+    help='Remove specified library and its dependencies from the current %s.' % cwd_type)
 def remove(path):
     repo = Repo.fromrepo()
     if not Repo.isrepo(path):
@@ -748,10 +775,10 @@ def remove(path):
     
 # Publish command
 @subcommand('publish',
-    help='Publish program or library and its dependencies from the current directory')
+    help='Publish current %s and its dependencies to associated remote repository URLs.' % cwd_type)
 def publish(top=True):
     if top:
-        action("Checking for modifications...")
+        action("Checking for local modifications...")
 
     repo = Repo.fromrepo()
     if repo.is_local:
@@ -783,7 +810,7 @@ def publish(top=True):
     dict(name='rev', nargs='?', help="Revision hash or branch"),
     dict(name=['-C', '--clean'], action="store_true", help="Perform a clean update and discard all local changes"),
     dict(name=['-F', '--force'], action="store_true", help="WARNING: This will enforce the original layout and will remove any local libraries and also libraries containing uncommitted or unpublished changes."),
-    help='Update program or library and its dependencies in the current directory')
+    help='Update current %s and its dependencies from associated remote repository URLs.' % cwd_type)
 def update(rev=None,clean=False,force=False,top=True):
     if top:
         sync()
@@ -845,10 +872,11 @@ def can_update(repo,clean=False,force=False):
         return False, "Unpublished changes in \"%s\" in \"%s\". Please publish them first using the \"publish\" command. You can also use --force to discard all local commits and replace the library with the one included in this revision.\nWARNING: This action cannot be undone." % (repo.name, repo.path)
 
     return True, "OK"
-            
+
+
 # Synch command
 @subcommand('sync',
-    help='Synchronize dependency references (.lib files)')
+    help='Synchronize dependency references (.lib files) in the current %s.' % cwd_type)
 def sync(recursive=True, top=True):
     if top and recursive:
         action("Synchronizing dependency references...")
@@ -894,7 +922,7 @@ def sync(recursive=True, top=True):
             
 @subcommand('ls',
     dict(name=['-a', '--all'], action='store_true', help="List repository URL and hash pairs"),
-    help='View program or library tree.')
+    help='View the current %s dependency tree.' % cwd_type)
 def list_(all=False, prefix=''):
     repo = Repo.fromrepo()
     print prefix + repo.name, '(%s)' % (repo.url if all else repo.hash)
@@ -912,7 +940,7 @@ def list_(all=False, prefix=''):
 
             
 @subcommand('status',
-    help='Show status of program or library and its dependencies in the current directory')
+    help='Show status of the current %s and its dependencies.' % cwd_type)
 def status():
     repo = Repo.fromrepo()
     if repo.scm.dirty():
@@ -927,7 +955,7 @@ def status():
 @subcommand('compile',
     dict(name=['-t', '--toolchain'], help="Compile toolchain. Example: ARM, uARM, GCC_ARM, IAR"),
     dict(name=['-m', '--mcu'], help="Compile target. Example: K64F, NUCLEO_F401RE, NRF51822..."),
-    help='Compile program using the native mbed OS build system')
+    help='Compile program using the native mbed OS build system.')
 def compile(toolchain=None, mcu=None):
     if not os.path.isdir('mbed-os'):
         error('mbed-os not found?\n', -1)
@@ -964,7 +992,7 @@ def compile(toolchain=None, mcu=None):
 @subcommand('export',
     dict(name=['-i', '--ide'], help="IDE to create project files for. Example: UVISION,DS5,IAR", required=True),
     dict(name=['-m', '--mcu'], help="Export for target MCU. Example: K64F, NUCLEO_F401RE, NRF51822..."),
-    help='Generate project files for desktop IDEs')
+    help='Generate project files for desktop IDEs for the current program.')
 def export(ide=None, mcu=None):
     if not os.path.isdir('mbed-os'):
         error('mbed-os not found?\n', -1)
@@ -994,7 +1022,7 @@ def export(ide=None, mcu=None):
 # Build system and exporters
 @subcommand('target',
     dict(name='name', nargs='?', help="Default target name. Example: K64F, NUCLEO_F401RE, NRF51822..."),
-    help='Set default target when compiling and exporting')
+    help='Set default target for the current program.')
 def target(name=None):
     repo = Repo.fromrepo()
     
@@ -1012,7 +1040,7 @@ def target(name=None):
     
 @subcommand('toolchain',
     dict(name='name', nargs='?', help="Default toolchain name. Example: ARM, uARM, GCC_ARM, IAR"),
-    help='Sets default toolchain')
+    help='Sets default toolchain for the current program.')
 def toolchain(name=None):
     repo = Repo.fromrepo()
     
@@ -1036,6 +1064,7 @@ if len(sys.argv) <= 1:
 args, remainder = parser.parse_known_args()
 
 try:
+    log('Working path \"%s\" (%s)' % (os.getcwd(), cwd_type))
     status = args.command(args)
 except ProcessException as e:
     error('Subrocess exit with error code %d' % e[0], e[0])
