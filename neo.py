@@ -826,17 +826,18 @@ def publish(top=True):
 # Update command
 @subcommand('update',
     dict(name='rev', nargs='?', help="Revision hash or branch"),
-    dict(name=['-C', '--clean'], action="store_true", help="Perform a clean update and discard all local changes"),
-    dict(name=['-F', '--force'], action="store_true", help="WARNING: This will enforce the original layout and will remove any local libraries and also libraries containing uncommitted or unpublished changes."),
+    dict(name=['-C', '--clean'], action="store_true", help="Perform a clean update and discard all local changes. WARNING: This action cannot be undone. Use with caution."),
+    dict(name=['-F', '--force'], action="store_true", help="Enforce the original layout and will remove any local libraries and also libraries containing uncommitted or unpublished changes. WARNING: This action cannot be undone. Use with caution."),
+    dict(name=['-I', '--ignore'], action="store_true", help="Ignore local libraries and attempt to update from associated remote repository URLs."),
     help='Update current %s and its dependencies from associated remote repository URLs.' % cwd_type)
-def update(rev=None, clean=False, force=False, top=True):
-    def can_update(repo, clean=False, force=False):
-        if repo.url is None and not force:
-            return False, "Preserving local repository \"%s\" in \"%s\". Please publish the library to a remote URL to be able to restore it at any time. You can also use --force switch to remove the local libraries.\nWARNING: This action cannot be undone." % (repo.name, repo.path)
+def update(rev=None, clean=False, force=False, ignore=False, top=True):
+    def can_update(repo, clean, force):
+        if (repo.is_local or repo.url is None) and not force:
+            return False, "Preserving local library \"%s\" in \"%s\".\nPlease publish this library to a remote URL to be able to restore it at any time.\nYou can use --ignore switch to ignore all local libraries and update only the published ones.\nYou can also use --force switch to remove all local libraries. WARNING: This action cannot be undone." % (repo.name, repo.path)
         if not clean and repo.scm.dirty():
-            return False, "Uncommitted changes in \"%s\" in \"%s\". Please discard or stash them first and then retry update. You can also use --clean switch to discard all uncommitted changes.\nWARNING: This action cannot be undone." % (repo.name, repo.path)
+            return False, "Uncommitted changes in \"%s\" in \"%s\".\nPlease discard or stash them first and then retry update.\nYou can also use --clean switch to discard all uncommitted changes. WARNING: This action cannot be undone." % (repo.name, repo.path)
         if not force and repo.scm.outgoing():
-            return False, "Unpublished changes in \"%s\" in \"%s\". Please publish them first using the \"publish\" command. You can also use --force to discard all local commits and replace the library with the one included in this revision.\nWARNING: This action cannot be undone." % (repo.name, repo.path)
+            return False, "Unpublished changes in \"%s\" in \"%s\".\nPlease publish them first using the \"publish\" command.\nYou can also use --force to discard all local commits and replace the library with the one included in this revision. WARNING: This action cannot be undone." % (repo.name, repo.path)
 
         return True, "OK"
 
@@ -860,7 +861,10 @@ def update(rev=None, clean=False, force=False, top=True):
                 rmtree_readonly(lib.path)
                 repo.scm.unignore(repo, relpath(repo.path, lib.path))
             else:
-                error(msg, 1)
+                if lib.is_local and ignore:
+                    warning(msg, 1)
+                else:
+                    error(msg, 1)
 
     # Reinitialize repo.libs() to reflect the library files after update
     repo.sync()
@@ -878,7 +882,10 @@ def update(rev=None, clean=False, force=False, top=True):
                     rmtree_readonly(lib.path)
                     repo.scm.unignore(repo, relpath(repo.path, lib.path))
                 else:
-                    error(msg, 1)
+                    if lib.is_local and ignore:
+                        warning(msg, 1)
+                    else:
+                        error(msg, 1)
 
     # Import missing repos and update to hashes
     for lib in repo.libs:
