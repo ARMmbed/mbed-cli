@@ -825,7 +825,7 @@ def publish(top=True):
 
 # Update command
 @subcommand('update',
-    dict(name='rev', nargs='?', help="Revision hash or branch"),
+    dict(name='rev', nargs='?', help="Revision hash, tag or branch"),
     dict(name=['-C', '--clean'], action="store_true", help="Perform a clean update and discard all local changes. WARNING: This action cannot be undone. Use with caution."),
     dict(name=['-F', '--force'], action="store_true", help="Enforce the original layout and will remove any local libraries and also libraries containing uncommitted or unpublished changes. WARNING: This action cannot be undone. Use with caution."),
     dict(name=['-I', '--ignore'], action="store_true", help="Ignore local libraries and attempt to update from associated remote repository URLs."),
