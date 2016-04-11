@@ -49,18 +49,18 @@ $ cd mbed-Client-Morpheus-from-source
 ```
 
 <span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: some of the repositories that *neo* will clone might require special access (Mercurial will ask you for your credentials if that's the case). If you don't have access, e-mail [mihail.stoyanov@arm.com](mailto:mihail.stoyanov@arm.com) or [bogdan.marinescu@arm.com](mailto:bogdan.marinescu@arm.com) with your developer.mbed.org account name.</span>
+
 ### Creating a new program
 
-If you want to create a new program rather than importing an existing one, we recommend that you depend on the [mbed-os library] (https://developer.mbed.org/teams/Morpheus/code/mbed-os/). This library represents a **release** of mbed OS and will pull in all the components of the OS, including its build system and desktop IDE project generators. In the future, when we introduce mbed OS **releases**, you'll get the guarantee that all the components in *mbed-os* passed integration tests, so that you know they work properly together. 
+If you want to create a new program rather than importing an existing one, *neo* will automatically import the [mbed-os library] for you (https://developer.mbed.org/teams/Morpheus/code/mbed-os/). This library represents a **release** of mbed OS and will pull in all the components of the OS, including its build system and desktop IDE project generators. In the future, when we introduce mbed OS **releases**, you'll get the guarantee that all the components in *mbed-os* passed integration tests, so that you know they work properly together. 
 
 With this in mind, these are the steps for creating a new program (we'll call it `myprog`):
 
 ```
 $ mkdir myprog
 $ cd myprog
-$ "git init" or "hg init"
+$ "neo.py new git" or "neo.py new hg"   # this creates new project in the current folder based on the source control management you specified, and also imports the latest revision of mbed-os dependency to your project tree
 <add your source files>
-$ neo.py add https://developer.mbed.org/teams/Morpheus/code/mbed-os/ # this adds the latest revision of mbed-os dependency to your project tree
 ```
 
 `add` above works a lot like `clone`, except it adds an explicit dependency to the program that already exists on your local machine. You can get a list of all the dependencies of your program by running `neo.py ls`.
@@ -185,12 +185,27 @@ As you work on your code, you'll edit parts of it: either your own program code 
 
 To synchronize changes that you made to the directory structure you can run ``neo.py sync``, which will update the necessary library references and get rid of the invalid ones.
 
-
 ### Updating to an upstream version
 
 To update your program to another upstream version, go to the root of the program and run `neo.py update [rev]`. It will update the program to the specified revision (or to the latest one if `rev` is not specified), then update recursively all the other dependencies to match the top-level dependencies in `rev`. 
 
-<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: This command will fail if there are changes in your local repository that will be overwritten as a result of running `update`. This is by design: *neo* does not run operations that would result in overwriting local changes that are not yet committed. If you get an error, take care of your local changes (commit or abandon them manually), then re-run `update`.</span>
+<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: This command will fail if there are changes in your local repository that will be overwritten as a result of running `update`. This is by design: *neo* does not run operations that would result in overwriting local changes that are not yet committed. If you get an error, take care of your local changes (commit or use one of the switches below), then re-run `update`.</span>
+
+There are 3 `update` switches that define the handling of your source tree:
+
+`neo.py update --clean` - update the current program or library and its dependencies, and discard all local changes. This is useful for when you modified something and you want to the original state of your source tree. Use this with caution as your uncommitted changes cannot be restored.
+
+`neo.py update --ignore` - update the current program or library and its dependencies, and ignore any local unpublished libraries as if they are not present of your source tree (they won't be deleted or modified, just ignored)
+
+`neo.py update --force` - update the current program or library and its dependencies, and discard all local unpublished repositories. Use this with caution as your local unpublished repositories cannot be restored unless you have a backupi copy.
+
+You can combine the switches above for the following scenarios:
+
+`neo.py update --clean --ignore` - update the current program or library and its depedencies, but ignore any local repositories, e.g. update whatever you can from public repositories.
+
+`neo.py update --clean --force` - update the current program or library and all its depedencies, and restore my source tree to stock layout. This wipes every single change you made in the source tree that didn't belong to the original commit.
+
+
 ### Pushing upstream
 To push the changes in your local tree upstream, run `neo.py publish`. `publish` works recursively, pushing the leaf dependencies first, then updating the dependents and pushing them too. 
 
