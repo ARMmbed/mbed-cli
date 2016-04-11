@@ -9,7 +9,6 @@ This document covers the installation and usage of *neo*.
 <span style="background-color:#ffffe6;border:1px solid #000;display:block; height:100%; padding:10px">**Warning**: At this point, *neo* is alpha quality and very much in development. Breakages are fully expected. Please open issues on this repository for any problems that you find with *neo*.</span>
 
 
-1. *neo* assumes that you always work with remotely hosted repositories. If you depend on a library in a repository that exists only on your local machine (as opposed to a host like GitHub of developer.mbed.org), various neo commands might not work as expected. If you want to depend on a new library, create it locally, push it to a remote host, then depend on the remote URL of the library, not the local one. **Note that this limitation will be resolved soon**.
 1. *neo* does not check whether you have Mercurial or Git installed and assumes that they are available.
 
 # Installation
