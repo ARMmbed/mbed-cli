@@ -7,6 +7,7 @@ import subprocess
 import os
 import contextlib
 import shutil
+import stat
 from collections import *
 from itertools import *
 
@@ -16,62 +17,56 @@ git_cmd = 'git'
 
 ignores = [
     # Version control folders
-    "\.hg$",
-    "\.git$",
-    "\.svn$",
-    "\.CVS$",
-    "\.cvs$",
+    ".hg",
+    ".git",
+    ".svn",
+    ".CVS",
+    ".cvs",
     
     # Version control fallout
-    "\.orig$",
+    "*.orig",
     
     # mbed Tools
-    "\.build$",
-    "\.export$",
+    ".build",
+    ".export",
     
     # Online IDE caches
-    "\.msub$",
-    "\.meta$",
-    "\.ctags",
+    ".msub$",
+    ".meta$",
+    ".ctags*",
     
     # uVision project files
-    "\.uvproj$",
-    "\.uvopt$",
+    "*.uvproj",
+    "*.uvopt",
     
     # Eclipse project files
-    "\.project$",
-    "\.cproject$",
-    "\.launch$",
+    "*.project",
+    "*.cproject",
+    "*.launch",
     
     # IAR project files
-    "\.ewp$",
-    "\.eww$",
+    "*.ewp",
+    "*.eww",
     
     # GCC make
-    "Makefile$",
-    "Debug$",
+    "Makefile",
+    "Debug",
     
     # HTML files
-    "\.htm$",
+    "*.htm",
     
     # Settings files
-    ".settings$",
-    "mbed_settings.py$",
+    "*.settings",
+    "mbed_settings.py",
     
     # Python 
-    ".py[cod]",
+    "*.py[cod]",
     "# subrepo ignores",
     ]
 
-# Subparser handling
-parser = argparse.ArgumentParser(
-    description="ARM mbed neo.py")
-subparsers = parser.add_subparsers(
-    title="Commands", metavar="")
-
 # Logging and output
 def message(msg):
-    return "["+os.path.basename(sys.argv[0])+"] "+msg+"\n"
+    return "[%s] %s\n" % (os.path.basename(sys.argv[0]), msg)
 
 def log(msg):
     sys.stderr.write(message(msg))
@@ -79,8 +74,15 @@ def log(msg):
 def action(msg):
     sys.stderr.write(message(msg))
 
+def warning(msg, code):
+    for line in msg.splitlines():
+        sys.stderr.write("[%s WARNING] %s\n" % (os.path.basename(sys.argv[0]), line))
+    sys.stderr.write("---\n")
+
 def error(msg, code):
-    sys.stderr.write("---\n["+os.path.basename(sys.argv[0])+" ERROR] "+msg+"\n---\n")
+    for line in msg.splitlines():
+        sys.stderr.write("[%s ERROR] %s\n" % (os.path.basename(sys.argv[0]), line))
+    sys.stderr.write("---\n")
     sys.exit(code)
 
 def progress_cursor():
@@ -94,34 +96,6 @@ def progress():
     sys.stdout.write(progress_spinner.next())
     sys.stdout.flush()
     sys.stdout.write('\b')
-
-# Process handling
-def subcommand(name, *args, **kwargs):
-    def subcommand(command):
-        subparser = subparsers.add_parser(name, **kwargs)
-    
-        for arg in args:
-            arg = dict(arg)
-            opt = arg['name']
-            del arg['name']
-
-            if isinstance(opt, basestring):
-                subparser.add_argument(opt, **arg)
-            else:
-                subparser.add_argument(*opt, **arg)
-    
-        def thunk(parsed_args):
-            argv = [arg['name'] for arg in args]
-            argv = [(arg if isinstance(arg, basestring) else arg[-1]).strip('-')
-                    for arg in argv]
-            argv = {arg: vars(parsed_args)[arg] for arg in argv
-                    if vars(parsed_args)[arg]}
-
-            return command(**argv)
-    
-        subparser.set_defaults(command=thunk)
-        return command
-    return subcommand
 
 
 # Process execution
@@ -137,7 +111,7 @@ def popen(command, stdin=None, **kwargs):
         raise ProcessException(proc.returncode)
 
 def pquery(command, stdin=None, **kwargs):
-    #log("Query "+' '.join(command))
+    #log("Query "+' '.join(command)+" in "+os.getcwd())
     proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
     stdout, _ = proc.communicate(stdin)
 
@@ -145,6 +119,13 @@ def pquery(command, stdin=None, **kwargs):
         raise ProcessException(proc.returncode)
 
     return stdout
+
+def rmtree_readonly(directory):
+    def remove_readonly(func, path, _):
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
+
+    shutil.rmtree(directory, onerror=remove_readonly)
 
 # Defaults config file
 def set_cfg(file, var, val):
@@ -189,13 +170,6 @@ def cd(newdir):
 def relpath(root, path):
     return path[len(root)+1:]
 
-# Handling for multiple version controls
-scms = {}
-def scm(name):
-    def scm(cls):
-        scms[name] = cls()
-        return cls
-    return scm
 
 def staticclass(cls):
     for k, v in cls.__dict__.items():
@@ -204,7 +178,15 @@ def staticclass(cls):
 
     return cls
 
-    
+
+# Handling for multiple version controls
+scms = {}
+def scm(name):
+    def scm(cls):
+        scms[name] = cls()
+        return cls
+    return scm
+
 @scm('hg')
 @staticclass
 class Hg(object):
@@ -213,6 +195,10 @@ class Hg(object):
 
     def isurl(url):
         return re.match('^https?\:\/\/(developer\.)?mbed\.(org|com)', url)
+
+    def init(path=None):
+        action("Initializing repository")
+        popen([hg_cmd, 'init'] + ([path] if path else []))
 
     def clone(url, name=None, hash=None):
         action("Cloning "+name+" from "+url)
@@ -239,28 +225,38 @@ class Hg(object):
     def commit():
         popen([hg_cmd, 'commit'])
         
-    def push():
-        action("Pushing to remote repository")
+    def push(repo):
+        action("Pushing local repository \"%s\" to remote \"%s\"" % (repo.name, repo.url))
         popen([hg_cmd, 'push'])
         
-    def pull():
-        action("Pulling from remote repository")
+    def pull(repo):
+        action("Pulling remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
         popen([hg_cmd, 'pull'])
 
-    def update(hash=None, clean=False):
-        action("Pulling from remote repository")
+    def update(repo, hash=None, clean=False):
+        action("Pulling remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
         popen([hg_cmd, 'pull'])
-        action("Updating repository to %s" % ("revision "+hash if hash else "latest revision in the current branch"))
+        action("Updating \"%s\" to %s" % (repo.name, "revision "+hash if hash else "latest revision in the current branch"))
         popen([hg_cmd, 'update'] + (['-r', hash] if hash else []) + (['-C'] if clean else []))
 
     def status():
-        popen([hg_cmd, 'status'])
+        return pquery([hg_cmd, 'status'])
 
     def dirty():
         return pquery([hg_cmd, 'status', '-q'])
-       
+
+    def untracked():
+        result = pquery([hg_cmd, 'status', '-u'])
+        return re.sub('^\? ', '', result).splitlines()
+
     def outgoing():
-        return pquery([hg_cmd, 'outgoing'])
+        try:
+            pquery([hg_cmd, 'outgoing'])
+            return True
+        except ProcessException as e:
+            if e[0] != 1:
+                raise
+            return False
         
     def geturl(repo):
         tagpaths = '[paths]'
@@ -276,7 +272,6 @@ class Hg(object):
                         default_url = m.group(2)
                     else:
                         url = m.group(2)
-
         if default_url:
             url = default_url
         return url if url else pquery([hg_cmd, 'paths', 'default']).strip()
@@ -295,7 +290,7 @@ class Hg(object):
 
         exclude = os.path.join(repo.path, '.hg/hgignore')
         with open(exclude, 'w') as f:
-            f.write("syntax: regexp\n"+'\n'.join(ignores)+'\n')
+            f.write("syntax: glob\n"+'\n'.join(ignores)+'\n')
 
     def ignore(repo, file):
         hook = 'ignore.local = .hg/hgignore'
@@ -344,6 +339,10 @@ class Git(object):
     def isurl(url):
         return re.match('\.git$', url) or re.match('^https?\:\/\/github\.com', url)
 
+    def init(path=None):
+        action("Initializing repository")
+        popen([git_cmd, 'init'] + ([path] if path else []))
+
     def clone(url, name=None, hash=None):
         action("Cloning "+name+" from "+url)
         popen([git_cmd, 'clone', url, name])
@@ -372,45 +371,57 @@ class Git(object):
     def commit():
         popen([git_cmd, 'commit', '-a'])
         
-    def push():
-        action("Pushing to remote repository")
+    def push(repo):
+        action("Pushing local repository \"%s\" to remote \"%s\"" % (repo.name, repo.url))
         popen([git_cmd, 'push', '--all'])
         
-    def pull():
-        action("Pulling from remote repository")
+    def pull(repo):
+        action("Pulling remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
         popen([git_cmd, 'fetch', '--all'])
 
-    def update(hash=None, clean=False):
-        action("Updating repository to %s" % ("revision "+hash if hash else "latest revision in the current branch"))
+    def update(repo, hash=None, clean=False):
         if clean:
+            action("Discarding local changes in \"%s\"" % repo.name)
             popen([git_cmd, 'reset', '--hard'])
-
         if hash:
-            popen([git_cmd, 'fetch', '--all'])
+            action("Fetching remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
+            popen([git_cmd, 'fetch', '-v', '--all'])
+            action("Updating \"%s\" to %s" % (repo.name, hash))
             popen([git_cmd, 'checkout'] + [hash])
         else:
-            popen([git_cmd, 'pull'])
+            action("Fetching remote repository \"%s\" to local \"%s\" and updating to latest revision in the current branch" % (repo.url, repo.name))
+            popen([git_cmd, 'pull', '-v', '--all'])
 
     def status():
-        popen([git_cmd, 'status', '-s'])
+        return pquery([git_cmd, 'status', '-s'])
         
     def dirty():
         return pquery([git_cmd, 'diff', '--name-only', 'HEAD'])
 
+    def untracked():
+        return pquery([git_cmd, 'ls-files', '--others', '--exclude-standard']).splitlines()
+
     def outgoing():
         try:
-            pquery([git_cmd, 'log', 'origin..'])
-            return True
+            return True if pquery([git_cmd, 'log', 'origin..']) else False
         except ProcessException as e:
             if e[0] != 1:
                 raise
-            return False
+            return True
 
     def geturl(repo):
-        return pquery([git_cmd, 'config', '--get', 'remote.origin.url']).strip()
+        url = ""
+        remotes = pquery([git_cmd, 'remote', '-v']).strip().splitlines()
+        for remote in remotes:
+            remote = re.split("\s", remote)
+            if "(fetch)" in remote:
+                url = remote[1]
+                if remote[0] == "origin": # Prefer origin URL
+                    return url
+        return url
 
     def gethash(repo):
-        return pquery([git_cmd, 'rev-parse', '--short', 'HEAD']).strip()
+        return pquery([git_cmd, 'rev-parse', '--short=12', 'HEAD']).strip()
 
     def ignores(repo):
         with open(os.path.join(repo.path, '.git/info/exclude'), 'w') as f:
@@ -426,7 +437,7 @@ class Git(object):
 
         if not exists:
             with open(exclude, 'a') as f:
-                f.write(file + '\n')
+                f.write(file.replace("\\", "/") + '\n')
 
     def unignore(repo, file):
         exclude = os.path.join(repo.path, '.git/info/exclude')
@@ -447,19 +458,26 @@ class Git(object):
 
 # Repository object
 class Repo(object):
+    is_local = False
+    
     @classmethod
     def fromurl(cls, url, path=None):
         repo = cls()
-
-        m = re.match('^(.*/([\w+-]+)(?:\.\w+)?)/?(?:#(.*))?$', url.strip())
-        if not m:
+        m_local = re.match('^([\w./+-]+)/?(?:#(.*))?$', url.strip())
+        m_url = re.match('^(.*/([\w+-]+)(?:\.\w+)?)/?(?:#(.*))?$', url.strip())
+        if m_local:
+            repo.name = os.path.basename(path or m_local.group(1))
+            repo.path = os.path.abspath(path or os.path.join(os.getcwd(), m_local.group(1)))
+            repo.url = m_local.group(1)
+            repo.hash = m_local.group(2)
+            repo.is_local = True
+        elif m_url:
+            repo.name = os.path.basename(path or m_url.group(2))
+            repo.path = os.path.abspath(path or os.path.join(os.getcwd(), repo.name))
+            repo.url = m_url.group(1)
+            repo.hash = m_url.group(3)
+        else:
             error('Invalid repository (%s)' % url.strip(), -1)
-
-        repo.name = os.path.basename(path or m.group(2))
-        repo.path = os.path.abspath(path or os.path.join(os.getcwd(), repo.name))
-
-        repo.url = m.group(1)
-        repo.hash = m.group(3)
         return repo
 
     @classmethod
@@ -474,7 +492,7 @@ class Repo(object):
         if path is None:
             path = Repo.findrepo(os.getcwd())
             if path is None:
-                error('Cannot find the root repository. Hint: use "git init" or "hg init" to create one.', 1)
+                error('Cannot find the program or library in the current path \"%s\".\nPlease change your working directory to a different location or use command \"new\" to create a new program.' % os.getcwd(), 1)
 
         repo.path = os.path.abspath(path)
         repo.name = os.path.basename(repo.path)
@@ -490,15 +508,15 @@ class Repo(object):
     def isrepo(cls, path=None):
         for name, scm in scms.items():
             if os.path.isdir(os.path.join(path, '.'+name)):
-               break
+               return True
         else:
             return False
             
-        return hasattr(Repo.fromrepo(path), 'url')
-        
+        return False
+
     @classmethod
     def findrepo(cls, path=None):
-        path = path or os.getcwd()
+        path = os.path.abspath(path or os.getcwd())
 
         while cd(path):
             if Repo.isrepo(path):
@@ -510,6 +528,42 @@ class Repo(object):
                 break
 
         return None
+
+    @classmethod
+    def findroot(cls, path=None):
+        path = os.path.abspath(path or os.getcwd())
+        rpath = None
+
+        while cd(path):
+            tpath = path
+            path = Repo.findrepo(path)
+            if path:
+                rpath = path
+                path = os.path.split(path)[0]
+                if tpath == path:       # Reached root.
+                    break
+            else:
+                break
+
+        return rpath
+
+    @classmethod
+    def typerepo(cls, path=None):
+        path = os.path.abspath(path or os.getcwd())
+
+        depth = 0
+        while cd(path):
+            tpath = path
+            path = Repo.findrepo(path)
+            if path:
+                depth += 1
+                path = os.path.split(path)[0]
+                if tpath == path:       # Reached root.
+                    break
+            else:
+                break
+
+        return "directory" if depth == 0 else ("program" if depth == 1 else "library")
 
     @property
     def lib(self):
@@ -532,6 +586,10 @@ class Repo(object):
 
             try:
                 self.url = self.geturl()
+                if not self.url:
+                    self.is_local = True
+                    ppath = self.findrepo(os.path.split(self.path)[0])
+                    self.url = relpath(ppath, self.path).replace("\\", "/") if ppath else os.path.basename(self.path)
             except ProcessException:
                 pass
 
@@ -582,16 +640,94 @@ class Repo(object):
         with open(self.lib, 'wb') as f:
             f.write(self.fullurl + '\n')
 
-        print self.name, '->', self.fullurl
+        action("Update reference \"%s\" -> \"%s\"" % (self.name, self.fullurl))
 
-        
+    def rm_untracked(self):
+        untracked = self.scm.untracked()
+        for file in untracked:
+            if re.match("(.+)\.lib$", file) and os.path.isfile(file):
+                action("Remove untracked library reference \"%s\"" % file)
+                os.remove(file)
+
+
+# Help messages adapt based on current dir
+cwd_type = Repo.typerepo()
+cwd_dest = "program" if cwd_type == "directory" else "library"
+
+# Subparser handling
+parser = argparse.ArgumentParser(description="A command-line code management tool for ARM mbed OS - http://www.mbed.com\n%s uses current directory as a working context." % os.path.basename(sys.argv[0]))
+subparsers = parser.add_subparsers(title="Commands", metavar="           ")
+
+# Process handling
+def subcommand(name, *args, **kwargs):
+    def subcommand(command):
+        subparser = subparsers.add_parser(name, **kwargs)
+    
+        for arg in args:
+            arg = dict(arg)
+            opt = arg['name']
+            del arg['name']
+
+            if isinstance(opt, basestring):
+                subparser.add_argument(opt, **arg)
+            else:
+                subparser.add_argument(*opt, **arg)
+    
+        def thunk(parsed_args):
+            argv = [arg['name'] for arg in args]
+            argv = [(arg if isinstance(arg, basestring) else arg[-1]).strip('-')
+                    for arg in argv]
+            argv = {arg: vars(parsed_args)[arg] for arg in argv
+                    if vars(parsed_args)[arg]}
+
+            return command(**argv)
+    
+        subparser.set_defaults(command=thunk)
+        return command
+    return subcommand
+
+
+# Clone command
+@subcommand('new', 
+    dict(name='scm', help='Source control management. Currently supported: %s' % ', '.join([s.name for s in scms.values()])),
+    dict(name='path', nargs='?', help='Destination name or path. Default: current folder.'),
+    help='Create a new program based on the specified source control management. Will create a new library when called from inside a local program. Supported SCMs: %s.' % (', '.join([s.name for s in scms.values()])))
+def new(scm, path=None):
+    repo_scm = [s for s in scms.values() if s.name == scm.lower()]
+    if not repo_scm:
+        error("Please specify one of the following source control management systems: %s" % ', '.join([s.name for s in scms.values()]), 1)
+
+    d_path = path or os.getcwd()
+    if os.path.isdir(d_path) and len(os.listdir(d_path)) > 1:
+        error("Directory \"%s\" is not empty. Please select different path or manually remove all files." % d_path, 1)
+
+    if Repo.isrepo(d_path):
+        error("A %s is already initialized in \"%s\". Please select different path or manually remove all files." % (cwd_dest, d_path), 1)
+
+    p_path = Repo.findrepo(path)    # Find parent repository
+    repo_scm[0].init(d_path)        # Initialize repository
+    
+    if p_path:  # It's a library
+        with cd(p_path):
+            sync()
+    else:       # It's a program. Add mbed-os
+        with cd(d_path):
+            add("https://github.com/ARMmbed/mbed-os")
+        if path:
+            os.chdir(path)
+
+
 # Clone command
 @subcommand('import', 
-    dict(name='url', help='URL of the program'),
-    dict(name='path', nargs='?', help='Destination local path'),
-    help='Import a program into the current directory')
-def import_(url, path=None):
+    dict(name='url', help='URL of the %s' % cwd_dest),
+    dict(name='path', nargs='?', help='Destination name or path. Default: current %s.' % cwd_type),
+    help='Import a program and its dependencies into the current directory or specified destination path.')
+def import_(url, path=None, top=True):
     repo = Repo.fromurl(url, path)
+
+    if top and cwd_type != "directory":
+        d_path = os.path.abspath(path or os.getcwd())
+        error("Cannot import program in the specified location \"%s\" because it's already part of a program.\nPlease change your working directory to a different location or use command \"add\" to import the URL as a library." % d_path, 1)
 
     # Sorted so repositories that match urls are attempted first
     sorted_scms = [(scm.isurl(url), scm) for scm in scms.values()]
@@ -611,44 +747,47 @@ def import_(url, path=None):
     with cd(repo.path):
         deploy()
 
-
 # Deploy command
 @subcommand('deploy',
-    help='Import dependencies in the current program or library')
+    help="Import missing dependencies in the current program or library.")
 def deploy():
     repo = Repo.fromrepo()
     repo.scm.ignores(repo)
 
     for lib in repo.libs:
-        import_(lib.fullurl, lib.path)
-        repo.scm.ignore(repo, relpath(repo.path, lib.path))
+        if not os.path.isdir(lib.path):
+            import_(lib.fullurl, lib.path, top=False)
+        else:
+            with cd(lib.path):
+                deploy()
+            repo.scm.ignore(repo, relpath(repo.path, lib.path))
 
     # This has to be replaced by one time python script from tools that sets up everything the developer needs to use the tools
     if (not os.path.isfile('mbed_settings.py') and 
         os.path.isfile('mbed-os/tools/default_settings.py')):
         shutil.copy('mbed-os/tools/default_settings.py', 'mbed_settings.py')
 
-        
+
 # Install/uninstall command
 @subcommand('add', 
     dict(name='url', help="URL of the library"),
-    dict(name='path', nargs='?', help="Destination local path"),
-    help='Add a library and its dependencies to the current directory')
+    dict(name='path', nargs='?', help="Destination name or path. Default: current folder."),
+    help='Add a library and its dependencies into the current %s or specified destination path.' % cwd_type)
 def add(url, path=None):
     repo = Repo.fromrepo()
 
     lib = Repo.fromurl(url, path)
-    import_(lib.url, lib.path)
+    import_(lib.url, lib.path, top=False)
     repo.scm.ignore(repo, relpath(repo.path, lib.path))
     lib.sync()
 
     lib.write()
     repo.scm.add(lib.lib)
 
-    
+
 @subcommand('remove', 
     dict(name='path', help="Local library name or path"),
-    help='Remove a library and its dependencies from the current directory')
+    help='Remove specified library and its dependencies from the current %s.' % cwd_type)
 def remove(path):
     repo = Repo.fromrepo()
     if not Repo.isrepo(path):
@@ -657,93 +796,121 @@ def remove(path):
     lib = Repo.fromrepo(path)
 
     repo.scm.remove(lib.lib)
-    shutil.rmtree(lib.path)
+    rmtree_readonly(lib.path)
     repo.scm.unignore(repo, relpath(repo.path, lib.path))
 
-    
+
 # Publish command
 @subcommand('publish',
-    help='Publish program or library and its dependencies from the current directory')
+    help='Publish current %s and its dependencies to associated remote repository URLs.' % cwd_type)
 def publish(top=True):
     if top:
-        action("Checking for modifications...")
+        action("Checking for local modifications...")
 
     repo = Repo.fromrepo()
+    if repo.is_local:
+        error("%s \"%s\" in \"%s\" is a local repository.\nPlease associate it with a remote repository URL before attempting to publish.\nRead more about %s repositories here:\nhttp://developer.mbed.org/handbook/how-to-publish-with-%s/" % ("Program" if top else "Library", repo.name, repo.path, repo.scm.name, repo.scm.name), 1)
+
     for lib in repo.libs:
         with cd(lib.path):
             progress()
             publish(False)
 
     sync(recursive=False)
-    dirty = repo.scm.dirty()
 
-    if dirty:
+    if repo.scm.dirty():
         action('Uncommitted changes in %s (%s)' % (repo.name, repo.path))
         raw_input('Press enter to commit and push: ')
         repo.scm.commit()
 
     try:
         if repo.scm.outgoing():
-            repo.scm.push()
+            repo.scm.push(repo)
     except ProcessException as e:
         if e[0] != 1:
             raise
 
-            
+
 # Update command
 @subcommand('update',
-    dict(name='rev', nargs='?', help="Revision hash or branch"),
-    dict(name=['-C', '--clean'], action="store_true", help="Perform a clean update and discard all local changes"),
-    help='Update program or library and its dependencies in the current directory')
-def update(rev=None,clean=False):
+    dict(name='rev', nargs='?', help="Revision hash, tag or branch"),
+    dict(name=['-C', '--clean'], action="store_true", help="Perform a clean update and discard all local changes. WARNING: This action cannot be undone. Use with caution."),
+    dict(name=['-F', '--force'], action="store_true", help="Enforce the original layout and will remove any local libraries and also libraries containing uncommitted or unpublished changes. WARNING: This action cannot be undone. Use with caution."),
+    dict(name=['-I', '--ignore'], action="store_true", help="Ignore errors regarding unpiblished libraries, unpublished or uncommitted changes, and attempt to update from associated remote repository URLs."),
+    help='Update current %s and its dependencies from associated remote repository URLs.' % cwd_type)
+def update(rev=None, clean=False, force=False, ignore=False, top=True):
+    def can_update(repo, clean, force):
+        if (repo.is_local or repo.url is None) and not force:
+            return False, "Preserving local library \"%s\" in \"%s\".\nPlease publish this library to a remote URL to be able to restore it at any time.\nYou can use --ignore switch to ignore all local libraries and update only the published ones.\nYou can also use --force switch to remove all local libraries. WARNING: This action cannot be undone." % (repo.name, repo.path)
+        if not clean and repo.scm.dirty():
+            return False, "Uncommitted changes in \"%s\" in \"%s\".\nPlease discard or stash them first and then retry update.\nYou can also use --clean switch to discard all uncommitted changes. WARNING: This action cannot be undone." % (repo.name, repo.path)
+        if not force and repo.scm.outgoing():
+            return False, "Unpublished changes in \"%s\" in \"%s\".\nPlease publish them first using the \"publish\" command.\nYou can also use --force to discard all local commits and replace the library with the one included in this revision. WARNING: This action cannot be undone." % (repo.name, repo.path)
+
+        return True, "OK"
+
+    if top:
+        sync()
     repo = Repo.fromrepo()
     
     # Fetch from remote repo
-    repo.scm.update(rev,clean=clean)
+    repo.scm.update(repo, rev, clean)
+    repo.rm_untracked()
 
     # Compare library references (.lib) before and after update, and remove libraries that do not have references in the current revision
     for lib in repo.libs:
-        if not os.path.isfile(lib.lib):
-            if not clean:
-                with cd(lib.path):
-                    if Repo.fromrepo(lib.path).scm.dirty():
-                        error('Uncommitted changes in %s (%s). Please discard or stash them first and then retry update.'
-                            % (lib.name, lib.path), 1)
+        if not os.path.isfile(lib.lib) and os.path.isdir(lib.path): # Library reference doesn't exist in the new revision. Will try to remove library to reproduce original structure
+            gc = False
+            with cd(lib.path):
+                lib_repo = Repo.fromrepo(lib.path)
+                gc, msg = can_update(lib_repo, clean, force)
+            if gc:
+                action("Removing leftover library \"%s\" in \"%s\"" % (lib.name, lib.path))
+                rmtree_readonly(lib.path)
+                repo.scm.unignore(repo, relpath(repo.path, lib.path))
+            else:
+                if ignore:
+                    warning(msg, 1)
+                else:
+                    error(msg, 1)
 
-            action("Removing leftover library %s" % lib.path)
-            shutil.rmtree(lib.path)
-            repo.scm.unignore(repo, relpath(repo.path, lib.path))
-
-    # Reinitialize Repo to reflect the library files after update
-    repo = Repo.fromrepo()
+    # Reinitialize repo.libs() to reflect the library files after update
+    repo.sync()
     
     # Recheck libraries as their URLs might have changed
     for lib in repo.libs:
-        if Repo.isrepo(lib.path) and Repo.fromrepo(lib.path).url and lib.url != Repo.fromrepo(lib.path).url:
-            if not clean:
+        if os.path.isdir(lib.path) and Repo.isrepo(lib.path):
+            lib_repo = Repo.fromrepo(lib.path)
+            if lib.url != lib_repo.url: # Repository URL has changed
+                gc = False
                 with cd(lib.path):
-                    if Repo.fromrepo(lib.path).scm.dirty():
-                        error('Uncommitted changes in %s (%s). Please discard or stash them first and then retry update.'
-                            % (lib.name, lib.path), 1)
+                    gc, msg = can_update(lib_repo, clean, force)
+                if gc:
+                    action("Removing library \"%s\" in \"%s\" due to changed repository URL. Will import from new URL." % (lib.name, lib.path))
+                    rmtree_readonly(lib.path)
+                    repo.scm.unignore(repo, relpath(repo.path, lib.path))
+                else:
+                    if ignore:
+                        warning(msg, 1)
+                    else:
+                        error(msg, 1)
 
-            action("Removing library %s due to changed repository URL" % lib.path)
-            shutil.rmtree(lib.path)
-            repo.scm.unignore(repo, relpath(repo.path, lib.path))
-    
     # Import missing repos and update to hashes
     for lib in repo.libs:
         if os.path.isdir(lib.path):
             with cd(lib.path):
-                update(lib.hash,clean)
+                update(lib.hash, clean, force, ignore, top=False)
         else:
-            import_(lib.url, lib.path)
+            import_(lib.url, lib.path, top=False)
             with cd(lib.path):
-                update(lib.hash,clean)
+                update(lib.hash, clean, force, ignore, top=False)
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
-            
+
+
+
 # Synch command
 @subcommand('sync',
-    help='Synchronize dependency references (.lib files)')
+    help='Synchronize dependency references (.lib files) in the current %s.' % cwd_type)
 def sync(recursive=True, top=True):
     if top and recursive:
         action("Synchronizing dependency references...")
@@ -757,6 +924,7 @@ def sync(recursive=True, top=True):
             lib.write()
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
         else:
+            action("Remove reference \"%s\" -> \"%s\"" % (lib.name, lib.fullurl))
             repo.scm.remove(lib.lib)
             repo.scm.unignore(repo, relpath(repo.path, lib.path))
 
@@ -788,7 +956,7 @@ def sync(recursive=True, top=True):
             
 @subcommand('ls',
     dict(name=['-a', '--all'], action='store_true', help="List repository URL and hash pairs"),
-    help='View program or library tree.')
+    help='View the current %s dependency tree.' % cwd_type)
 def list_(all=False, prefix=''):
     repo = Repo.fromrepo()
     print prefix + repo.name, '(%s)' % (repo.url if all else repo.hash)
@@ -798,128 +966,129 @@ def list_(all=False, prefix=''):
             nprefix = prefix[:-3] + ('|  ' if prefix[-3] == '|' else '   ')
         else:
             nprefix = ''
-
         nprefix += '|- ' if i < len(repo.libs)-1 else '`- '
 
         with cd(lib.path):
             list_(all, nprefix)
 
-            
+
 @subcommand('status',
-    help='Show status of program or library and its dependencies in the current directory')
+    help='Show status of the current %s and its dependencies.' % cwd_type)
 def status():
     repo = Repo.fromrepo()
     if repo.scm.dirty():
-        print '---', repo.name, '---'
-        repo.scm.status()
+        action("Status for \"%s\":" % repo.name)
+        print repo.scm.status()
 
     for lib in repo.libs:
         with cd(lib.path):
             status()
 
-            
+
 @subcommand('compile',
     dict(name=['-t', '--toolchain'], help="Compile toolchain. Example: ARM, uARM, GCC_ARM, IAR"),
     dict(name=['-m', '--mcu'], help="Compile target. Example: K64F, NUCLEO_F401RE, NRF51822..."),
-    help='Compile program using the native mbed OS build system')
+    help='Compile program using the native mbed OS build system.')
 def compile(toolchain=None, mcu=None):
-    if not os.path.isdir('mbed-os'):
-        error('mbed-os not found?\n', -1)
+    root_path = Repo.findroot(os.getcwd())
+    if not root_path:
+        Repo.fromrepo()
+    with cd(root_path):
+        if not os.path.isdir('mbed-os'):
+            error('The mbed-os codebase and tools were not found in this program.', -1)
 
-    args = remainder
-    repo = Repo.fromrepo()
-    file = os.path.join(repo.scm.store, 'neo')
+        args = remainder
+        repo = Repo.fromrepo()
+        file = os.path.join(repo.scm.store, 'neo')
 
-    target = mcu if mcu else get_cfg(file, 'TARGET')
-    if target is None:
-        error('Please specify compile target using the -m switch or set default target using command "target"', 1)
-        
-    tchain = toolchain if toolchain else get_cfg(file, 'TOOLCHAIN')
-    if tchain is None:
-        error('Please specify compile toolchain using the -t switch or set default toolchain using command "toolchain"', 1)
+        target = mcu if mcu else get_cfg(file, 'TARGET')
+        if target is None:
+            error('Please specify compile target using the -m switch or set default target using command "target"', 1)
+            
+        tchain = toolchain if toolchain else get_cfg(file, 'TOOLCHAIN')
+        if tchain is None:
+            error('Please specify compile toolchain using the -t switch or set default toolchain using command "toolchain"', 1)
 
-    macros = []
-    if os.path.isfile('MACROS.txt'):
-        with open('MACROS.txt') as f:
-            macros = f.read().splitlines()
+        macros = []
+        if os.path.isfile('MACROS.txt'):
+            with open('MACROS.txt') as f:
+                macros = f.read().splitlines()
 
-    env = os.environ.copy()
-    env['PYTHONPATH'] = '.'
-    popen(['python', 'mbed-os/tools/make.py']
-        + list(chain.from_iterable(izip(repeat('-D'), macros)))
-        + ['-t', tchain, '-m', target,
-           '--source=.',
-           '--build=%s' % os.path.join('.build', target, tchain)]
-        + args,
-        env=env)
+        env = os.environ.copy()
+        env['PYTHONPATH'] = '.'
+        popen(['python', 'mbed-os/tools/make.py']
+            + list(chain.from_iterable(izip(repeat('-D'), macros)))
+            + ['-t', tchain, '-m', target, '--source=.', '--build=%s' % os.path.join('.build', target, tchain)]
+            + args,
+            env=env)
 
         
 # Export command
 @subcommand('export',
     dict(name=['-i', '--ide'], help="IDE to create project files for. Example: UVISION,DS5,IAR", required=True),
     dict(name=['-m', '--mcu'], help="Export for target MCU. Example: K64F, NUCLEO_F401RE, NRF51822..."),
-    help='Generate project files for desktop IDEs')
+    help='Generate project files for desktop IDEs for the current program.')
 def export(ide=None, mcu=None):
-    if not os.path.isdir('mbed-os'):
-        error('mbed-os not found?\n', -1)
+    root_path = Repo.findroot(os.getcwd())
+    if not root_path:
+        Repo.fromrepo()
+    with cd(root_path):
+        if not os.path.isdir('mbed-os'):
+            error('The mbed-os codebase and tools were not found in this program.', -1)
 
-    args = remainder
-    repo = Repo.fromrepo()
-    file = os.path.join(repo.scm.store, 'neo')
-    
-    target = mcu if mcu else get_cfg(file, 'TARGET')
-    if target is None:
-        error('Please specify export target using the -m switch or set default target using command "target"', 1)
+        args = remainder
+        repo = Repo.fromrepo()
+        file = os.path.join(repo.scm.store, 'neo')
+        
+        target = mcu if mcu else get_cfg(file, 'TARGET')
+        if target is None:
+            error('Please specify export target using the -m switch or set default target using command "target"', 1)
 
-    macros = []
-    if os.path.isfile('MACROS.txt'):
-        with open('MACROS.txt') as f:
-            macros = f.read().splitlines()
+        macros = []
+        if os.path.isfile('MACROS.txt'):
+            with open('MACROS.txt') as f:
+                macros = f.read().splitlines()
 
-    env = os.environ.copy()
-    env['PYTHONPATH'] = '.'
-    popen(['python', 'mbed-os/tools/project.py']
-        + list(chain.from_iterable(izip(repeat('-D'), macros)))
-        + ['-m', target, '--source=%s' % repo.path]
-        + args,
-        env=env)
+        env = os.environ.copy()
+        env['PYTHONPATH'] = '.'
+        popen(['python', 'mbed-os/tools/project.py']
+            + list(chain.from_iterable(izip(repeat('-D'), macros)))
+            + ['-m', target, '--source=%s' % repo.path]
+            + args,
+            env=env)
 
         
 # Build system and exporters
 @subcommand('target',
     dict(name='name', nargs='?', help="Default target name. Example: K64F, NUCLEO_F401RE, NRF51822..."),
-    help='Set default target when compiling and exporting')
+    help='Set default target for the current program.')
 def target(name=None):
-    repo = Repo.fromrepo()
-    
-    file = os.path.join(repo.scm.store, 'neo')
-    if name is None:
-        name = get_cfg(file, 'TARGET')
-        if name:
-            action('The current target for this program is "%s"' % name)
-        else:
-            action('No target is specified for this program')
-    else:        
-        set_cfg(file, 'TARGET', name)
-        action('"%s" now set as default target' % name)
+    root_path = Repo.findroot(os.getcwd())
+    with cd(root_path):
+        repo = Repo.fromrepo()
+        file = os.path.join(repo.scm.store, 'neo')
+        if name is None:
+            name = get_cfg(file, 'TARGET')
+            action(('The default target for program "%s" is "%s"' % (repo.name, name)) if name else 'No default target is specified for program "%s"' % repo.name)
+        else:        
+            set_cfg(file, 'TARGET', name)
+            action('"%s" now set as default target for program "%s"' % (name, repo.name))
 
     
 @subcommand('toolchain',
     dict(name='name', nargs='?', help="Default toolchain name. Example: ARM, uARM, GCC_ARM, IAR"),
-    help='Sets default toolchain')
+    help='Sets default toolchain for the current program.')
 def toolchain(name=None):
-    repo = Repo.fromrepo()
-    
-    file = os.path.join(repo.scm.store, 'neo')
-    if name is None:
-        name = get_cfg(file, 'TOOLCHAIN')
-        if name:
-            action('The current toolchain for this program is "%s"' % name)
+    root_path = Repo.findroot(os.getcwd())
+    with cd(root_path):
+        repo = Repo.fromrepo()        
+        file = os.path.join(repo.scm.store, 'neo')
+        if name is None:
+            name = get_cfg(file, 'TOOLCHAIN')
+            action(('The default toolchain for program "%s" is "%s"' % (repo.name, name)) if name else 'No default toolchain is specified for program "%s"' % repo.name)
         else:
-            action('No toolchain is specified for this program')
-    else:
-        set_cfg(file, 'TOOLCHAIN', name)
-        action('"%s" now set as default toolchain' % name)
+            set_cfg(file, 'TOOLCHAIN', name)
+            action('"%s" now set as default toolchain for program "%s"' % (name, repo.name))
 
 
 # Parse/run command
@@ -930,9 +1099,10 @@ if len(sys.argv) <= 1:
 args, remainder = parser.parse_known_args()
 
 try:
+    log('Working path \"%s\" (%s)' % (os.getcwd(), cwd_type))
     status = args.command(args)
 except ProcessException as e:
-    error('Process exit with error code %d' % e[0], e[0])
+    error('Subrocess exit with error code %d' % e[0], e[0])
 except KeyboardInterrupt as e:
     error('User aborted!', 255)
 
