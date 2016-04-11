@@ -745,14 +745,20 @@ def import_(url, path=None, top=True):
     with cd(repo.path):
         deploy()
 
-# Deploy routine. Shouldn't be called directly
+# Deploy command
+@subcommand('deploy',
+    help="Import missing dependencies in the current program or library.")
 def deploy():
     repo = Repo.fromrepo()
     repo.scm.ignores(repo)
 
     for lib in repo.libs:
-        import_(lib.fullurl, lib.path, top=False)
-        repo.scm.ignore(repo, relpath(repo.path, lib.path))
+        if not os.path.isdir(lib.path):
+            import_(lib.fullurl, lib.path, top=False)
+        else:
+            with cd(lib.path):
+                deploy()
+            repo.scm.ignore(repo, relpath(repo.path, lib.path))
 
     # This has to be replaced by one time python script from tools that sets up everything the developer needs to use the tools
     if (not os.path.isfile('mbed_settings.py') and 
