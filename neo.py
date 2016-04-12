@@ -863,7 +863,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
         
     repo = Repo.fromrepo()
     
-    if top and repo.scm.isdetached():
+    if top and not rev and repo.scm.isdetached():
         error("This %s is in detached HEAD state, and you won't be able to receive updates from the remote repository until you either checkout a branch or create a new one.\nYou can checkout a branch using \"%s checkout <branch_name>\" command before running \"%s update\"." % (cwd_type, repo.scm.name, os.path.basename(sys.argv[0])),1)
     
     # Fetch from remote repo
