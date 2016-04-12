@@ -764,10 +764,10 @@ def deploy(depth=None):
     for lib in repo.libs:
         if not os.path.isdir(lib.path):
             import_(lib.fullurl, lib.path, top=False, depth=depth)
+            repo.scm.ignore(repo, relpath(repo.path, lib.path))
         else:
             with cd(lib.path):
                 deploy()
-        repo.scm.ignore(repo, relpath(repo.path, lib.path))
 
     # This has to be replaced by one time python script from tools that sets up everything the developer needs to use the tools
     if (not os.path.isfile('mbed_settings.py') and 
@@ -910,14 +910,11 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
 
     # Import missing repos and update to hashes
     for lib in repo.libs:
-        if os.path.isdir(lib.path):
-            with cd(lib.path):
-                update(lib.hash, clean, force, ignore, top=False)
-        else:
+        if not os.path.isdir(lib.path):
             import_(lib.url, lib.path, top=False, depth=depth)
-            with cd(lib.path):
-                update(lib.hash, clean, force, ignore, top=False)
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
+        with cd(lib.path):
+            update(lib.hash, clean, force, ignore, top=False)
 
 
 
@@ -940,7 +937,7 @@ def sync(recursive=True, keep_refs=False, top=True):
             if not keep_refs:
                 action("Remove reference \"%s\" -> \"%s\"" % (lib.name, lib.fullurl))
                 repo.scm.remove(lib.lib)
-            repo.scm.unignore(repo, relpath(repo.path, lib.path))
+                repo.scm.unignore(repo, relpath(repo.path, lib.path))
 
     for root, dirs, files in os.walk(repo.path):
         dirs[:]  = [d for d in dirs  if not d.startswith('.')]
