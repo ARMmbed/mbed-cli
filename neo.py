@@ -257,7 +257,10 @@ class Hg(object):
             if e[0] != 1:
                 raise
             return False
-        
+
+    def isdetached():
+        return False
+
     def geturl(repo):
         tagpaths = '[paths]'
         default_url = ''
@@ -406,6 +409,10 @@ class Git(object):
             if e[0] != 1:
                 raise
             return True
+
+    def isdetached():
+        branch = pquery([git_cmd, 'rev-parse', '--symbolic-full-name', '--abbrev-ref', 'HEAD'])
+        return branch != "HEAD"
 
     def geturl(repo):
         url = ""
@@ -760,7 +767,7 @@ def deploy(depth=None):
         else:
             with cd(lib.path):
                 deploy()
-            repo.scm.ignore(repo, relpath(repo.path, lib.path))
+        repo.scm.ignore(repo, relpath(repo.path, lib.path))
 
     # This has to be replaced by one time python script from tools that sets up everything the developer needs to use the tools
     if (not os.path.isfile('mbed_settings.py') and 
@@ -853,7 +860,11 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
 
     if top:
         sync()
+        
     repo = Repo.fromrepo()
+    
+    if top and repo.scm.isdetached():
+        error("This %s is in detached HEAD state, and you won't be able to receive updates from the remote repository until you either checkout a branch or create a new one.\nYou can checkout a branch using \"%s checkout <branch_name>\" command before running \"%s update\"." % (cwd_type, repo.scm.name, os.path.basename(sys.argv[0])),1)
     
     # Fetch from remote repo
     repo.scm.update(repo, rev, clean)
