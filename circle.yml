@@ -1,0 +1,10 @@
+test:
+    override:
+        - py.test test
+
+dependencies:
+    pre:
+        - sudo pip install pytest
+        - git config --global user.email "test@test.com"
+        - git config --global user.name "Tester"
+        - echo -e "[ui]\nusername = Tester <test@test.com>\n" > ~/.hgrc

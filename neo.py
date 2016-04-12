@@ -468,8 +468,8 @@ class Repo(object):
     @classmethod
     def fromurl(cls, url, path=None):
         repo = cls()
-        m_local = re.match('^([\w./+-]+)/?(?:#(.*))?$', url.strip())
-        m_url = re.match('^(.*/([\w+-]+)(?:\.\w+)?)/?(?:#(.*))?$', url.strip())
+        m_local = re.match('^([\w.+-][\w./+-]+)/?(?:#(.*))?$', url.strip().replace('\\', '/'))
+        m_url = re.match('^(.*/([\w+-]+)(?:\.\w+)?)/?(?:#(.*))?$', url.strip().replace('\\', '/'))
         if m_local:
             repo.name = os.path.basename(path or m_local.group(1))
             repo.path = os.path.abspath(path or os.path.join(os.getcwd(), m_local.group(1)))
@@ -621,7 +621,7 @@ class Repo(object):
     def geturl(self):
         if self.scm:
             with cd(self.path):
-                return self.scm.geturl(self)
+                return self.scm.geturl(self).strip().replace('\\', '/')
 
     def getlibs(self):
         for root, dirs, files in os.walk(self.path):
@@ -975,7 +975,7 @@ def list_(all=False, prefix=''):
     repo = Repo.fromrepo()
     print prefix + repo.name, '(%s)' % (repo.url if all else repo.hash)
 
-    for i, lib in enumerate(repo.libs):
+    for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.name)):
         if prefix:
             nprefix = prefix[:-3] + ('|  ' if prefix[-3] == '|' else '   ')
         else:
