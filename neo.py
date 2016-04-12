@@ -300,7 +300,6 @@ class Hg(object):
                     f.write('[ui]\n')
                     f.write(hook + '\n')
 
-        file = '^%s/' % file
         exclude = os.path.join(repo.path, '.hg/hgignore')
         try: 
             with open(exclude) as f:
@@ -313,7 +312,6 @@ class Hg(object):
                 f.write(file + '\n')
 
     def unignore(repo, file):
-        file = '^%s/' % file
         exclude = os.path.join(repo.path, '.hg/hgignore')
         try:
             with open(exclude) as f:
