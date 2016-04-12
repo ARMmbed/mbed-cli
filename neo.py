@@ -200,7 +200,7 @@ class Hg(object):
         action("Initializing repository")
         popen([hg_cmd, 'init'] + ([path] if path else []))
 
-    def clone(url, name=None, hash=None):
+    def clone(url, name=None, hash=None, depth=None):
         action("Cloning "+name+" from "+url)
         popen([hg_cmd, 'clone', url, name] + (['-u', hash] if hash else []))
 
@@ -343,9 +343,9 @@ class Git(object):
         action("Initializing repository")
         popen([git_cmd, 'init'] + ([path] if path else []))
 
-    def clone(url, name=None, hash=None):
+    def clone(url, name=None, hash=None, depth=None):
         action("Cloning "+name+" from "+url)
-        popen([git_cmd, 'clone', url, name])
+        popen([git_cmd, 'clone', url, name] + (['--depth', depth] if depth else []))
         if hash:
             with cd(name):
                 popen([git_cmd, 'checkout', '-q', hash])
@@ -721,8 +721,9 @@ def new(scm, path=None):
 @subcommand('import', 
     dict(name='url', help='URL of the %s' % cwd_dest),
     dict(name='path', nargs='?', help='Destination name or path. Default: current %s.' % cwd_type),
+    dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     help='Import a program and its dependencies into the current directory or specified destination path.')
-def import_(url, path=None, top=True):
+def import_(url, path=None, top=True, depth=None):
     repo = Repo.fromurl(url, path)
 
     if top and cwd_type != "directory":
@@ -735,7 +736,7 @@ def import_(url, path=None, top=True):
 
     for _, scm in sorted_scms:
         try:
-            scm.clone(repo.url, repo.path, repo.hash)
+            scm.clone(repo.url, repo.path, repo.hash, depth=depth)
             break
         except ProcessException:
             pass
@@ -749,14 +750,15 @@ def import_(url, path=None, top=True):
 
 # Deploy command
 @subcommand('deploy',
+    dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     help="Import missing dependencies in the current program or library.")
-def deploy():
+def deploy(depth=None):
     repo = Repo.fromrepo()
     repo.scm.ignores(repo)
 
     for lib in repo.libs:
         if not os.path.isdir(lib.path):
-            import_(lib.fullurl, lib.path, top=False)
+            import_(lib.fullurl, lib.path, top=False, depth=depth)
         else:
             with cd(lib.path):
                 deploy()
@@ -772,12 +774,13 @@ def deploy():
 @subcommand('add', 
     dict(name='url', help="URL of the library"),
     dict(name='path', nargs='?', help="Destination name or path. Default: current folder."),
+    dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     help='Add a library and its dependencies into the current %s or specified destination path.' % cwd_type)
-def add(url, path=None):
+def add(url, path=None, depth=None):
     repo = Repo.fromrepo()
 
     lib = Repo.fromurl(url, path)
-    import_(lib.url, lib.path, top=False)
+    import_(lib.url, lib.path, top=False, depth=depth)
     repo.scm.ignore(repo, relpath(repo.path, lib.path))
     lib.sync()
 
@@ -837,8 +840,9 @@ def publish(top=True):
     dict(name=['-C', '--clean'], action="store_true", help="Perform a clean update and discard all local changes. WARNING: This action cannot be undone. Use with caution."),
     dict(name=['-F', '--force'], action="store_true", help="Enforce the original layout and will remove any local libraries and also libraries containing uncommitted or unpublished changes. WARNING: This action cannot be undone. Use with caution."),
     dict(name=['-I', '--ignore'], action="store_true", help="Ignore errors regarding unpiblished libraries, unpublished or uncommitted changes, and attempt to update from associated remote repository URLs."),
+    dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     help='Update current %s and its dependencies from associated remote repository URLs.' % cwd_type)
-def update(rev=None, clean=False, force=False, ignore=False, top=True):
+def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=None):
     def can_update(repo, clean, force):
         if (repo.is_local or repo.url is None) and not force:
             return False, "Preserving local library \"%s\" in \"%s\".\nPlease publish this library to a remote URL to be able to restore it at any time.\nYou can use --ignore switch to ignore all local libraries and update only the published ones.\nYou can also use --force switch to remove all local libraries. WARNING: This action cannot be undone." % (repo.name, repo.path)
@@ -901,7 +905,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True):
             with cd(lib.path):
                 update(lib.hash, clean, force, ignore, top=False)
         else:
-            import_(lib.url, lib.path, top=False)
+            import_(lib.url, lib.path, top=False, depth=depth)
             with cd(lib.path):
                 update(lib.hash, clean, force, ignore, top=False)
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
