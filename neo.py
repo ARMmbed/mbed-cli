@@ -411,8 +411,8 @@ class Git(object):
             return True
 
     def isdetached():
-        branch = pquery([git_cmd, 'rev-parse', '--symbolic-full-name', '--abbrev-ref', 'HEAD'])
-        return branch != "HEAD"
+        branch = pquery([git_cmd, 'rev-parse', '--symbolic-full-name', '--abbrev-ref', 'HEAD']).strip()
+        return branch == "HEAD"
 
     def geturl(repo):
         url = ""
