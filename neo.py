@@ -859,7 +859,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
         return True, "OK"
 
     if top:
-        sync()
+        sync(keep_refs=True)
         
     repo = Repo.fromrepo()
     
@@ -924,7 +924,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
 # Synch command
 @subcommand('sync',
     help='Synchronize dependency references (.lib files) in the current %s.' % cwd_type)
-def sync(recursive=True, top=True):
+def sync(recursive=True, keep_refs=False, top=True):
     if top and recursive:
         action("Synchronizing dependency references...")
         
@@ -937,8 +937,9 @@ def sync(recursive=True, top=True):
             lib.write()
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
         else:
-            action("Remove reference \"%s\" -> \"%s\"" % (lib.name, lib.fullurl))
-            repo.scm.remove(lib.lib)
+            if not keep_refs:
+                action("Remove reference \"%s\" -> \"%s\"" % (lib.name, lib.fullurl))
+                repo.scm.remove(lib.lib)
             repo.scm.unignore(repo, relpath(repo.path, lib.path))
 
     for root, dirs, files in os.walk(repo.path):
@@ -964,7 +965,7 @@ def sync(recursive=True, top=True):
     if recursive:
         for lib in repo.libs:
             with cd(lib.path):
-                sync(top=False)
+                sync(keep_refs=keep_refs, top=False)
 
             
 @subcommand('ls',
