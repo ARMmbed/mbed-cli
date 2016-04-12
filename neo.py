@@ -1066,7 +1066,7 @@ def export(ide=None, mcu=None):
         env['PYTHONPATH'] = '.'
         popen(['python', 'mbed-os/tools/project.py']
             + list(chain.from_iterable(izip(repeat('-D'), macros)))
-            + ['-m', target, '--source=%s' % repo.path]
+            + ['-i', ide, '-m', target, '--source=%s' % repo.path]
             + args,
             env=env)
 
