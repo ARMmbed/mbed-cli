@@ -1,6 +1,7 @@
 from util import *
 
-def test_ls(neo, teststructure):
+# Tests 'neo ls' and provides sanity check of test framework
+def test_ls(neo, testrepos):
     assertls(neo, 'test1', [
         "test1",
         "`- test2",
