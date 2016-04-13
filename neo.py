@@ -64,6 +64,10 @@ ignores = [
     "# subrepo ignores",
     ]
 
+regex_git_url = '^(git@|git\://|ssh\://|https?\://)([^/:]+)[:/]([^/]+)/([^/]+?)(\.git|\/?)$'
+regex_hg_url = '^(file|ssh|https?)://([^/:]+)/([^/]+)/?([^/]+?)?$'
+regex_mbed_url = '^(https?)://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+)/?$'
+
 # Logging and output
 def message(msg):
     return "[%s] %s\n" % (os.path.basename(sys.argv[0]), msg)
@@ -127,6 +131,7 @@ def rmtree_readonly(directory):
 
     shutil.rmtree(directory, onerror=remove_readonly)
 
+
 # Defaults config file
 def set_cfg(file, var, val):
     try:
@@ -145,7 +150,7 @@ def set_cfg(file, var, val):
     with open(file, 'w') as f:
         f.write('\n'.join(lines) + '\n')
 
-def get_cfg(file, var):
+def get_cfg(file, var, default_val=None):
     try:
         with open(file) as f:
             lines = f.read().splitlines()
@@ -156,7 +161,9 @@ def get_cfg(file, var):
         m = re.match('^([\w+-]+)\=(.*)?$', line)
         if m and m.group(1) == var:
             return m.group(2)
-    
+    return default_val
+
+
 # Directory navigation
 @contextlib.contextmanager
 def cd(newdir):
@@ -200,9 +207,9 @@ class Hg(object):
         action("Initializing repository")
         popen([hg_cmd, 'init'] + ([path] if path else []))
 
-    def clone(url, name=None, hash=None, depth=None):
+    def clone(url, name=None, hash=None, depth=None, protocol=None):
         action("Cloning "+name+" from "+url)
-        popen([hg_cmd, 'clone', url, name] + (['-u', hash] if hash else []))
+        popen([hg_cmd, 'clone', formaturl(url, protocol), name] + (['-u', hash] if hash else []))
 
     def add(file):
         action("Adding "+file)
@@ -277,7 +284,7 @@ class Hg(object):
                         url = m.group(2)
         if default_url:
             url = default_url
-        return url if url else pquery([hg_cmd, 'paths', 'default']).strip()
+        return formaturl(url or pquery([hg_cmd, 'paths', 'default']).strip())
 
     def gethash(repo):
         with open(os.path.join(repo.path, '.hg/dirstate'), 'rb') as f:
@@ -344,9 +351,9 @@ class Git(object):
         action("Initializing repository")
         popen([git_cmd, 'init'] + ([path] if path else []))
 
-    def clone(url, name=None, hash=None, depth=None):
+    def clone(url, name=None, hash=None, depth=None, protocol=None):
         action("Cloning "+name+" from "+url)
-        popen([git_cmd, 'clone', url, name] + (['--depth', depth] if depth else []))
+        popen([git_cmd, 'clone', formaturl(url, protocol), name] + (['--depth', depth] if depth else []))
         if hash:
             with cd(name):
                 popen([git_cmd, 'checkout', '-q', hash])
@@ -422,8 +429,8 @@ class Git(object):
             if "(fetch)" in remote:
                 url = remote[1]
                 if remote[0] == "origin": # Prefer origin URL
-                    return url
-        return url
+                    break
+        return formaturl(url)
 
     def gethash(repo):
         return pquery([git_cmd, 'rev-parse', 'HEAD']).strip()
@@ -479,7 +486,7 @@ class Repo(object):
         elif m_url:
             repo.name = os.path.basename(path or m_url.group(2))
             repo.path = os.path.abspath(path or os.path.join(os.getcwd(), repo.name))
-            repo.url = m_url.group(1)
+            repo.url = formaturl(m_url.group(1))
             repo.hash = m_url.group(3)
         else:
             error('Invalid repository (%s)' % url.strip(), -1)
@@ -654,10 +661,32 @@ class Repo(object):
                 action("Remove untracked library reference \"%s\"" % file)
                 os.remove(file)
 
+                
+def formaturl(url, format="default"):
+    url = "%s" % url
+    m = re.match(regex_mbed_url, url)
+    if m:
+        url = 'https://mbed.org/'+m.group(4)+'/'+m.group(5)+'/code/'+m.group(7)+'/'
+    else:
+        m = re.match(regex_git_url, url)
+        if m:
+            if format == "git": url = 'git@'+m.group(2)+':'+m.group(3)+'/'+m.group(4)+'.git'
+            elif format == "ssh": url = 'ssh://'+m.group(2)+'/'+m.group(3)+'/'+m.group(4)+'.git'
+            elif format == "http": url = 'http://'+m.group(2)+'/'+m.group(3)+'/'+m.group(4)+'/'
+            else: url = 'https://'+m.group(2)+'/'+m.group(3)+'/'+m.group(4)+'/'    # https is default
+        else:
+            m = re.match(regex_hg_url, url)
+            if m:
+                if format == "ssh": url = 'ssh://'+m.group(2)+'/'+m.group(3)+'/'
+                elif format == "http": url = 'http://'+m.group(2)+'/'+m.group(3)+'/'
+                else: url = 'https://'+m.group(2)+'/'+m.group(3)+'/'    # https is default
+    return url
+
 
 # Help messages adapt based on current dir
 cwd_type = Repo.typerepo()
 cwd_dest = "program" if cwd_type == "directory" else "library"
+
 
 # Subparser handling
 parser = argparse.ArgumentParser(description="A command-line code management tool for ARM mbed OS - http://www.mbed.com\n%s uses current directory as a working context." % os.path.basename(sys.argv[0]))
@@ -727,8 +756,9 @@ def new(scm, path=None):
     dict(name='url', help='URL of the %s' % cwd_dest),
     dict(name='path', nargs='?', help='Destination name or path. Default: current %s.' % cwd_type),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
+    dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help='Import a program and its dependencies into the current directory or specified destination path.')
-def import_(url, path=None, top=True, depth=None):
+def import_(url, path=None, top=True, depth=None, protocol=None):
     repo = Repo.fromurl(url, path)
 
     if top and cwd_type != "directory":
@@ -741,7 +771,7 @@ def import_(url, path=None, top=True, depth=None):
 
     for _, scm in sorted_scms:
         try:
-            scm.clone(repo.url, repo.path, repo.hash, depth=depth)
+            scm.clone(repo.url, repo.path, repo.hash, depth=depth, protocol=protocol)
             break
         except ProcessException:
             pass
@@ -751,23 +781,24 @@ def import_(url, path=None, top=True, depth=None):
     repo.sync()
 
     with cd(repo.path):
-        deploy()
+        deploy(depth=depth, protocol=protocol)
 
 # Deploy command
 @subcommand('deploy',
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
+    dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help="Import missing dependencies in the current program or library.")
-def deploy(depth=None):
+def deploy(depth=None, protocol=None):
     repo = Repo.fromrepo()
     repo.scm.ignores(repo)
 
     for lib in repo.libs:
         if not os.path.isdir(lib.path):
-            import_(lib.fullurl, lib.path, top=False, depth=depth)
+            import_(lib.fullurl, lib.path, top=False, depth=depth, protocol=protocol)
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
         else:
             with cd(lib.path):
-                deploy()
+                deploy(depth=depth, protocol=protocol)
 
     # This has to be replaced by one time python script from tools that sets up everything the developer needs to use the tools
     if (not os.path.isfile('mbed_settings.py') and 
@@ -780,12 +811,13 @@ def deploy(depth=None):
     dict(name='url', help="URL of the library"),
     dict(name='path', nargs='?', help="Destination name or path. Default: current folder."),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
+    dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help='Add a library and its dependencies into the current %s or specified destination path.' % cwd_type)
-def add(url, path=None, depth=None):
+def add(url, path=None, depth=None, protocol=None):
     repo = Repo.fromrepo()
 
     lib = Repo.fromurl(url, path)
-    import_(lib.url, lib.path, top=False, depth=depth)
+    import_(lib.url, lib.path, top=False, depth=depth, protocol=protocol)
     repo.scm.ignore(repo, relpath(repo.path, lib.path))
     lib.sync()
 
@@ -846,8 +878,9 @@ def publish(top=True):
     dict(name=['-F', '--force'], action="store_true", help="Enforce the original layout and will remove any local libraries and also libraries containing uncommitted or unpublished changes. WARNING: This action cannot be undone. Use with caution."),
     dict(name=['-I', '--ignore'], action="store_true", help="Ignore errors regarding unpiblished libraries, unpublished or uncommitted changes, and attempt to update from associated remote repository URLs."),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
+    dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help='Update current %s and its dependencies from associated remote repository URLs.' % cwd_type)
-def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=None):
+def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=None, protocol=None):
     def can_update(repo, clean, force):
         if (repo.is_local or repo.url is None) and not force:
             return False, "Preserving local library \"%s\" in \"%s\".\nPlease publish this library to a remote URL to be able to restore it at any time.\nYou can use --ignore switch to ignore all local libraries and update only the published ones.\nYou can also use --force switch to remove all local libraries. WARNING: This action cannot be undone." % (repo.name, repo.path)
@@ -911,7 +944,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
     # Import missing repos and update to hashes
     for lib in repo.libs:
         if not os.path.isdir(lib.path):
-            import_(lib.url, lib.path, top=False, depth=depth)
+            import_(lib.url, lib.path, top=False, depth=depth, protocol=protocol)
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
         with cd(lib.path):
             update(lib.hash, clean, force, ignore, top=False)
@@ -1086,7 +1119,6 @@ def target(name=None):
             set_cfg(file, 'TARGET', name)
             action('"%s" now set as default target for program "%s"' % (name, repo.name))
 
-    
 @subcommand('toolchain',
     dict(name='name', nargs='?', help="Default toolchain name. Example: ARM, uARM, GCC_ARM, IAR"),
     help='Sets default toolchain for the current program.')
