@@ -971,7 +971,12 @@ def sync(recursive=True, keep_refs=False, top=True):
     help='View the current %s dependency tree.' % cwd_type)
 def list_(all=False, prefix=''):
     repo = Repo.fromrepo()
-    print prefix + repo.name, '(%s)' % (repo.url if all else repo.hash)
+
+    if all:
+        print '%s%s' % (prefix, repo.fullurl)
+    else:
+        print '%s%s (%s)' % (prefix, repo.name, 
+            repo.hash[:7] if repo.scm.name == 'git' else repo.hash)
 
     for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.name)):
         if prefix:
