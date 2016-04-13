@@ -961,8 +961,9 @@ def sync(recursive=True, keep_refs=False, top=True):
 
     if recursive:
         for lib in repo.libs:
-            with cd(lib.path):
-                sync(keep_refs=keep_refs, top=False)
+            if os.path.isdir(lib.path):
+                with cd(lib.path):
+                    sync(keep_refs=keep_refs, top=False)
 
             
 @subcommand('ls',
