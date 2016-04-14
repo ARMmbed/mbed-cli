@@ -11,6 +11,7 @@ import stat
 from collections import *
 from itertools import *
 
+
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
 git_cmd = 'git'
@@ -70,7 +71,7 @@ regex_mbed_url = '^(https?)://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([
 
 # Logging and output
 def message(msg):
-    return "[%s] %s\n" % (os.path.basename(sys.argv[0]), msg)
+    return "[mbed] %s\n" % msg
 
 def log(msg):
     sys.stderr.write(message(msg))
@@ -80,12 +81,12 @@ def action(msg):
 
 def warning(msg, code):
     for line in msg.splitlines():
-        sys.stderr.write("[%s WARNING] %s\n" % (os.path.basename(sys.argv[0]), line))
+        sys.stderr.write("[mbed WARNING] %s\n" % line)
     sys.stderr.write("---\n")
 
 def error(msg, code):
     for line in msg.splitlines():
-        sys.stderr.write("[%s ERROR] %s\n" % (os.path.basename(sys.argv[0]), line))
+        sys.stderr.write("[mbed ERROR] %s\n" % line)
     sys.stderr.write("---\n")
     sys.exit(code)
 
@@ -694,7 +695,7 @@ cwd_dest = "program" if cwd_type == "directory" else "library"
 
 
 # Subparser handling
-parser = argparse.ArgumentParser(description="A command-line code management tool for ARM mbed OS - http://www.mbed.com\n%s uses current directory as a working context." % os.path.basename(sys.argv[0]))
+parser = argparse.ArgumentParser(description="A command-line code management tool for ARM mbed OS - http://www.mbed.com\nmbed uses current directory as a working context.")
 subparsers = parser.add_subparsers(title="Commands", metavar="           ")
 
 # Process handling
@@ -902,7 +903,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
     repo = Repo.fromrepo()
     
     if top and not rev and repo.scm.isdetached():
-        error("This %s is in detached HEAD state, and you won't be able to receive updates from the remote repository until you either checkout a branch or create a new one.\nYou can checkout a branch using \"%s checkout <branch_name>\" command before running \"%s update\"." % (cwd_type, repo.scm.name, os.path.basename(sys.argv[0])),1)
+        error("This %s is in detached HEAD state, and you won't be able to receive updates from the remote repository until you either checkout a branch or create a new one.\nYou can checkout a branch using \"%s checkout <branch_name>\" command before running \"mbed update\"." % (cwd_type, repo.scm.name),1)
     
     # Fetch from remote repo
     repo.scm.update(repo, rev, clean)
