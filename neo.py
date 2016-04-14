@@ -1152,6 +1152,11 @@ try:
     status = args.command(args)
 except ProcessException as e:
     error('Subrocess exit with error code %d' % e[0], e[0])
+except OSError as e:
+    if e[0] == 2:
+        error('Could not detect one of the command-line tools.\nPlease verify that you have Git and Mercurial installed and accessible from your current path by executing commands "git" and "hg".\nHint: check the last executed command above.', e[0])
+    else:
+        error('OS Error: %s' % e[1], e[0])
 except KeyboardInterrupt as e:
     error('User aborted!', 255)
 
