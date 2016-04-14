@@ -64,7 +64,7 @@ ignores = [
     "# subrepo ignores",
     ]
 
-regex_git_url = '^(git@|git\://|ssh\://|https?\://)([^/:]+)[:/]([^/]+)/([^/]+?)(\.git|\/?)$'
+regex_git_url = '^(git@|git\://|ssh\://|https?\://)([^/:]+)[:/](.+?)(\.git|\/?)$'
 regex_hg_url = '^(file|ssh|https?)://([^/:]+)/([^/]+)/?([^/]+?)?$'
 regex_mbed_url = '^(https?)://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+)/?$'
 
@@ -670,16 +670,23 @@ def formaturl(url, format="default"):
     else:
         m = re.match(regex_git_url, url)
         if m:
-            if format == "git": url = 'git@'+m.group(2)+':'+m.group(3)+'/'+m.group(4)+'.git'
-            elif format == "ssh": url = 'ssh://'+m.group(2)+'/'+m.group(3)+'/'+m.group(4)+'.git'
-            elif format == "http": url = 'http://'+m.group(2)+'/'+m.group(3)+'/'+m.group(4)+'/'
-            else: url = 'https://'+m.group(2)+'/'+m.group(3)+'/'+m.group(4)+'/'    # https is default
+            if format == "git":
+                url = 'git@%s:%s.git' % (m.group(2), m.group(3))
+            elif format == "ssh":
+                url = 'ssh://%s/%s.git' % (m.group(2), m.group(3))
+            elif format == "http":
+                url = 'http://%s/%s/' % (m.group(2), m.group(3))
+            else:
+                url = 'https://%s/%s/' % (m.group(2), m.group(3)) # https is default
         else:
             m = re.match(regex_hg_url, url)
             if m:
-                if format == "ssh": url = 'ssh://'+m.group(2)+'/'+m.group(3)+'/'
-                elif format == "http": url = 'http://'+m.group(2)+'/'+m.group(3)+'/'
-                else: url = 'https://'+m.group(2)+'/'+m.group(3)+'/'    # https is default
+                if format == "ssh":
+                    url = 'ssh://%s/%s/' % (m.group(2), m.group(3))
+                elif format == "http":
+                    url = 'http://%s/%s/' % (m.group(2), m.group(3))
+                else:
+                    url = 'https://%s/%s/' % (m.group(2), m.group(3)) # https is default
     return url
 
 
