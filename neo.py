@@ -670,9 +670,7 @@ def formaturl(url, format="default"):
     else:
         m = re.match(regex_git_url, url)
         if m:
-            if format == "git":
-                url = 'git@%s:%s.git' % (m.group(2), m.group(3))
-            elif format == "ssh":
+            if format == "ssh":
                 url = 'ssh://%s/%s.git' % (m.group(2), m.group(3))
             elif format == "http":
                 url = 'http://%s/%s/' % (m.group(2), m.group(3))
