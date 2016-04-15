@@ -1045,7 +1045,12 @@ def compile(toolchain=None, mcu=None):
     if not root_path:
         Repo.fromrepo()
     with cd(root_path):
-        if not os.path.isdir('mbed-os'):
+        mbed_os_path = None
+        if os.path.split(os.getcwd())[1] == 'mbed-os':
+            mbed_os_path = "." 
+        elif os.path.isdir('mbed-os'):
+            mbed_os_path = "mbed-os" 
+        if mbed_os_path is None:
             error('The mbed-os codebase and tools were not found in this program.', -1)
 
         args = remainder
@@ -1067,11 +1072,49 @@ def compile(toolchain=None, mcu=None):
 
         env = os.environ.copy()
         env['PYTHONPATH'] = '.'
-        popen(['python', 'mbed-os/tools/make.py']
-            + list(chain.from_iterable(izip(repeat('-D'), macros)))
-            + ['-t', tchain, '-m', target, '--source=.', '--build=%s' % os.path.join('.build', target, tchain)]
-            + args,
-            env=env)
+
+        # Only compile a program
+        if mbed_os_path == 'mbed-os':
+            popen(['python', '%s/tools/make.py' % mbed_os_path]
+                + list(chain.from_iterable(izip(repeat('-D'), macros)))
+                + ['-t', tchain, '-m', target, '--source=.', '--build=%s' % os.path.join('.build', target, tchain)]
+                + args,
+                env=env)
+            # remove clean build flag onec exercised 
+            if "-c" in args: args.remove('-c')
+        else:
+            action("Skipping module compilation as it is a library!")
+
+        # Compile tests
+        tests_path = None
+        for d in os.listdir(os.getcwd()):
+            if d.lower() == 'tests':
+                tests_path = d
+                break
+        # Find test inside tests
+        if tests_path is not None:
+            test_dirs = []
+            for d, sds, files in os.walk(tests_path):
+                # dir name host_tests is reserved for host python scripts.
+                # dirs under a test dir are ignored considering they may contain
+                # factored parts of the test code.
+                if d != "host_tests" and os.path.split(d)[0] not in test_dirs:
+                    # Check if there are source files.
+                    for f in files:
+                        if os.path.splitext(f)[1].lower() == ".cpp":
+                            test_dirs.append(d)
+                            break
+
+            # compile each test
+            for d in test_dirs:
+                popen(['python', '%s/tools/make.py' % mbed_os_path]
+                    + list(chain.from_iterable(izip(repeat('-D'), macros)))
+                    + ['-t', tchain, '-m', target]
+                    + ['--source=%s' % d, '--source=.']
+                    + ['--build=%s' % os.path.join('.build', target, tchain)]
+                    + args,
+                    env=env)
+                if "-c" in args: args.remove('-c')
 
         
 # Export command
