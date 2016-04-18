@@ -32,8 +32,8 @@ ignores = [
     ".export",
     
     # Online IDE caches
-    ".msub$",
-    ".meta$",
+    ".msub",
+    ".meta",
     ".ctags*",
     
     # uVision project files
