@@ -666,25 +666,25 @@ def formaturl(url, format="default"):
     url = "%s" % url
     m = re.match(regex_mbed_url, url)
     if m:
-        url = 'https://mbed.org/'+m.group(4)+'/'+m.group(5)+'/code/'+m.group(7)+'/'
+        url = 'https://mbed.org/'+m.group(4)+'/'+m.group(5)+'/code/'+m.group(7)
     else:
         m = re.match(regex_git_url, url)
         if m:
             if format == "ssh":
                 url = 'ssh://%s/%s.git' % (m.group(2), m.group(3))
             elif format == "http":
-                url = 'http://%s/%s/' % (m.group(2), m.group(3))
+                url = 'http://%s/%s' % (m.group(2), m.group(3))
             else:
-                url = 'https://%s/%s/' % (m.group(2), m.group(3)) # https is default
+                url = 'https://%s/%s' % (m.group(2), m.group(3)) # https is default
         else:
             m = re.match(regex_hg_url, url)
             if m:
                 if format == "ssh":
-                    url = 'ssh://%s/%s/' % (m.group(2), m.group(3))
+                    url = 'ssh://%s/%s' % (m.group(2), m.group(3))
                 elif format == "http":
-                    url = 'http://%s/%s/' % (m.group(2), m.group(3))
+                    url = 'http://%s/%s' % (m.group(2), m.group(3))
                 else:
-                    url = 'https://%s/%s/' % (m.group(2), m.group(3)) # https is default
+                    url = 'https://%s/%s' % (m.group(2), m.group(3)) # https is default
     return url
 
 
