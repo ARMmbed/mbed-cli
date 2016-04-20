@@ -121,7 +121,7 @@ Tests are compiled with the module source. Test code exists in following directo
 
 ```
 
-As shown above tests exist inside ```TESTS\testgroup\testcase\``` directory. Please observe TESTS is a special upper case directory that is excluded from module sources while compiling. Any Test case dependency libs can be put inside the ```frameworks``` directory. ```frameworks``` is also excluded when compiling module sources. 
+As shown above tests exist inside ```TESTS\testgroup\testcase\``` directory. Please observe TESTS is a special upper case directory that is excluded from module sources while compiling. Any Test case dependency libs can be put inside the ```frameworks``` directory. ```frameworks``` is also excluded when compiling module sources and only compiled and linked to the tests. 
 Compiled test binaries are created in ```.build/<TARGET>/<TOOLCHAIN>/TestCase1.bin```
 
 
