@@ -94,7 +94,7 @@ The compiled binary (and ELF image) can be found in the `.build` subdirectory of
 
 ### Compiling Tests
 
-Test code exists in following directory structure
+Tests are compiled with the module source. Test code exists in following directory structure
 
 ```
 <module>
@@ -123,6 +123,9 @@ Test code exists in following directory structure
 
 As shown above tests exist inside ```TESTS\testgroup\testcase\``` directory. Please observe TESTS is a special upper case directory that is excluded from module sources while compiling. Any Test case dependency libs can be put inside the ```frameworks``` directory. ```frameworks``` is also excluded when compiling module sources. 
 Compiled test binaries are created in ```.build/<TARGET>/<TOOLCHAIN>/TestCase1.bin```
+
+
+Note: This feature does not work in application modules that contain ```main()```. This issue is being worked on in parallel. However, currently we don't have any module with ```main()``` and ```TESTS``` together. Hence it does not break any existing module.
 
 ### Automating toolchain and target selection
 
