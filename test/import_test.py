@@ -1,7 +1,8 @@
 from util import *
 
-def test_import(neo, teststructure):
-    test1 = teststructure[0]
+# Tests 'neo import'
+def test_import(neo, testrepos):
+    test1 = testrepos[0]
     popen(['python', neo, 'import', test1, 'testimport'])
 
     assertls(neo, 'testimport', [

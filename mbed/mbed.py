@@ -667,25 +667,25 @@ def formaturl(url, format="default"):
     url = "%s" % url
     m = re.match(regex_mbed_url, url)
     if m:
-        url = 'https://mbed.org/'+m.group(4)+'/'+m.group(5)+'/code/'+m.group(7)+'/'
+        url = 'https://mbed.org/'+m.group(4)+'/'+m.group(5)+'/code/'+m.group(7)
     else:
         m = re.match(regex_git_url, url)
         if m:
             if format == "ssh":
                 url = 'ssh://%s/%s.git' % (m.group(2), m.group(3))
             elif format == "http":
-                url = 'http://%s/%s/' % (m.group(2), m.group(3))
+                url = 'http://%s/%s' % (m.group(2), m.group(3))
             else:
-                url = 'https://%s/%s/' % (m.group(2), m.group(3)) # https is default
+                url = 'https://%s/%s' % (m.group(2), m.group(3)) # https is default
         else:
             m = re.match(regex_hg_url, url)
             if m:
                 if format == "ssh":
-                    url = 'ssh://%s/%s/' % (m.group(2), m.group(3))
+                    url = 'ssh://%s/%s' % (m.group(2), m.group(3))
                 elif format == "http":
-                    url = 'http://%s/%s/' % (m.group(2), m.group(3))
+                    url = 'http://%s/%s' % (m.group(2), m.group(3))
                 else:
-                    url = 'https://%s/%s/' % (m.group(2), m.group(3)) # https is default
+                    url = 'https://%s/%s' % (m.group(2), m.group(3)) # https is default
     return url
 
 
@@ -1153,6 +1153,11 @@ try:
     status = args.command(args)
 except ProcessException as e:
     error('Subrocess exit with error code %d' % e[0], e[0])
+except OSError as e:
+    if e[0] == 2:
+        error('Could not detect one of the command-line tools.\nPlease verify that you have Git and Mercurial installed and accessible from your current path by executing commands "git" and "hg".\nHint: check the last executed command above.', e[0])
+    else:
+        error('OS Error: %s' % e[1], e[0])
 except KeyboardInterrupt as e:
     error('User aborted!', 255)
 
