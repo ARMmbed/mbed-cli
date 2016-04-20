@@ -1036,7 +1036,7 @@ def compile(toolchain=None, mcu=None):
 
         # Only compile a program
         if mbed_os_path == 'mbed-os':
-            popen(['python', '%s/tools/make.py' % mbed_os_path]
+            popen(['python', os.path.join(mbed_os_path, 'tools', 'make.py')]
                 + list(chain.from_iterable(izip(repeat('-D'), macros)))
                 + ['-t', tchain, '-m', target, '--source=.', '--build=%s' % os.path.join('.build', target, tchain)]
                 + args,
@@ -1047,35 +1047,23 @@ def compile(toolchain=None, mcu=None):
             action("Skipping module compilation as it is a library!")
 
         # Compile tests
-        tests_path = None
-        for d in os.listdir(os.getcwd()):
-            if d.lower() == 'tests':
-                tests_path = d
-                break
-        # Find test inside tests
-        if tests_path is not None:
-            test_dirs = []
-            for d, sds, files in os.walk(tests_path):
+        tests_path = 'TESTS'
+        if os.path.exists(tests_path):
+            # Loop on test group directories
+            for d in os.listdir(tests_path):
                 # dir name host_tests is reserved for host python scripts.
-                # dirs under a test dir are ignored considering they may contain
-                # factored parts of the test code.
-                if d != "host_tests" and os.path.split(d)[0] not in test_dirs:
-                    # Check if there are source files.
-                    for f in files:
-                        if os.path.splitext(f)[1].lower() == ".cpp":
-                            test_dirs.append(d)
-                            break
-
-            # compile each test
-            for d in test_dirs:
-                popen(['python', '%s/tools/make.py' % mbed_os_path]
-                    + list(chain.from_iterable(izip(repeat('-D'), macros)))
-                    + ['-t', tchain, '-m', target]
-                    + ['--source=%s' % d, '--source=.']
-                    + ['--build=%s' % os.path.join('.build', target, tchain)]
-                    + args,
-                    env=env)
-                if "-c" in args: args.remove('-c')
+                if d != "host_tests":
+                    # Loop on test case directories
+                    for td in os.listdir(os.path.join(tests_path, d)):
+                        # compile each test
+                        popen(['python', os.path.join(mbed_os_path, 'tools', 'make.py')]
+                            + list(chain.from_iterable(izip(repeat('-D'), macros)))
+                            + ['-t', tchain, '-m', target]
+                            + ['--source=%s' % os.path.join(tests_path, d, td), '--source=.']
+                            + ['--build=%s' % os.path.join('.build', target, tchain)]
+                            + args,
+                            env=env)
+                        if "-c" in args: args.remove('-c')
 
         
 # Export command
