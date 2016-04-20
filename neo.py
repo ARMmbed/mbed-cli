@@ -195,6 +195,9 @@ def scm(name):
         return cls
     return scm
 
+# pylint: disable=no-self-argument
+# pylint: disable=no-method-argument
+# pylint: disable=no-member
 @scm('hg')
 @staticclass
 class Hg(object):
@@ -376,6 +379,9 @@ class Hg(object):
         except IOError:
             error("Unable to write ignore file in \"%s\"" % exclude)
             
+# pylint: disable=no-self-argument
+# pylint: disable=no-method-argument
+# pylint: disable=no-member
 @scm('git')
 @staticclass
 class Git(object):
