@@ -92,6 +92,47 @@ The arguments to *compile* are:
 
 The compiled binary (and ELF image) can be found in the `.build` subdirectory of your project.
 
+### Compiling Tests
+
+Tests are compiled by adding argument ```--tests``` in the above compile command:
+
+```
+$ neo.py compile -t ARM -m K64F --tests -j 0
+```
+
+Test code exists in following directory structure
+
+```
+<module>
+|_main.cpp          # Optional main.cpp with ```main()``` if it is an application module.
+|_pqr.lib           # Required libs
+|_xyz.lib
+|_frameworks        # Test dependencies. Excluded from module sources while compilation.
+  \_greentea-client # Greentea client required by tests.
+\_TESTS             # Tests directory. Special name upper case TESTS is excluded just like frameworks.
+  |_TestGroup1      # Test Group directory
+  | \_TestCase1     # Test case source directory
+  |   \_main.cpp    # Test source
+  |_TestGroup2
+  | \_TestCase2
+  |   \_main.cpp
+  \_host_tests      # Python host tests script directory
+    |_host_test1.py
+    \_host_test2.py
+\.build             # Build directory
+  |_<TARGET>        # Target directory
+  | \_<TOOLCHAIN>   # Toolchain directory
+  |   |_TestCase1.bin    # Test binary
+  |   \_TestCase2.bin
+
+```
+
+As shown above tests exist inside ```TESTS\testgroup\testcase\``` directory. Please observe TESTS is a special upper case directory that is excluded from module sources while compiling. Any Test case dependency libs can be put inside the ```frameworks``` directory. ```frameworks``` is also excluded when compiling module sources and only compiled and linked to the tests. 
+Compiled test binaries are created in ```.build/<TARGET>/<TOOLCHAIN>/TestCase1.bin```
+
+
+Note: This feature does not work in application modules that contain ```main()```. This issue is being worked on in parallel. However, currently we don't have any module with ```main()``` and ```TESTS``` together. Hence it does not break any existing module.
+
 ### Automating toolchain and target selection
 
 Using ``neo.py target <target>`` and ``neo.py toolchain <toolchain>`` you can set the default target and toolchain for your program, meaning you won't have to specify these every time you compile or generate IDE project files.
