@@ -801,10 +801,14 @@ def new(scm, path=None):
         with cd(p_path):
             sync()
     else:       # It's a program. Add mbed-os
-        with cd(d_path):
-            add("https://github.com/ARMmbed/mbed-os")
-        if path:
-            os.chdir(path)
+        try:
+            with cd(d_path):
+                add("https://github.com/ARMmbed/mbed-os")
+        except:
+            rmtree_readonly(d_path)
+            raise
+        if d_path:
+            os.chdir(d_path)
 
 
 # Clone command
@@ -833,6 +837,7 @@ def import_(url, path=None, top=True, depth=None, protocol=None):
             scm.clone(repo.url, repo.path, repo.hash, depth=depth, protocol=protocol)
             break
         except ProcessException:
+            rmtree_readonly(repo.path)
             pass
     else:
         error("Unable to clone repository (%s)" % url, 1)
