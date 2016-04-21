@@ -714,7 +714,7 @@ def subcommand(name, *args, **kwargs):
                 subparser.add_argument(*opt, **arg)
     
         def thunk(parsed_args):
-            argv = [arg['name'] for arg in args]
+            argv = [arg['dest'] if 'dest' in arg else arg['name'] for arg in args]
             argv = [(arg if isinstance(arg, basestring) else arg[-1]).strip('-')
                     for arg in argv]
             argv = {arg: vars(parsed_args)[arg] for arg in argv
@@ -1039,8 +1039,9 @@ def status():
 @subcommand('compile',
     dict(name=['-t', '--toolchain'], help="Compile toolchain. Example: ARM, uARM, GCC_ARM, IAR"),
     dict(name=['-m', '--mcu'], help="Compile target. Example: K64F, NUCLEO_F401RE, NRF51822..."),
+    dict(name='--tests', dest="compile_tests", action="store_true", help="Compile tests in TESTS directory."),
     help='Compile program using the native mbed OS build system.')
-def compile(toolchain=None, mcu=None):
+def compile(toolchain=None, mcu=None, compile_tests=False):
     root_path = Repo.findroot(os.getcwd())
     if not root_path:
         Repo.fromrepo()
@@ -1086,23 +1087,24 @@ def compile(toolchain=None, mcu=None):
             action("Skipping module compilation as it is a library!")
 
         # Compile tests
-        tests_path = 'TESTS'
-        if os.path.exists(tests_path):
-            # Loop on test group directories
-            for d in os.listdir(tests_path):
-                # dir name host_tests is reserved for host python scripts.
-                if d != "host_tests":
-                    # Loop on test case directories
-                    for td in os.listdir(os.path.join(tests_path, d)):
-                        # compile each test
-                        popen(['python', os.path.join(mbed_os_path, 'tools', 'make.py')]
-                            + list(chain.from_iterable(izip(repeat('-D'), macros)))
-                            + ['-t', tchain, '-m', target]
-                            + ['--source=%s' % os.path.join(tests_path, d, td), '--source=.']
-                            + ['--build=%s' % os.path.join('.build', target, tchain)]
-                            + args,
-                            env=env)
-                        if "-c" in args: args.remove('-c')
+        if compile_tests:
+            tests_path = 'TESTS'
+            if os.path.exists(tests_path):
+                # Loop on test group directories
+                for d in os.listdir(tests_path):
+                    # dir name host_tests is reserved for host python scripts.
+                    if d != "host_tests":
+                        # Loop on test case directories
+                        for td in os.listdir(os.path.join(tests_path, d)):
+                            # compile each test
+                            popen(['python', os.path.join(mbed_os_path, 'tools', 'make.py')]
+                                + list(chain.from_iterable(izip(repeat('-D'), macros)))
+                                + ['-t', tchain, '-m', target]
+                                + ['--source=%s' % os.path.join(tests_path, d, td), '--source=.']
+                                + ['--build=%s' % os.path.join('.build', target, tchain)]
+                                + args,
+                                env=env)
+                            if "-c" in args: args.remove('-c')
 
         
 # Export command
