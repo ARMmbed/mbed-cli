@@ -79,7 +79,7 @@ def log(msg):
 def action(msg):
     sys.stderr.write(message(msg))
 
-def warning(msg, code):
+def warning(msg):
     for line in msg.splitlines():
         sys.stderr.write("[mbed WARNING] %s\n" % line)
     sys.stderr.write("---\n")
@@ -662,6 +662,32 @@ class Repo(object):
                 action("Remove untracked library reference \"%s\"" % file)
                 os.remove(file)
 
+    def can_update(self, clean, force):
+        if (self.is_local or self.url is None) and not force:
+            return False, "Preserving local library \"%s\" in \"%s\".\nPlease publish this library to a remote URL to be able to restore it at any time.\nYou can use --ignore switch to ignore all local libraries and update only the published ones.\nYou can also use --force switch to remove all local libraries. WARNING: This action cannot be undone." % (self.name, self.path)
+        if not clean and self.scm.dirty():
+            return False, "Uncommitted changes in \"%s\" in \"%s\".\nPlease discard or stash them first and then retry update.\nYou can also use --clean switch to discard all uncommitted changes. WARNING: This action cannot be undone." % (self.name, self.path)
+        if not force and self.scm.outgoing():
+            return False, "Unpublished changes in \"%s\" in \"%s\".\nPlease publish them first using the \"publish\" command.\nYou can also use --force to discard all local commits and replace the library with the one included in this revision. WARNING: This action cannot be undone." % (self.name, self.path)
+
+        return True, "OK"
+
+    def check_repo(self, show_warning=None):
+        if not os.path.isdir(self.path):
+            if show_warning:
+                warning("Library reference \"%s\" points to non-existing library in \"%s\"\nYou can use \"deploy\" command to import the missing libraries.\nYou can also use \"sync\" command to synchronize and remove all invalid library references." % (os.path.basename(self.lib), self.path))
+            else:
+                error("Library reference \"%s\" points to non-existing library in \"%s\"\nYou can use \"deploy\" command to import the missing libraries\nYou can also use \"sync\" command to synchronize and remove all invalid library references." % (os.path.basename(self.lib), self.path), 1)
+            return False
+        elif not self.isrepo(self.path):
+            if show_warning:
+                warning("Library reference \"%s\" points to a folder \"%s\", which is not a valid repository.\nYou can remove the conflicting folder manually and use \"deploy\" command to import the missing libraries\nYou can also remove library reference \"%s\" and use the \"sync\" command again." % (os.path.basename(self.lib), self.path, self.lib))
+            else:
+                error("Library reference \"%s\" points to a folder \"%s\", which is not a valid repository.\nYou can remove the conflicting folder manually and use \"deploy\" command to import the missing libraries\nYou can also remove library reference \"%s\" and use the \"sync\" command again." % (os.path.basename(self.lib), self.path, self.lib), 1)
+            return False
+
+        return True
+
                 
 def formaturl(url, format="default"):
     url = "%s" % url
@@ -687,6 +713,7 @@ def formaturl(url, format="default"):
                 else:
                     url = 'https://%s/%s' % (m.group(2), m.group(3)) # https is default
     return url
+
 
 
 # Help messages adapt based on current dir
@@ -771,6 +798,9 @@ def import_(url, path=None, top=True, depth=None, protocol=None):
         d_path = os.path.abspath(path or os.getcwd())
         error("Cannot import program in the specified location \"%s\" because it's already part of a program.\nPlease change your working directory to a different location or use command \"add\" to import the URL as a library." % d_path, 1)
 
+    if os.path.isdir(repo.path) and len(os.listdir(repo.path)) > 1:
+        error("Directory \"%s\" is not empty. Please ensure that the destination folder is empty." % repo.path, 1)
+
     # Sorted so repositories that match urls are attempted first
     sorted_scms = [(scm.isurl(url), scm) for scm in scms.values()]
     sorted_scms = sorted(sorted_scms, key=lambda (m, _): not m)
@@ -799,12 +829,13 @@ def deploy(depth=None, protocol=None):
     repo.scm.ignores(repo)
 
     for lib in repo.libs:
-        if not os.path.isdir(lib.path):
+        if os.path.isdir(lib.path):
+            if lib.check_repo():
+                with cd(lib.path):
+                    deploy(depth=depth, protocol=protocol)
+        else:
             import_(lib.fullurl, lib.path, top=False, depth=depth, protocol=protocol)
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
-        else:
-            with cd(lib.path):
-                deploy(depth=depth, protocol=protocol)
 
     # This has to be replaced by one time python script from tools that sets up everything the developer needs to use the tools
     if (not os.path.isfile('mbed_settings.py') and 
@@ -859,9 +890,10 @@ def publish(top=True, all=None):
         error("%s \"%s\" in \"%s\" is a local repository.\nPlease associate it with a remote repository URL before attempting to publish.\nRead more about %s repositories here:\nhttp://developer.mbed.org/handbook/how-to-publish-with-%s/" % ("Program" if top else "Library", repo.name, repo.path, repo.scm.name, repo.scm.name), 1)
 
     for lib in repo.libs:
-        with cd(lib.path):
-            progress()
-            publish(False, all)
+        if lib.check_repo():
+            with cd(lib.path):
+                progress()
+                publish(False, all)
 
     sync(recursive=False)
 
@@ -888,16 +920,6 @@ def publish(top=True, all=None):
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help='Update current %s and its dependencies from associated remote repository URLs.' % cwd_type)
 def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=None, protocol=None):
-    def can_update(repo, clean, force):
-        if (repo.is_local or repo.url is None) and not force:
-            return False, "Preserving local library \"%s\" in \"%s\".\nPlease publish this library to a remote URL to be able to restore it at any time.\nYou can use --ignore switch to ignore all local libraries and update only the published ones.\nYou can also use --force switch to remove all local libraries. WARNING: This action cannot be undone." % (repo.name, repo.path)
-        if not clean and repo.scm.dirty():
-            return False, "Uncommitted changes in \"%s\" in \"%s\".\nPlease discard or stash them first and then retry update.\nYou can also use --clean switch to discard all uncommitted changes. WARNING: This action cannot be undone." % (repo.name, repo.path)
-        if not force and repo.scm.outgoing():
-            return False, "Unpublished changes in \"%s\" in \"%s\".\nPlease publish them first using the \"publish\" command.\nYou can also use --force to discard all local commits and replace the library with the one included in this revision. WARNING: This action cannot be undone." % (repo.name, repo.path)
-
-        return True, "OK"
-
     if top:
         sync(keep_refs=True)
         
@@ -916,14 +938,14 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
             gc = False
             with cd(lib.path):
                 lib_repo = Repo.fromrepo(lib.path)
-                gc, msg = can_update(lib_repo, clean, force)
+                gc, msg = lib_repo.can_update(clean, force)
             if gc:
                 action("Removing leftover library \"%s\" in \"%s\"" % (lib.name, lib.path))
                 rmtree_readonly(lib.path)
                 repo.scm.unignore(repo, relpath(repo.path, lib.path))
             else:
                 if ignore:
-                    warning(msg, 1)
+                    warning(msg)
                 else:
                     error(msg, 1)
 
@@ -937,14 +959,14 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
             if lib.url != lib_repo.url: # Repository URL has changed
                 gc = False
                 with cd(lib.path):
-                    gc, msg = can_update(lib_repo, clean, force)
+                    gc, msg = lib_repo.can_update(clean, force)
                 if gc:
                     action("Removing library \"%s\" in \"%s\" due to changed repository URL. Will import from new URL." % (lib.name, lib.path))
                     rmtree_readonly(lib.path)
                     repo.scm.unignore(repo, relpath(repo.path, lib.path))
                 else:
                     if ignore:
-                        warning(msg, 1)
+                        warning(msg)
                     else:
                         error(msg, 1)
 
@@ -970,6 +992,7 @@ def sync(recursive=True, keep_refs=False, top=True):
 
     for lib in repo.libs:
         if os.path.isdir(lib.path):
+            lib.check_repo()
             lib.sync()
             lib.write()
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
@@ -1001,15 +1024,16 @@ def sync(recursive=True, keep_refs=False, top=True):
 
     if recursive:
         for lib in repo.libs:
-            if os.path.isdir(lib.path):
+            if lib.check_repo():
                 with cd(lib.path):
                     sync(keep_refs=keep_refs, top=False)
 
             
 @subcommand('ls',
     dict(name=['-a', '--all'], action='store_true', help="List repository URL and hash pairs"),
+    dict(name=['-I', '--ignore'], action="store_true", help="Ignore errors regarding missing libraries."),
     help='View the current %s dependency tree.' % cwd_type)
-def list_(all=False, prefix=''):
+def list_(all=False, prefix='', ignore=False):
     repo = Repo.fromrepo()
     print prefix + repo.name, '(%s)' % (repo.url if all else repo.hash)
 
@@ -1020,21 +1044,24 @@ def list_(all=False, prefix=''):
             nprefix = ''
         nprefix += '|- ' if i < len(repo.libs)-1 else '`- '
 
-        with cd(lib.path):
-            list_(all, nprefix)
+        if lib.check_repo(ignore):
+            with cd(lib.path):
+                list_(all, nprefix, ignore=False)
 
 
 @subcommand('status',
+    dict(name=['-I', '--ignore'], action="store_true", help="Ignore errors regarding missing libraries."),
     help='Show status of the current %s and its dependencies.' % cwd_type)
-def status():
+def status(ignore=False):
     repo = Repo.fromrepo()
     if repo.scm.dirty():
         action("Status for \"%s\":" % repo.name)
         print repo.scm.status()
 
     for lib in repo.libs:
-        with cd(lib.path):
-            status()
+        if lib.check_repo(ignore):
+            with cd(lib.path):
+                status(ignore)
 
 
 @subcommand('compile',
