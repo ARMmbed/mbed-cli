@@ -942,7 +942,7 @@ def publish(top=True, all=None):
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help='Update current %s and its dependencies from associated remote repository URLs.' % cwd_type)
 def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=None, protocol=None):
-    if top:
+    if top and clean:
         sync(keep_refs=True)
         
     repo = Repo.fromrepo()
