@@ -220,14 +220,14 @@ class Hg(object):
                     pass
 
     def add(file):
-        action("Adding "+file)
+        action("Adding reference \"%s\"" % file)
         try:
             popen([hg_cmd, 'add', file])
         except ProcessException:
             pass
         
     def remove(file):
-        action("Removing "+file)
+        action("Removing reference \"%s\" " % file)
         try:
             popen([hg_cmd, 'rm', '-f', file])
         except ProcessException:
@@ -838,7 +838,8 @@ def import_(url, path=None, top=True, depth=None, protocol=None):
             scm.clone(repo.url, repo.path, repo.hash, depth=depth, protocol=protocol)
             break
         except ProcessException:
-            rmtree_readonly(repo.path)
+            if os.path.isdir(repo.path):
+                rmtree_readonly(repo.path)
             pass
     else:
         error("Unable to clone repository (%s)" % url, 1)
