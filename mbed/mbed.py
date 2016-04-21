@@ -233,9 +233,9 @@ class Hg(object):
     def commit():
         popen([hg_cmd, 'commit'])
         
-    def push(repo):
+    def push(repo, all=None):
         action("Pushing local repository \"%s\" to remote \"%s\"" % (repo.name, repo.url))
-        popen([hg_cmd, 'push'])
+        popen([hg_cmd, 'push'] + (['--new-branch'] if all else []))
         
     def pull(repo):
         action("Pulling remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
@@ -380,9 +380,9 @@ class Git(object):
     def commit():
         popen([git_cmd, 'commit', '-a'])
         
-    def push(repo):
+    def push(repo, all=None):
         action("Pushing local repository \"%s\" to remote \"%s\"" % (repo.name, repo.url))
-        popen([git_cmd, 'push', '--all'])
+        popen([git_cmd, 'push'] + (['--all'] if all else []))
         
     def pull(repo):
         action("Pulling remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
@@ -848,8 +848,9 @@ def remove(path):
 
 # Publish command
 @subcommand('publish',
+    dict(name=['-A', '--all'], action="store_true", help="Publish all branches, including new. Default: push only the current branch."),
     help='Publish current %s and its dependencies to associated remote repository URLs.' % cwd_type)
-def publish(top=True):
+def publish(top=True, all=None):
     if top:
         action("Checking for local modifications...")
 
@@ -860,7 +861,7 @@ def publish(top=True):
     for lib in repo.libs:
         with cd(lib.path):
             progress()
-            publish(False)
+            publish(False, all)
 
     sync(recursive=False)
 
@@ -871,7 +872,7 @@ def publish(top=True):
 
     try:
         if repo.scm.outgoing():
-            repo.scm.push(repo)
+            repo.scm.push(repo, all)
     except ProcessException as e:
         if e[0] != 1:
             raise
