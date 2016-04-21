@@ -279,23 +279,28 @@ class Hg(object):
         tagpaths = '[paths]'
         default_url = ''
         url = ''
-        with open(os.path.join(repo.path, '.hg/hgrc')) as f: 
-            lines = f.read().splitlines()
-            if tagpaths in lines:
-                idx = lines.index(tagpaths)
-                m = re.match('^([\w_]+)\s*=\s*(.*)?$', lines[idx+1])
-                if m:
-                    if m.group(1) == 'default':
-                        default_url = m.group(2)
-                    else:
-                        url = m.group(2)
-        if default_url:
-            url = default_url
+        if os.path.isfile(os.path.join(repo.path, '.hg/hgrc')):
+            with open(os.path.join(repo.path, '.hg/hgrc')) as f: 
+                lines = f.read().splitlines()
+                if tagpaths in lines:
+                    idx = lines.index(tagpaths)
+                    m = re.match('^([\w_]+)\s*=\s*(.*)?$', lines[idx+1])
+                    if m:
+                        if m.group(1) == 'default':
+                            default_url = m.group(2)
+                        else:
+                            url = m.group(2)
+            if default_url:
+                url = default_url
+
         return formaturl(url or pquery([hg_cmd, 'paths', 'default']).strip())
 
     def gethash(repo):
-        with open(os.path.join(repo.path, '.hg/dirstate'), 'rb') as f:
-            return ''.join('%02x'%ord(i) for i in f.read(6))
+        if os.path.isfile(os.path.join(repo.path, '.hg/dirstate')):
+            with open(os.path.join(repo.path, '.hg/dirstate'), 'rb') as f:
+                return ''.join('%02x'%ord(i) for i in f.read(6))
+        else:
+            return ""
             
     def ignores(repo):
         hook = 'ignore.local = .hg/hgignore'
@@ -311,11 +316,18 @@ class Hg(object):
 
     def ignore(repo, file):
         hook = 'ignore.local = .hg/hgignore'
-        with open(os.path.join(repo.path, '.hg/hgrc')) as f:
-            if hook not in f.read().splitlines():
-                with open('.hg/hgrc', 'a') as f:
-                    f.write('[ui]\n')
-                    f.write(hook + '\n')
+        
+        hgrc = os.path.join(repo.path, '.hg/hgrc')
+        try: 
+            with open(hgrc) as f:
+                exists = hook in f.read().splitlines()
+        except IOError:
+            exists = False
+
+        if not exists:
+            with open(hgrc, 'a') as f:
+                f.write('[ui]\n')
+                f.write(hook + '\n')
 
         exclude = os.path.join(repo.path, '.hg/hgignore')
         try: 
