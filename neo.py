@@ -413,7 +413,8 @@ class Git(object):
     def update(repo, hash=None, clean=False):
         if clean:
             action("Discarding local changes in \"%s\"" % repo.name)
-            popen([git_cmd, 'reset', '--hard'])
+            popen([git_cmd, 'checkout', '.'])
+            popen([git_cmd, 'clean', '-fdq'])
         if hash:
             action("Fetching remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
             popen([git_cmd, 'fetch', '-v', '--all'])
