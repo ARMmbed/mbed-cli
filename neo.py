@@ -854,7 +854,7 @@ def deploy(depth=None, protocol=None):
         if os.path.isdir(lib.path):
             if lib.check_repo():
                 with cd(lib.path):
-                    deploy(depth=depth, protocol=protocol)
+                    update(lib.hash, top=False, depth=depth, protocol=protocol)
         else:
             import_(lib.fullurl, lib.path, top=False, depth=depth, protocol=protocol)
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
