@@ -210,7 +210,14 @@ class Hg(object):
 
     def clone(url, name=None, hash=None, depth=None, protocol=None):
         action("Cloning "+name+" from "+url)
-        popen([hg_cmd, 'clone', formaturl(url, protocol), name] + (['-u', hash] if hash else []))
+        popen([hg_cmd, 'clone', formaturl(url, protocol), name])
+        if hash:
+            with cd(name):
+                try:
+                    popen([hg_cmd, 'checkout', hash])
+                except ProcessException:
+                    error("Unable to update to requested revision \"%s\"" % hash)
+                    pass
 
     def add(file):
         action("Adding "+file)
@@ -357,7 +364,11 @@ class Git(object):
         popen([git_cmd, 'clone', formaturl(url, protocol), name] + (['--depth', depth] if depth else []))
         if hash:
             with cd(name):
-                popen([git_cmd, 'checkout', '-q', hash])
+                try:
+                    popen([git_cmd, 'checkout', '-q', hash])
+                except ProcessException:
+                    error("Unable to update to the requested revision \"%s\"" % hash)
+                    pass
 
     def add(file):
         action("Adding "+file)
