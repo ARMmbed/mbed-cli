@@ -94,7 +94,13 @@ The compiled binary (and ELF image) can be found in the `.build` subdirectory of
 
 ### Compiling Tests
 
-Tests are compiled with the module source. Test code exists in following directory structure
+Tests are compiled by adding argument ```--tests``` in the above compile command:
+
+```
+$ neo.py compile -t ARM -m K64F --tests -j 0
+```
+
+Test code exists in following directory structure
 
 ```
 <module>
