@@ -310,14 +310,21 @@ class Hg(object):
                 exists = hook in f.read().splitlines()
         except IOError:
             exists = False
+            
         if not exists:
-            with open(hgrc, 'a') as f:
-                f.write('[ui]\n')
-                f.write(hook + '\n')
+            try:
+                with open(hgrc, 'a') as f:
+                    f.write('[ui]\n')
+                    f.write(hook + '\n')
+            except IOError:
+                error("Unable to write hgrc file in \"%s\"" % hgrc)
 
         exclude = os.path.join(repo.path, '.hg', 'hgignore')
-        with open(exclude, 'w') as f:
-            f.write("syntax: glob\n"+'\n'.join(ignores)+'\n')
+        try:
+            with open(exclude, 'w') as f:
+                f.write("syntax: glob\n"+'\n'.join(ignores)+'\n')
+        except IOError:
+            error("Unable to write ignore file in \"%s\"" % exclude)
 
     def ignore(repo, file):
         hook = 'ignore.local = .hg/hgignore'
@@ -329,9 +336,12 @@ class Hg(object):
             exists = False
 
         if not exists:
-            with open(hgrc, 'a') as f:
-                f.write('[ui]\n')
-                f.write(hook + '\n')
+            try:
+                with open(hgrc, 'a') as f:
+                    f.write('[ui]\n')
+                    f.write(hook + '\n')
+            except IOError:
+                error("Unable to write hgrc file in \"%s\"" % hgrc)
 
         exclude = os.path.join(repo.path, '.hg/hgignore')
         try: 
@@ -341,8 +351,11 @@ class Hg(object):
             exists = False
 
         if not exists:
-            with open(exclude, 'a') as f:
-                f.write(file + '\n')
+            try:
+                with open(exclude, 'a') as f:
+                    f.write(file + '\n')
+            except IOError:
+                error("Unable to write ignore file in \"%s\"" % exclude)
 
     def unignore(repo, file):
         exclude = os.path.join(repo.path, '.hg', 'hgignore')
@@ -357,9 +370,11 @@ class Hg(object):
 
         lines.remove(file)
 
-        with open(exclude, 'w') as f:
-            f.write('\n'.join(lines) + '\n')
-
+        try:
+            with open(exclude, 'w') as f:
+                f.write('\n'.join(lines) + '\n')
+        except IOError:
+            error("Unable to write ignore file in \"%s\"" % exclude)
             
 @scm('git')
 @staticclass
