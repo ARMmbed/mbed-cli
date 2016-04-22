@@ -1114,7 +1114,7 @@ def compile(toolchain=None, mcu=None, compile_tests=False):
 
         args = remainder
         repo = Repo.fromrepo()
-        file = os.path.join(repo.scm.store, 'neo')
+        file = os.path.join(repo.scm.store, 'mbed')
 
         target = mcu if mcu else get_cfg(file, 'TARGET')
         if target is None:
@@ -1180,7 +1180,7 @@ def export(ide=None, mcu=None):
 
         args = remainder
         repo = Repo.fromrepo()
-        file = os.path.join(repo.scm.store, 'neo')
+        file = os.path.join(repo.scm.store, 'mbed')
         
         target = mcu if mcu else get_cfg(file, 'TARGET')
         if target is None:
@@ -1208,7 +1208,7 @@ def target(name=None):
     root_path = Repo.findroot(os.getcwd())
     with cd(root_path):
         repo = Repo.fromrepo()
-        file = os.path.join(repo.scm.store, 'neo')
+        file = os.path.join(repo.scm.store, 'mbed')
         if name is None:
             name = get_cfg(file, 'TARGET')
             action(('The default target for program "%s" is "%s"' % (repo.name, name)) if name else 'No default target is specified for program "%s"' % repo.name)
@@ -1223,7 +1223,7 @@ def toolchain(name=None):
     root_path = Repo.findroot(os.getcwd())
     with cd(root_path):
         repo = Repo.fromrepo()        
-        file = os.path.join(repo.scm.store, 'neo')
+        file = os.path.join(repo.scm.store, 'mbed')
         if name is None:
             name = get_cfg(file, 'TOOLCHAIN')
             action(('The default toolchain for program "%s" is "%s"' % (repo.name, name)) if name else 'No default toolchain is specified for program "%s"' % repo.name)
