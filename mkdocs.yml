@@ -1,7 +1,7 @@
-site_name: neo
+site_name: mbed
 
 docs_dir: docs
 
 pages:
-- ['index.md','Introduction to neo']
-- ['user_guide.md','neo User Guide']
+- ['index.md','Introduction to mbed']
+- ['user_guide.md','mbed User Guide']
