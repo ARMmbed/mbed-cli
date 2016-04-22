@@ -14,6 +14,7 @@ from itertools import *
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
 git_cmd = 'git'
+ver = '0.1.1'
 
 ignores = [
     # Version control folders
@@ -762,7 +763,7 @@ cwd_dest = "program" if cwd_type == "directory" else "library"
 
 
 # Subparser handling
-parser = argparse.ArgumentParser(description="A command-line code management tool for ARM mbed OS - http://www.mbed.com\n%s uses current directory as a working context." % os.path.basename(sys.argv[0]))
+parser = argparse.ArgumentParser(description="Command-line code management tool for ARM mbed OS - http://www.mbed.com\nversion %s" % ver)
 subparsers = parser.add_subparsers(title="Commands", metavar="           ")
 
 # Process handling
