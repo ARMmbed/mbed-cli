@@ -363,7 +363,7 @@ class Hg(object):
             with open(exclude) as f:
                 lines = f.read().splitlines()
         except:
-            lines = ''
+            lines = []
 
         if file not in lines:
             return
@@ -499,7 +499,7 @@ class Git(object):
             with open(exclude) as f:
                 lines = f.read().splitlines()
         except:
-            lines = ''
+            lines = []
 
         if file not in lines:
             return
