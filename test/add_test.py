@@ -1,13 +1,13 @@
 from util import *
 
-# Tests the result of 'neo add'
-def test_add(neo, testrepos):
+# Tests the result of 'mbed add'
+def test_add(mbed, testrepos):
     test3 = testrepos[2]
 
     with cd('test1'):
-        popen(['python', neo, 'add', test3])
+        popen(['python', mbed, 'add', test3])
 
-    assertls(neo, 'test1', [
+    assertls(mbed, 'test1', [
         "test1",
         "|- test2",
         "|  `- test3",
@@ -16,15 +16,15 @@ def test_add(neo, testrepos):
         "   `- test4",
     ])
 
-# Tests if a repo can be imported correctly after 'neo add'
-def test_import_after_add(neo, testrepos):
-    test_add(neo, testrepos)
+# Tests if a repo can be imported correctly after 'mbed add'
+def test_import_after_add(mbed, testrepos):
+    test_add(mbed, testrepos)
     mkcommit('test1')
 
     test1 = testrepos[0]
-    popen(['python', neo, 'import', test1, 'testimport'])
+    popen(['python', mbed, 'import', test1, 'testimport'])
 
-    assertls(neo, 'testimport', [
+    assertls(mbed, 'testimport', [
         "testimport",
         "|- test2",
         "|  `- test3",

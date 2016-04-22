@@ -6,7 +6,7 @@ import re
 import shutil
 import stat
 
-NEO_PATH = os.path.abspath('neo.py')
+MBED_PATH = os.path.abspath(os.path.join('mbed', 'mbed.py'))
 
 # Process execution
 class ProcessException(Exception):
@@ -41,10 +41,10 @@ def cd(newdir):
 
 # Handling test environment
 @pytest.fixture
-def neo(tmpdir):
+def mbed(tmpdir):
     tmpdir.chdir()
 
-    return NEO_PATH
+    return MBED_PATH
     
 # Higher level functions
 def remove(path):
@@ -86,11 +86,11 @@ def mkhg(name):
 
     return os.path.abspath(name+'.hg').replace('\\', '/')
 
-def assertls(neo, dir, tree):
+def assertls(mbed, dir, tree):
     tree = ''.join(re.escape(l)+r'.*\n' for l in tree)
 
     with cd(dir):
-        result = pquery(['python', neo, 'ls'])
+        result = pquery(['python', mbed, 'ls'])
 
     print result
     assert re.match(tree, result, re.MULTILINE)
@@ -119,7 +119,7 @@ def mkcommit(dir=None, files=[]):
 
 # Different repository structures
 @pytest.fixture(params=['git1', 'hg1', 'alt1', 'alt2'])
-def testrepos(neo, request):
+def testrepos(mbed, request):
     if request.param in ['git1', 'alt1']:
         test1 = mkgit('test1')
         popen(['git', 'clone', test1, 'test1'])
