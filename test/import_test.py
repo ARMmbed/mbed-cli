@@ -1,11 +1,11 @@
 from util import *
 
-# Tests 'neo import'
-def test_import(neo, testrepos):
+# Tests 'mbed import'
+def test_import(mbed, testrepos):
     test1 = testrepos[0]
-    popen(['python', neo, 'import', test1, 'testimport'])
+    popen(['python', mbed, 'import', test1, 'testimport'])
 
-    assertls(neo, 'testimport', [
+    assertls(mbed, 'testimport', [
         "testimport",
         "`- test2",
         "   `- test3",

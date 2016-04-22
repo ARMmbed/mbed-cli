@@ -1,8 +1,8 @@
 from util import *
 
-# Tests 'neo ls' and provides sanity check of test framework
-def test_ls(neo, testrepos):
-    assertls(neo, 'test1', [
+# Tests 'mbed ls' and provides sanity check of test framework
+def test_ls(mbed, testrepos):
+    assertls(mbed, 'test1', [
         "test1",
         "`- test2",
         "   `- test3",
