@@ -216,8 +216,7 @@ class Hg(object):
                 try:
                     popen([hg_cmd, 'checkout', hash])
                 except ProcessException:
-                    error("Unable to update to requested revision \"%s\"" % hash)
-                    pass
+                    error("Unable to update to the requested revision \"%s\"" % hash)
 
     def add(file):
         action("Adding reference \"%s\"" % file)
@@ -297,28 +296,32 @@ class Hg(object):
         return formaturl(url or pquery([hg_cmd, 'paths', 'default']).strip())
 
     def gethash(repo):
-        if os.path.isfile(os.path.join(repo.path, '.hg/dirstate')):
-            with open(os.path.join(repo.path, '.hg/dirstate'), 'rb') as f:
+        if os.path.isfile(os.path.join(repo.path, '.hg', 'dirstate')):
+            with open(os.path.join(repo.path, '.hg', 'dirstate'), 'rb') as f:
                 return ''.join('%02x'%ord(i) for i in f.read(6))
         else:
             return ""
             
     def ignores(repo):
         hook = 'ignore.local = .hg/hgignore'
-        with open(os.path.join(repo.path, '.hg/hgrc')) as f:
-            if hook not in f.read().splitlines():
-                with open('.hg/hgrc', 'a') as f:
-                    f.write('[ui]\n')
-                    f.write(hook + '\n')
+        hgrc = os.path.join(repo.path, '.hg', 'hgrc')
+        try: 
+            with open(hgrc) as f:
+                exists = hook in f.read().splitlines()
+        except IOError:
+            exists = False
+        if not exists:
+            with open(hgrc, 'a') as f:
+                f.write('[ui]\n')
+                f.write(hook + '\n')
 
-        exclude = os.path.join(repo.path, '.hg/hgignore')
+        exclude = os.path.join(repo.path, '.hg', 'hgignore')
         with open(exclude, 'w') as f:
             f.write("syntax: glob\n"+'\n'.join(ignores)+'\n')
 
     def ignore(repo, file):
         hook = 'ignore.local = .hg/hgignore'
-        
-        hgrc = os.path.join(repo.path, '.hg/hgrc')
+        hgrc = os.path.join(repo.path, '.hg', 'hgrc')
         try: 
             with open(hgrc) as f:
                 exists = hook in f.read().splitlines()
@@ -342,7 +345,7 @@ class Hg(object):
                 f.write(file + '\n')
 
     def unignore(repo, file):
-        exclude = os.path.join(repo.path, '.hg/hgignore')
+        exclude = os.path.join(repo.path, '.hg', 'hgignore')
         try:
             with open(exclude) as f:
                 lines = f.read().splitlines()
@@ -380,7 +383,6 @@ class Git(object):
                     popen([git_cmd, 'checkout', '-q', hash])
                 except ProcessException:
                     error("Unable to update to the requested revision \"%s\"" % hash)
-                    pass
 
     def add(file):
         action("Adding "+file)
@@ -951,7 +953,7 @@ def publish(top=True, all=None):
     help='Update current %s and its dependencies from associated remote repository URLs.' % cwd_type)
 def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=None, protocol=None):
     if top and clean:
-        sync(keep_refs=True)
+        sync()
         
     repo = Repo.fromrepo()
     
