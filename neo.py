@@ -865,7 +865,7 @@ def import_(url, path=None, depth=None, protocol=None, top=True):
     sorted_scms = sorted(sorted_scms, key=lambda (m, _): not m)
 
     text = "Importing program" if top else "Adding library"
-    action("%s \"%s\" from \"%s/\"%s" % (text, relpath(cwd_root, repo.path).replace('\\', '/'), repo.url, ' at rev #'+repo.hash[0:12] if repo.hash else ''))
+    action("%s \"%s\" from \"%s/\"%s" % (text, relpath(cwd_root, repo.path), repo.url, ' at rev #'+repo.hash[0:12] if repo.hash else ''))
     for _, scm in sorted_scms:
         try:
             scm.clone(repo.url, repo.path, repo.hash, depth=depth, protocol=protocol)
