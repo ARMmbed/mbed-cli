@@ -433,8 +433,9 @@ class Git(object):
     def update(repo, hash=None, clean=False):
         if clean:
             log("Discarding local changes in \"%s\"" % repo.name)
-            popen([git_cmd, 'checkout', '.'] + ([] if verbose else ['-q']))
-            popen([git_cmd, 'clean', '-fdq'] + ([] if verbose else ['-q']))
+            popen([git_cmd, 'reset', 'HEAD'] + ([] if verbose else ['-q'])) # unmarks files for commit
+            popen([git_cmd, 'checkout', '.'] + ([] if verbose else ['-q'])) # undo  modified files
+            popen([git_cmd, 'clean', '-fdq'] + ([] if verbose else ['-q'])) # cleans up untracked files and folders
         if hash:
             log("Fetching remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
             popen([git_cmd, 'fetch', '-v', '--all'] + (['-v'] if verbose else ['-q']))
