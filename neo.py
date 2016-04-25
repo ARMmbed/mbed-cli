@@ -220,7 +220,7 @@ class Hg(object):
                 try:
                     popen([hg_cmd, 'checkout', hash])
                 except ProcessException:
-                    error("Unable to update to the requested revision \"%s\"" % hash)
+                    error("Unable to update to the requested revision \"%s\"" % hash, 1)
 
     def add(file):
         action("Adding reference \"%s\"" % file)
@@ -321,14 +321,14 @@ class Hg(object):
                     f.write('[ui]\n')
                     f.write(hook + '\n')
             except IOError:
-                error("Unable to write hgrc file in \"%s\"" % hgrc)
+                error("Unable to write hgrc file in \"%s\"" % hgrc, 1)
 
         exclude = os.path.join(repo.path, '.hg', 'hgignore')
         try:
             with open(exclude, 'w') as f:
                 f.write("syntax: glob\n"+'\n'.join(ignores)+'\n')
         except IOError:
-            error("Unable to write ignore file in \"%s\"" % exclude)
+            error("Unable to write ignore file in \"%s\"" % exclude, 1)
 
     def ignore(repo, file):
         hook = 'ignore.local = .hg/hgignore'
@@ -345,7 +345,7 @@ class Hg(object):
                     f.write('[ui]\n')
                     f.write(hook + '\n')
             except IOError:
-                error("Unable to write hgrc file in \"%s\"" % hgrc)
+                error("Unable to write hgrc file in \"%s\"" % hgrc, 1)
 
         exclude = os.path.join(repo.path, '.hg/hgignore')
         try: 
@@ -359,7 +359,7 @@ class Hg(object):
                 with open(exclude, 'a') as f:
                     f.write(file + '\n')
             except IOError:
-                error("Unable to write ignore file in \"%s\"" % exclude)
+                error("Unable to write ignore file in \"%s\"" % exclude, 1)
 
     def unignore(repo, file):
         exclude = os.path.join(repo.path, '.hg', 'hgignore')
@@ -378,7 +378,7 @@ class Hg(object):
             with open(exclude, 'w') as f:
                 f.write('\n'.join(lines) + '\n')
         except IOError:
-            error("Unable to write ignore file in \"%s\"" % exclude)
+            error("Unable to write ignore file in \"%s\"" % exclude, 1)
             
 # pylint: disable=no-self-argument
 # pylint: disable=no-method-argument
@@ -404,7 +404,7 @@ class Git(object):
                 try:
                     popen([git_cmd, 'checkout', '-q', hash])
                 except ProcessException:
-                    error("Unable to update to the requested revision \"%s\"" % hash)
+                    error("Unable to update to the requested revision \"%s\"" % hash, 1)
 
     def add(file):
         action("Adding "+file)
@@ -984,7 +984,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
     repo = Repo.fromrepo()
     
     if top and not rev and repo.scm.isdetached():
-        error("This %s is in detached HEAD state, and you won't be able to receive updates from the remote repository until you either checkout a branch or create a new one.\nYou can checkout a branch using \"%s checkout <branch_name>\" command before running \"%s update\"." % (cwd_type, repo.scm.name, os.path.basename(sys.argv[0])),1)
+        error("This %s is in detached HEAD state, and you won't be able to receive updates from the remote repository until you either checkout a branch or create a new one.\nYou can checkout a branch using \"%s checkout <branch_name>\" command before running \"%s update\"." % (cwd_type, repo.scm.name, os.path.basename(sys.argv[0])), 1)
     
     # Fetch from remote repo
     repo.scm.update(repo, rev, clean)
