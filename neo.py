@@ -251,9 +251,9 @@ class Hg(object):
         popen([hg_cmd, 'pull'] + (['-v'] if verbose else ['-q']))
 
     def update(repo, hash=None, clean=False):
-        action("Pulling remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
+        log("Pulling remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
         popen([hg_cmd, 'pull'] + (['-v'] if verbose else ['-q']))
-        action("Updating \"%s\" to %s" % (repo.name, "revision "+hash if hash else "latest revision in the current branch"))
+        log("Updating \"%s\" to %s" % (repo.name, "rev #"+hash if hash else "latest revision in the current branch"))
         popen([hg_cmd, 'update'] + (['-r', hash] if hash else []) + (['-C'] if clean else []) + (['-v'] if verbose else ['-q']))
 
     def status():
@@ -404,16 +404,14 @@ class Git(object):
                     error("Unable to update to revision \"%s\"" % hash, 1)
 
     def add(file):
-        if verbose:
-            action("Adding reference "+file)
+        log("Adding reference "+file)
         try:
             popen([git_cmd, 'add', file] + (['-v'] if verbose else []))
         except ProcessException:
             pass
         
     def remove(file):
-        if verbose:
-            action("Removing reference "+file)
+        log("Removing reference "+file)
         try:
             popen([git_cmd, 'rm', '-f', file] + ([] if verbose else ['-q']))
         except ProcessException:
@@ -434,16 +432,16 @@ class Git(object):
 
     def update(repo, hash=None, clean=False):
         if clean:
-            action("Discarding local changes in \"%s\"" % repo.name)
+            log("Discarding local changes in \"%s\"" % repo.name)
             popen([git_cmd, 'checkout', '.'] + ([] if verbose else ['-q']))
             popen([git_cmd, 'clean', '-fdq'] + ([] if verbose else ['-q']))
         if hash:
-            action("Fetching remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
+            log("Fetching remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
             popen([git_cmd, 'fetch', '-v', '--all'] + (['-v'] if verbose else ['-q']))
-            action("Updating \"%s\" to %s" % (repo.name, hash))
+            log("Updating \"%s\" to rev #%s" % (repo.name, hash))
             popen([git_cmd, 'checkout'] + [hash] + ([] if verbose else ['-q']))
         else:
-            action("Fetching remote repository \"%s\" to local \"%s\" and updating to latest revision in the current branch" % (repo.url, repo.name))
+            log("Fetching remote repository \"%s\" to local \"%s\" and updating to latest revision in the current branch" % (repo.url, repo.name))
             popen([git_cmd, 'pull', '--all'] + (['-v'] if verbose else ['-q']))
 
     def status():
@@ -695,10 +693,10 @@ class Repo(object):
                     progress()
                     return
 
+        action("Updating reference \"%s\" -> \"%s\"" % (relpath(cwd_root, self.path) if cwd_root != self.path else self.name, self.fullurl))
+        
         with open(self.lib, 'wb') as f:
             f.write(self.fullurl + '\n')
-
-        action("Update reference \"%s\" -> \"%s\"" % (self.name, self.fullurl))
 
     def rm_untracked(self):
         untracked = self.scm.untracked()
@@ -965,7 +963,7 @@ def publish(all=None, top=True):
     sync(recursive=False)
 
     if repo.scm.dirty():
-        action('Uncommitted changes in %s (%s)' % (repo.name, repo.path))
+        action('Uncommitted changes in \"%s\" (%s)' % (repo.name, relpath(cwd_root, repo.path)))
         raw_input('Press enter to commit and push: ')
         repo.scm.commit()
 
@@ -997,6 +995,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
         error("This %s is in detached HEAD state, and you won't be able to receive updates from the remote repository until you either checkout a branch or create a new one.\nYou can checkout a branch using \"%s checkout <branch_name>\" command before running \"%s update\"." % (cwd_type, repo.scm.name, os.path.basename(sys.argv[0])), 1)
     
     # Fetch from remote repo
+    action("Updating %s \"%s\" to %s" % (cwd_type if top else cwd_dest, os.path.basename(repo.path) if top else relpath(cwd_root, repo.path), "rev #"+rev if rev else "latest revision in the current branch"))
     repo.scm.update(repo, rev, clean)
     repo.rm_untracked()
 
@@ -1008,7 +1007,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
                 lib_repo = Repo.fromrepo(lib.path)
                 gc, msg = lib_repo.can_update(clean, force)
             if gc:
-                action("Removing leftover library \"%s\" in \"%s\"" % (lib.name, lib.path))
+                action("Removing library \"%s\" (obsolete)" % (relpath(cwd_root, lib.path)))
                 rmtree_readonly(lib.path)
                 repo.scm.unignore(repo, relpath(repo.path, lib.path))
             else:
@@ -1029,7 +1028,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
                 with cd(lib.path):
                     gc, msg = lib_repo.can_update(clean, force)
                 if gc:
-                    action("Removing library \"%s\" in \"%s\" due to changed repository URL. Will import from new URL." % (lib.name, lib.path))
+                    action("Removing library \"%s\" (changed URL). Will add from new URL." % (relpath(cwd_root, lib.path)))
                     rmtree_readonly(lib.path)
                     repo.scm.unignore(repo, relpath(repo.path, lib.path))
                 else:
@@ -1045,7 +1044,6 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
         with cd(lib.path):
             update(lib.hash, clean, force, ignore, top=False)
-
 
 
 # Synch command
@@ -1066,7 +1064,7 @@ def sync(recursive=True, keep_refs=False, top=True):
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
         else:
             if not keep_refs:
-                action("Remove reference \"%s\" -> \"%s\"" % (lib.name, lib.fullurl))
+                action("Removing reference \"%s\" -> \"%s\"" % (lib.name, lib.fullurl))
                 repo.scm.remove(lib.lib)
                 repo.scm.unignore(repo, relpath(repo.path, lib.path))
 
