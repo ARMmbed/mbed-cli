@@ -920,7 +920,7 @@ def add(url, path=None, depth=None, protocol=None):
     repo = Repo.fromrepo()
 
     lib = Repo.fromurl(url, path)
-    import_(lib.url, lib.path, depth=depth, protocol=protocol, top=False)
+    import_(lib.fullurl, lib.path, depth=depth, protocol=protocol, top=False)
     repo.scm.ignore(repo, relpath(repo.path, lib.path))
     lib.sync()
 
@@ -1041,10 +1041,11 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
     # Import missing repos and update to hashes
     for lib in repo.libs:
         if not os.path.isdir(lib.path):
-            import_(lib.url, lib.path, depth=depth, protocol=protocol, top=False)
+            import_(lib.fullurl, lib.path, depth=depth, protocol=protocol, top=False)
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
-        with cd(lib.path):
-            update(lib.hash, clean, force, ignore, top=False)
+        else:
+            with cd(lib.path):
+                update(lib.hash, clean, force, ignore, top=False)
 
 
 # Synch command
