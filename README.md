@@ -7,7 +7,7 @@ This document covers the installation and usage of *mbed-cli*.
 ## Table of Contents
 1. [Requierements](#requierements)
 1. [Installing mbed-cli](#installing-mbed-cli)
-1. [Importing and creating programs](#importing-and-creating-programs)
+1. [Creating and importing programs](#creating-and-importing-programs)
 	1. [Importing an existing program](#importing-and-creating-programs)
 	2. [Creating a new program](#creating-a-new-program)
 1. [Adding and removing libraries](#adding-and-removing-libraries)
@@ -60,7 +60,42 @@ To uninstall *mbed-cli* you can use:
 
 # Using mbed-cli
 
-## Importing and creating programs
+## Creating and importing programs
+
+
+### Creating a new program
+
+If you want to create a new program rather than importing an existing one, *mbed-cli* will automatically import the [mbed-os library] for you (https://github.com/ARMmbed/mbed-os/). This library represents a **release** of mbed OS and will pull in all the components of the OS, including its build system and desktop IDE project generators. In the future, when we introduce mbed OS **releases**, you'll get the guarantee that all the components in *mbed-os* passed integration tests, so that you know they work properly together. 
+
+With this in mind, these are the steps for creating a new program (we'll call it `myprog`):
+
+```
+$ mbed new myprog  # this creates new folder "myprog", initializes new repository and also imports the latest revision of mbed-os dependency to your program tree.
+$ cd myprog
+$ mbed ls -a       # this will list all libraries in your program
+myprog (no revision)
+`- mbed-os (https://github.com/ARMmbed/mbed-os/#e472a51e45f30d793cbb430b6ebf3e1c53d82f57)
+   |- core\mbedtls (https://mbed.org/teams/sandbox/code/mbedtls/#bef26f687287)
+   |- core\uvisor-mbed-lib (https://github.com/ARMmbed/uvisor-mbed-lib/#32b6df4a39df49dd14624d1503c4f2a27ab62516)
+   |- frameworks\greentea-client (https://github.com/bridadan/greentea-client/#398d96e25630ed62dfa7436bda8556d8d7e16969)
+   |- net\atmel-rf-driver (https://github.com/ARMmbed/atmel-rf-driver-mirror/#f4c48e5e98f66f145882b404e67998ad5cf2fe28)
+   |- net\coap-service (https://github.com/ARMmbed/coap-service-mirror/#0c78050989706c54c3e25c2854c379bdd734d539)
+   |- net\mbed-client (https://github.com/ARMmbed/mbed-client-mirror/#2a839d6c5beff8c19b16f3edc7b3e7ae10d5a471)
+   |- net\mbed-client-c (https://github.com/ARMmbed/mbed-client-c-mirror/#753541105a6fa7e1c66d905e0f2ee28815b3ffba)
+   |- net\mbed-client-classic (https://github.com/ARMmbed/mbed-client-classic/#0cf03c143a2a612e8225c18a88ecb7918be69cf5)
+   |- net\mbed-client-mbedtls (https://github.com/ARMmbed/mbed-client-mbedtls-mirror/#582821c96be81cbd92b3a33019051ad10a0d0693)
+   |- net\mbed-client-randlib (https://github.com/ARMmbed/mbed-client-randlib-mirror/#237b3fa0255f00194113814e8cc47cc38ee7ac5b)
+   |- net\mbed-mesh-api (https://github.com/ARMmbed/mbed-mesh-api-mirror/#f7a198bb1e668e6640bf8c46b99adcbdb49d9020)
+   |- net\mbed-trace (https://github.com/ARMmbed/mbed-trace-mirror/#f9a11fcaa2b5be4dc85bb5721c0cabaf0a96ea6d)
+   |- net\nanostack-hal-mbed-cmsis-rtos (https://github.com/ARMmbed/nanostack-hal-mbed-cmsis-rtos/#ab64e255deb92f6a363886cd621d60475738508a)
+   |- net\nanostack-libservice (https://github.com/ARMmbed/nanostack-libservice-mirror/#e3f7da74a143fc5c822be6213e4b6eca3d7e007a)
+   |- net\sal-iface-6lowpan-morpheus-private (https://github.com/ARMmbed/sal-iface-6lowpan-morpheus-private-mirror/#2b4852e22679353c7f96e1a90120933d4eadd6f6)
+   |- net\sal-stack-nanostack-eventloop (https://github.com/ARMmbed/sal-stack-nanostack-eventloop-mirror/#627b9769e3521800161f3abab2be26b32b5fa91e)
+   `- net\sal-stack-nanostack-private (https://github.com/ARMmbed/sal-stack-nanostack-private-mirror/#1374c77b03fb900425c09a1dd9a0cb8b4e4904ea)
+```
+
+
+<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: At the moment, if you want to start from an existing folder in your workspace, you can simply use `mbed new .`, which will initialize a new Git or Mercurial repository in that folder. While this might seem like a limitation, it helps start versioning all files in a program and also help *mbed-cli* find mbed-os and tooling. You can always drop the version control by removing the .git or .hg source management folders.</span>
 
 
 ### Importing an existing program
@@ -75,19 +110,6 @@ $ cd mbed-Client-Morpheus-from-source
 <span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: some of the repositories that *mbed-cli* will clone might require special access (Mercurial will ask you for your credentials if that's the case). If you don't have access, e-mail [mihail.stoyanov@arm.com](mailto:mihail.stoyanov@arm.com) or [bogdan.marinescu@arm.com](mailto:bogdan.marinescu@arm.com) with your developer.mbed.org account name.</span>
 
 
-### Creating a new program
-
-If you want to create a new program rather than importing an existing one, *mbed-cli* will automatically import the [mbed-os library] for you (https://github.com/ARMmbed/mbed-os/). This library represents a **release** of mbed OS and will pull in all the components of the OS, including its build system and desktop IDE project generators. In the future, when we introduce mbed OS **releases**, you'll get the guarantee that all the components in *mbed-os* passed integration tests, so that you know they work properly together. 
-
-With this in mind, these are the steps for creating a new program (we'll call it `myprog`):
-
-```
-$ mbed new myprog  # this creates new folder "myprog", initializes new repository and also imports the latest revision of mbed-os dependency to your program tree.
-$ cd myprog
-<add your source files>
-```
-
-<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: At the moment, if you want to start from an existing folder in your workspace, you can simply use `mbed new .`, which will initialize a new Git or Mercurial repository in that folder. While this might seem like a limitation, it helps start versioning all files in a program and also help *mbed-cli* find mbed-os and tooling. You can always drop the version control by removing the .git or .hg source management folders.</span>
 
 ## Adding and removing libraries
 
@@ -146,25 +168,25 @@ To update your program to another upstream version, go to the root folder of the
 
 <span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: This command will fail if there are changes in your program or library that will be overwritten as a result of running `update`. This is by design: *mbed-cli* does not run operations that would result in overwriting local changes that are not yet committed. If you get an error, take care of your local changes (commit or use one of the switches below), then re-run `update`.</span>
 
-### Updating to an upstream version
+### Update use-cases
 
 There are 2 major scanarios for when updating your code:
 * Update to a "moving" revision, e.g. the tip of a particular or current branch; and
 * Update to a "specific" revision, identified by revision hash or tag name
 
-Each of the above have 2 variants - update with local uncommitted changes (or *dirty* update); and update without local uncommitted changes (or *clean* update).
+Each scanario have 2 variants - update with local uncommitted changes (or *dirty* update); and update without local uncommitted changes (or *clean* update).
 
-To help understand what options to use with *mbed-cli*, please see examples below.
+To help understand what options you can use with *mbed-cli*, please see examples below.
 
-**Case 1: I want to update program or library to the latest version in a specific or current branch:**
-* I want to preserve local changes - `mbed update [branch]`
-* I want a clean update (and discard changes if any) - `mbed update [branch] --clean`
+**Case 1: I want to update a program or a library to the latest version in a specific or current branch:**
+* I want to preserve my uncommitted changes - run `mbed update [branch]`
+* I want a clean update (and discard uncommitted changes) - run `mbed update [branch] --clean`
 
-**Case 2: I want to update program or library to a specific revision or a tag:**
- * I want to preserve local changes - `mbed update <#rev|tag_name>`
- * I want clean update (discard changes) - `mbed update <#rev|tag_name> --clean`
+**Case 2: I want to update a program or a library to a specific revision or a tag:**
+ * I want to preserve my uncommitted changes - run `mbed update <#rev|tag_name>`
+ * I want a clean update (discard changes) - `mbed update <#rev|tag_name> --clean`
 
-The `--clean` option tells *mbed-cli* to update the current program or library and its dependencies, and discard all local changes. This is useful for when you modified something and you want to the original state of your source tree. 
+The `--clean` option tells *mbed-cli* to update that program or library and its dependencies, and discard all local changes.
 
 There are 2 addition options that define how unpublished local libraries are handled:
 
@@ -176,9 +198,9 @@ You can combine the switches above for the following scenarios:
 
 `mbed update --clean --ignore` - update the current program or library and its depedencies, but ignore any local repositories, e.g. update whatever you can from public repositories.
 
-`mbed update --clean --force` - update the current program or library and all its depedencies, and restore my source tree to stock layout. This wipes every single change you made in the source tree that didn't belong to the original commit.
+`mbed update --clean --force` - update the current program or library and all its depedencies, and restore my source tree to stock layout. This wipes every change that you made in the source tree that didn't belong to the original commit, including uncommitted changes and unpublished local libraries.
 
-Use these with caution as your uncommitted changes cannot be restored.
+Use these with caution as your uncommitted changes and unpublished libraries cannot be restored.
 
 ## Publishing your changes
 
