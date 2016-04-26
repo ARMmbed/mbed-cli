@@ -15,8 +15,7 @@ from itertools import *
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
 git_cmd = 'git'
-ver = '0.1.1'
-mbed_os_url = 'https://github.com/ARMmbed/mbed-os'
+ver = '0.1.2'
 
 ignores = [
     # Version control folders
@@ -71,12 +70,16 @@ regex_git_url = '^(git@|git\://|ssh\://|https?\://)([^/:]+)[:/](.+?)(\.git|\/?)$
 regex_hg_url = '^(file|ssh|https?)://([^/:]+)/([^/]+)/?([^/]+?)?$'
 regex_mbed_url = '^(https?)://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+)/?$'
 
+mbed_os_url = 'https://github.com/ARMmbed/mbed-os'
+verbose = False
+
 # Logging and output
 def message(msg):
     return "[mbed] %s\n" % msg
 
-def log(msg):
-    sys.stderr.write(message(msg))
+def log(msg, level=1):
+    if level <= 0 or verbose:
+        sys.stderr.write(message(msg))
     
 def action(msg):
     sys.stderr.write(message(msg))
@@ -210,30 +213,28 @@ class Hg(object):
         return re.match('^https?\:\/\/(developer\.)?mbed\.(org|com)', url)
 
     def init(path=None):
-        action("Initializing repository")
-        popen([hg_cmd, 'init'] + ([path] if path else []))
+        popen([hg_cmd, 'init'] + ([path] if path else []) + (['-v'] if verbose else ['-q']))
 
     def clone(url, name=None, hash=None, depth=None, protocol=None):
-        action("Cloning "+name+" from "+url)
-        popen([hg_cmd, 'clone', formaturl(url, protocol), name])
+        popen([hg_cmd, 'clone', formaturl(url, protocol), name] + (['-v'] if verbose else ['-q']))
         if hash:
             with cd(name):
                 try:
-                    popen([hg_cmd, 'checkout', hash])
+                    popen([hg_cmd, 'checkout', hash] + (['-v'] if verbose else ['-q']))
                 except ProcessException:
-                    error("Unable to update to the requested revision \"%s\"" % hash)
+                    error("Unable to update to revision \"%s\"" % hash, 1)
 
     def add(file):
-        action("Adding reference \"%s\"" % file)
+        log("Adding reference \"%s\"" % file)
         try:
-            popen([hg_cmd, 'add', file])
+            popen([hg_cmd, 'add', file] + (['-v'] if verbose else ['-q']))
         except ProcessException:
             pass
         
     def remove(file):
-        action("Removing reference \"%s\" " % file)
+        log("Removing reference \"%s\" " % file)
         try:
-            popen([hg_cmd, 'rm', '-f', file])
+            popen([hg_cmd, 'rm', '-f', file] + (['-v'] if verbose else ['-q']))
         except ProcessException:
             pass
         try:
@@ -242,24 +243,22 @@ class Hg(object):
             pass
 
     def commit():
-        popen([hg_cmd, 'commit'])
+        popen([hg_cmd, 'commit'] + (['-v'] if verbose else ['-q']))
         
     def push(repo, all=None):
-        action("Pushing local repository \"%s\" to remote \"%s\"" % (repo.name, repo.url))
-        popen([hg_cmd, 'push'] + (['--new-branch'] if all else []))
+        popen([hg_cmd, 'push'] + (['--new-branch'] if all else []) + (['-v'] if verbose else ['-q']))
         
     def pull(repo):
-        action("Pulling remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
-        popen([hg_cmd, 'pull'])
+        popen([hg_cmd, 'pull'] + (['-v'] if verbose else ['-q']))
 
     def update(repo, hash=None, clean=False):
-        action("Pulling remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
-        popen([hg_cmd, 'pull'])
-        action("Updating \"%s\" to %s" % (repo.name, "revision "+hash if hash else "latest revision in the current branch"))
-        popen([hg_cmd, 'update'] + (['-r', hash] if hash else []) + (['-C'] if clean else []))
+        log("Pulling remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
+        popen([hg_cmd, 'pull'] + (['-v'] if verbose else ['-q']))
+        log("Updating \"%s\" to %s" % (repo.name, "rev #"+hash if hash else "latest revision in the current branch"))
+        popen([hg_cmd, 'update'] + (['-r', hash] if hash else []) + (['-C'] if clean else []) + (['-v'] if verbose else ['-q']))
 
     def status():
-        return pquery([hg_cmd, 'status'])
+        return pquery([hg_cmd, 'status'] + (['-v'] if verbose else ['-q']))
 
     def dirty():
         return pquery([hg_cmd, 'status', '-q'])
@@ -322,14 +321,14 @@ class Hg(object):
                     f.write('[ui]\n')
                     f.write(hook + '\n')
             except IOError:
-                error("Unable to write hgrc file in \"%s\"" % hgrc)
+                error("Unable to write hgrc file in \"%s\"" % hgrc, 1)
 
         exclude = os.path.join(repo.path, '.hg', 'hgignore')
         try:
             with open(exclude, 'w') as f:
                 f.write("syntax: glob\n"+'\n'.join(ignores)+'\n')
         except IOError:
-            error("Unable to write ignore file in \"%s\"" % exclude)
+            error("Unable to write ignore file in \"%s\"" % exclude, 1)
 
     def ignore(repo, file):
         hook = 'ignore.local = .hg/hgignore'
@@ -346,7 +345,7 @@ class Hg(object):
                     f.write('[ui]\n')
                     f.write(hook + '\n')
             except IOError:
-                error("Unable to write hgrc file in \"%s\"" % hgrc)
+                error("Unable to write hgrc file in \"%s\"" % hgrc, 1)
 
         exclude = os.path.join(repo.path, '.hg/hgignore')
         try: 
@@ -360,7 +359,7 @@ class Hg(object):
                 with open(exclude, 'a') as f:
                     f.write(file + '\n')
             except IOError:
-                error("Unable to write ignore file in \"%s\"" % exclude)
+                error("Unable to write ignore file in \"%s\"" % exclude, 1)
 
     def unignore(repo, file):
         exclude = os.path.join(repo.path, '.hg', 'hgignore')
@@ -379,7 +378,7 @@ class Hg(object):
             with open(exclude, 'w') as f:
                 f.write('\n'.join(lines) + '\n')
         except IOError:
-            error("Unable to write ignore file in \"%s\"" % exclude)
+            error("Unable to write ignore file in \"%s\"" % exclude, 1)
             
 # pylint: disable=no-self-argument
 # pylint: disable=no-method-argument
@@ -394,30 +393,28 @@ class Git(object):
         return re.match('\.git$', url) or re.match('^https?\:\/\/github\.com', url)
 
     def init(path=None):
-        action("Initializing repository")
-        popen([git_cmd, 'init'] + ([path] if path else []))
+        popen([git_cmd, 'init'] + ([path] if path else []) + ([] if verbose else ['-q']))
 
     def clone(url, name=None, hash=None, depth=None, protocol=None):
-        action("Cloning "+name+" from "+url)
-        popen([git_cmd, 'clone', formaturl(url, protocol), name] + (['--depth', depth] if depth else []))
+        popen([git_cmd, 'clone', formaturl(url, protocol), name] + (['--depth', depth] if depth else []) + (['-v'] if verbose else ['-q']))
         if hash:
             with cd(name):
                 try:
-                    popen([git_cmd, 'checkout', '-q', hash])
+                    popen([git_cmd, 'checkout', '-q', hash] + ([] if verbose else ['-q']))
                 except ProcessException:
-                    error("Unable to update to the requested revision \"%s\"" % hash)
+                    error("Unable to update to revision \"%s\"" % hash, 1)
 
     def add(file):
-        action("Adding "+file)
+        log("Adding reference "+file)
         try:
-            popen([git_cmd, 'add', file])
+            popen([git_cmd, 'add', file] + (['-v'] if verbose else []))
         except ProcessException:
             pass
         
     def remove(file):
-        action("Removing "+file)
+        log("Removing reference "+file)
         try:
-            popen([git_cmd, 'rm', '-f', file])
+            popen([git_cmd, 'rm', '-f', file] + ([] if verbose else ['-q']))
         except ProcessException:
             pass
         try:
@@ -426,32 +423,31 @@ class Git(object):
             pass
 
     def commit():
-        popen([git_cmd, 'commit', '-a'])
+        popen([git_cmd, 'commit', '-a'] + (['-v'] if verbose else ['-q']))
         
     def push(repo, all=None):
-        action("Pushing local repository \"%s\" to remote \"%s\"" % (repo.name, repo.url))
-        popen([git_cmd, 'push'] + (['--all'] if all else []))
+        popen([git_cmd, 'push'] + (['--all'] if all else []) + (['-v'] if verbose else ['-q']))
         
     def pull(repo):
-        action("Pulling remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
-        popen([git_cmd, 'fetch', '--all'])
+        popen([git_cmd, 'fetch', '--all'] + (['-v'] if verbose else ['-q']))
 
     def update(repo, hash=None, clean=False):
         if clean:
-            action("Discarding local changes in \"%s\"" % repo.name)
-            popen([git_cmd, 'checkout', '.'])
-            popen([git_cmd, 'clean', '-fdq'])
+            log("Discarding local changes in \"%s\"" % repo.name)
+            popen([git_cmd, 'reset', 'HEAD'] + ([] if verbose else ['-q'])) # unmarks files for commit
+            popen([git_cmd, 'checkout', '.'] + ([] if verbose else ['-q'])) # undo  modified files
+            popen([git_cmd, 'clean', '-fdq'] + ([] if verbose else ['-q'])) # cleans up untracked files and folders
         if hash:
-            action("Fetching remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
-            popen([git_cmd, 'fetch', '-v', '--all'])
-            action("Updating \"%s\" to %s" % (repo.name, hash))
-            popen([git_cmd, 'checkout'] + [hash])
+            log("Fetching remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
+            popen([git_cmd, 'fetch', '-v', '--all'] + (['-v'] if verbose else ['-q']))
+            log("Updating \"%s\" to rev #%s" % (repo.name, hash))
+            popen([git_cmd, 'checkout'] + [hash] + ([] if verbose else ['-q']))
         else:
-            action("Fetching remote repository \"%s\" to local \"%s\" and updating to latest revision in the current branch" % (repo.url, repo.name))
-            popen([git_cmd, 'pull', '-v', '--all'])
+            log("Fetching remote repository \"%s\" to local \"%s\" and updating to latest revision in the current branch" % (repo.url, repo.name))
+            popen([git_cmd, 'pull', '--all'] + (['-v'] if verbose else ['-q']))
 
     def status():
-        return pquery([git_cmd, 'status', '-s'])
+        return pquery([git_cmd, 'status', '-s'] + (['-v'] if verbose else []))
         
     def dirty():
         return pquery([git_cmd, 'diff', '--name-only', 'HEAD'])
@@ -699,10 +695,10 @@ class Repo(object):
                     progress()
                     return
 
+        action("Updating reference \"%s\" -> \"%s\"" % (relpath(cwd_root, self.path) if cwd_root != self.path else self.name, self.fullurl))
+        
         with open(self.lib, 'wb') as f:
             f.write(self.fullurl + '\n')
-
-        action("Update reference \"%s\" -> \"%s\"" % (self.name, self.fullurl))
 
     def rm_untracked(self):
         untracked = self.scm.untracked()
@@ -768,7 +764,7 @@ def formaturl(url, format="default"):
 # Help messages adapt based on current dir
 cwd_type = Repo.typerepo()
 cwd_dest = "program" if cwd_type == "directory" else "library"
-
+cwd_root = os.getcwd()
 
 # Subparser handling
 parser = argparse.ArgumentParser(description="Command-line code management tool for ARM mbed OS - http://www.mbed.com\nversion %s" % ver)
@@ -788,6 +784,8 @@ def subcommand(name, *args, **kwargs):
                 subparser.add_argument(opt, **arg)
             else:
                 subparser.add_argument(*opt, **arg)
+
+        subparser.add_argument("-v", "--verbose", action="store_true", dest="verbose", help="Verbose diagnostic output")
     
         def thunk(parsed_args):
             argv = [arg['dest'] if 'dest' in arg else arg['name'] for arg in args]
@@ -811,26 +809,31 @@ def subcommand(name, *args, **kwargs):
     dict(name='--protocol', nargs='?', help='Transport protocol when fetching the mbed-os repository when creating new program. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help='Create a new program based on the specified source control management. Will create a new library when called from inside a local program. Supported SCMs: %s.' % (', '.join([s.name for s in scms.values()])))
 def new(name, scm='git', depth=None, protocol=None):
-    global mbed_os_url
+    global cwd_root
     
     d_path = name or os.getcwd()
     if os.path.isdir(d_path):
         if Repo.isrepo(d_path):
             error("A %s is already exists in \"%s\". Please select a different name or location." % (cwd_dest, d_path), 1)
         if len(os.listdir(d_path)) > 1:
-            warning("Directory \"%s\" is not empty." % d_path, 1)
+            warning("Directory \"%s\" is not empty." % d_path)
 
     p_path = Repo.findrepo(d_path)  # Find parent repository before the new one is created
 
     repo_scm = [s for s in scms.values() if s.name == scm.lower()]
     if not repo_scm:
         error("Please specify one of the following source control management systems: %s" % ', '.join([s.name for s in scms.values()]), 1)
+
+    action("Creating new %s \"%s\" (%s)" % (cwd_dest, os.path.basename(d_path), repo_scm[0].name))
     repo_scm[0].init(d_path)        # Initialize repository
 
     if p_path:  # It's a library
         with cd(p_path):
             sync()
     else:       # It's a program. Add mbed-os
+        # This helps sub-commands to display relative paths to the created program
+        cwd_root = os.path.abspath(d_path)
+        
         try:
             with cd(d_path):
                 add(mbed_os_url, depth=depth, protocol=protocol)
@@ -848,12 +851,12 @@ def new(name, scm='git', depth=None, protocol=None):
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help='Import a program and its dependencies into the current directory or specified destination path.')
-def import_(url, path=None, top=True, depth=None, protocol=None):
+def import_(url, path=None, depth=None, protocol=None, top=True):
+    global cwd_root
+    
     repo = Repo.fromurl(url, path)
-
     if top and cwd_type != "directory":
-        d_path = os.path.abspath(path or os.getcwd())
-        error("Cannot import program in the specified location \"%s\" because it's already part of a program.\nPlease change your working directory to a different location or use command \"add\" to import the URL as a library." % d_path, 1)
+            error("Cannot import program in the specified location \"%s\" because it's already part of a program.\nPlease change your working directory to a different location or use command \"add\" to import the URL as a library." % os.path.abspath(repo.path), 1)
 
     if os.path.isdir(repo.path) and len(os.listdir(repo.path)) > 1:
         error("Directory \"%s\" is not empty. Please ensure that the destination folder is empty." % repo.path, 1)
@@ -862,6 +865,8 @@ def import_(url, path=None, top=True, depth=None, protocol=None):
     sorted_scms = [(scm.isurl(url), scm) for scm in scms.values()]
     sorted_scms = sorted(sorted_scms, key=lambda (m, _): not m)
 
+    text = "Importing program" if top else "Adding library"
+    action("%s \"%s\" from \"%s/\"%s" % (text, relpath(cwd_root, repo.path), repo.url, ' at rev #'+repo.hash if repo.hash else ''))
     for _, scm in sorted_scms:
         try:
             scm.clone(repo.url, repo.path, repo.hash, depth=depth, protocol=protocol)
@@ -874,6 +879,9 @@ def import_(url, path=None, top=True, depth=None, protocol=None):
         error("Unable to clone repository (%s)" % url, 1)
 
     repo.sync()
+
+    if top: # This helps sub-commands to display relative paths to the imported program
+        cwd_root = repo.path
 
     with cd(repo.path):
         deploy(depth=depth, protocol=protocol)
@@ -891,9 +899,9 @@ def deploy(depth=None, protocol=None):
         if os.path.isdir(lib.path):
             if lib.check_repo():
                 with cd(lib.path):
-                    update(lib.hash, top=False, depth=depth, protocol=protocol)
+                    update(lib.hash, depth=depth, protocol=protocol, top=False)
         else:
-            import_(lib.fullurl, lib.path, top=False, depth=depth, protocol=protocol)
+            import_(lib.fullurl, lib.path, depth=depth, protocol=protocol, top=False)
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
 
     # This has to be replaced by one time python script from tools that sets up everything the developer needs to use the tools
@@ -913,7 +921,7 @@ def add(url, path=None, depth=None, protocol=None):
     repo = Repo.fromrepo()
 
     lib = Repo.fromurl(url, path)
-    import_(lib.url, lib.path, top=False, depth=depth, protocol=protocol)
+    import_(lib.fullurl, lib.path, depth=depth, protocol=protocol, top=False)
     repo.scm.ignore(repo, relpath(repo.path, lib.path))
     lib.sync()
 
@@ -940,7 +948,7 @@ def remove(path):
 @subcommand('publish',
     dict(name=['-A', '--all'], action="store_true", help="Publish all branches, including new. Default: push only the current branch."),
     help='Publish current %s and its dependencies to associated remote repository URLs.' % cwd_type)
-def publish(top=True, all=None):
+def publish(all=None, top=True):
     if top:
         action("Checking for local modifications...")
 
@@ -957,12 +965,13 @@ def publish(top=True, all=None):
     sync(recursive=False)
 
     if repo.scm.dirty():
-        action('Uncommitted changes in %s (%s)' % (repo.name, repo.path))
+        action('Uncommitted changes in \"%s\" (%s)' % (repo.name, relpath(cwd_root, repo.path)))
         raw_input('Press enter to commit and push: ')
         repo.scm.commit()
 
     try:
         if repo.scm.outgoing():
+            action("Pushing local repository \"%s\" to remote \"%s\"" % (repo.name, repo.url))
             repo.scm.push(repo, all)
     except ProcessException as e:
         if e[0] != 1:
@@ -988,6 +997,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
         error("This %s is in detached HEAD state, and you won't be able to receive updates from the remote repository until you either checkout a branch or create a new one.\nYou can checkout a branch using \"%s checkout <branch_name>\" command before running \"mbed update\"." % (cwd_type, repo.scm.name),1)
     
     # Fetch from remote repo
+    action("Updating %s \"%s\" to %s" % (cwd_type if top else cwd_dest, os.path.basename(repo.path) if top else relpath(cwd_root, repo.path), "rev #"+rev if rev else "latest revision in the current branch"))
     repo.scm.update(repo, rev, clean)
     repo.rm_untracked()
 
@@ -999,7 +1009,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
                 lib_repo = Repo.fromrepo(lib.path)
                 gc, msg = lib_repo.can_update(clean, force)
             if gc:
-                action("Removing leftover library \"%s\" in \"%s\"" % (lib.name, lib.path))
+                action("Removing library \"%s\" (obsolete)" % (relpath(cwd_root, lib.path)))
                 rmtree_readonly(lib.path)
                 repo.scm.unignore(repo, relpath(repo.path, lib.path))
             else:
@@ -1020,7 +1030,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
                 with cd(lib.path):
                     gc, msg = lib_repo.can_update(clean, force)
                 if gc:
-                    action("Removing library \"%s\" in \"%s\" due to changed repository URL. Will import from new URL." % (lib.name, lib.path))
+                    action("Removing library \"%s\" (changed URL). Will add from new URL." % (relpath(cwd_root, lib.path)))
                     rmtree_readonly(lib.path)
                     repo.scm.unignore(repo, relpath(repo.path, lib.path))
                 else:
@@ -1032,11 +1042,11 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
     # Import missing repos and update to hashes
     for lib in repo.libs:
         if not os.path.isdir(lib.path):
-            import_(lib.url, lib.path, top=False, depth=depth, protocol=protocol)
+            import_(lib.fullurl, lib.path, depth=depth, protocol=protocol, top=False)
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
-        with cd(lib.path):
-            update(lib.hash, clean, force, ignore, top=False)
-
+        else:
+            with cd(lib.path):
+                update(lib.hash, clean, force, ignore, top=False)
 
 
 # Synch command
@@ -1057,7 +1067,7 @@ def sync(recursive=True, keep_refs=False, top=True):
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
         else:
             if not keep_refs:
-                action("Remove reference \"%s\" -> \"%s\"" % (lib.name, lib.fullurl))
+                action("Removing reference \"%s\" -> \"%s\"" % (lib.name, lib.fullurl))
                 repo.scm.remove(lib.lib)
                 repo.scm.unignore(repo, relpath(repo.path, lib.path))
 
@@ -1269,6 +1279,7 @@ if len(sys.argv) <= 1:
 args, remainder = parser.parse_known_args()
 
 try:
+    verbose = args.verbose
     log('Working path \"%s\" (%s)' % (os.getcwd(), cwd_type))
     status = args.command(args)
 except ProcessException as e:
