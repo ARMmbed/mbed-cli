@@ -1,23 +1,38 @@
 # Introduction
 
-*mbed-cli* is the name of the Morpheus command line tool. It enables workflows with Morpheus repositories and maintaining dependencies, code publishing and updating from remotely hosted repositories (GitHub, GitLab, mbed.org), as well as invoking Morpheus's own build system and export functions, and other operations.
+*mbed-cli* is the name of the ARM mbed command line tool, which enables workflows with version control repositories, maintaining dependencies, code publishing, updating from remotely hosted repositories (GitHub, GitLab, mbed.org), as well as invoking ARM mbed's own build system and export functions, and other operations.
 
 This document covers the installation and usage of *mbed-cli*.
 
-# Known limitations
-
-<span style="background-color:#ffffe6;border:1px solid #000;display:block; height:100%; padding:10px">**Warning**: At this point, *mbed-cli* is alpha quality and very much in development. Breakages are fully expected. Please open issues on this repository for any problems that you find with *mbed-cli*.</span>
-
-
-1. *mbed-cli* does not check whether you have Mercurial or Git installed and assumes that they are available.
+## Table of Contents
+1. [Requierements](#requierements)
+1. [Installing mbed-cli](#installing-mbed-cli)
+1. [Importing and creating programs](#importing-and-creating-programs)
+	1. [Importing an existing program](#importing-and-creating-programs)
+	2. [Creating a new program](#creating-a-new-program)
+1. [Adding and removing libraries](#adding-and-removing-libraries)
+	1. [Adding a library](#adding-a-library)
+	2. [Removing a library](#removing-a-library)
+1. [Updating programs and libraries](#updating-programs-and-libraries)
+	1. [Synchronizing library references](#synchronizing-library-references)
+	2. [Removing a library](#removing-a-library)
+	3. [Updating to an upstream version](#updating-to-an-upstream-version)
+1. [Publishing your changes](#publishing-your-changes)
+	1. [Checking status](#checking-status)
+	2. [Pushing upstream](#pushing-upstream)
+1. [Compiling code](#compiling-code)
+	1. [Toolchain selection](#toolchain-selection)
+	2. [Compiling your program](#compiling-your-program)
+	4. [Compiling binary library](#compiling-binary-library)
+	4. [Compiling tests](#compiling-tests)
+1. [Exporting to desktop IDEs](#exporting-to-desktop-ides)
+1. [Known limitations](#known-limitations)
 
 # Installation
 
-<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: *mbed-cli* lives in [https://github.com/ARMmbed/mbed](https://github.com/ARMmbed/mbed). If you don't have permissions to access the above repository, e-mail [mihail.stoyanov@arm.com](mailto:mihail.stoyanov@arm.com) or [bogdan.marinescu@arm.com](mailto:bogdan.marinescu@arm.com) with your GitHub account name.</span>
+<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: *mbed-cli* lives in [https://github.com/ARMmbed/mbed-cli](https://github.com/ARMmbed/mbed-cli). If you don't have permissions to access the above repository, e-mail [mihail.stoyanov@arm.com](mailto:mihail.stoyanov@arm.com) or [bogdan.marinescu@arm.com](mailto:bogdan.marinescu@arm.com) with your GitHub account name.</span>
 
 ## Requierements
-
-* You'll need an [mbed account](https://developer.mbed.org) to access some of the code used in this document.
 
 * *mbed-cli* is a Python script, so you'll need Python installed in order to use it. *mbed-cli* was tested with [version 2.7 of Python](https://www.python.org/download/releases/2.7/).
 
@@ -27,17 +42,16 @@ This document covers the installation and usage of *mbed-cli*.
 	
 <span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Tip:** Remember that the directories containing the executables of `hg` and `git` need to be in your system's PATH.</span>
 
+
 ## Installing mbed-cli
 
-1. To get the latest version of *mbed-cli*, clone the repository [https://github.com/ARMmbed/mbed](https://github.com/ARMmbed/mbed):
+1. To get the latest version of *mbed-cli*, clone the repository [https://github.com/ARMmbed/mbed-cli](https://github.com/ARMmbed/mbed-cli):
 
 ``$ git clone https://github.com/ARMmbed/mbed-cli``
 
 Once cloned you can install *mbed-cli* as a python package:
 
-``$ sudo ./setup.py install`` on Linux/Mac
-
-``> setup.py install`` on Windows
+``$ sudo ./setup.py install`` on Linux/Mac or ``> setup.py install`` on Windows
 
 To uninstall *mbed-cli* you can use:
 
@@ -116,10 +130,98 @@ $ mbed remove TextLCD
 
 <span style="background-color:#ffffe6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: Removing a library from your Morpheus program is not the same thing as just deleting its local clone. Use `mbed remove` to remove the library, don't simply remove its directory with 'rm'.</span>
 
-<span style="background-color:#ffffe6;border:1px solid #000;display:block; height:100%; padding:10px">**Warning**: *mbed-cli* stores information about libraries and dependencies in lib_name.lib reference files. While these files are human-readable, we *strongly* advise that you don't edit these manually and let *mbed-cli* manage them accordingly.</span>
+<span style="background-color:#ffffe6;border:1px solid #000;display:block; height:100%; padding:10px">**Warning**: *mbed-cli* stores information about libraries and dependencies in lib_name.lib reference files. While these files are human-readable, we *strongly* advise that you don't edit these manually and let *mbed-cli* manage them instead.</span>
 
 
-## Compiling and exporting programs
+## Updating programs and libraries
+
+### Synchronizing library references
+
+Before updating you might want to synchronize any changes that you made to the directory structure by running ``mbed sync``, which will update the necessary library references and get rid of the invalid ones.
+
+
+### Updating to an upstream version
+
+To update your program to another upstream version, go to the root folder of the program and run `mbed update [branch|tag|rev]`. This will fetch the latest revisions from the remote repository, update the program to the specified branch, tag or revision (or to the latest one in the current branch if `rev` is not specified), then fetch and update recursively all the other dependencies to match the top-level dependencies in `rev`. You can apply the same mechanism for libraries and their depedencies by executing the update command in the library folder, not the root of your program.
+
+<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: This command will fail if there are changes in your program or library that will be overwritten as a result of running `update`. This is by design: *mbed-cli* does not run operations that would result in overwriting local changes that are not yet committed. If you get an error, take care of your local changes (commit or use one of the switches below), then re-run `update`.</span>
+
+### Updating to an upstream version
+
+There are 2 major scanarios for when updating your code:
+* Update to a "moving" revision, e.g. the tip of a particular or current branch; and
+* Update to a "specific" revision, identified by revision hash or tag name
+
+Each of the above have 2 variants - update with local uncommitted changes (or *dirty* update); and update without local uncommitted changes (or *clean* update).
+
+To help understand what options to use with *mbed-cli*, please see examples below.
+
+**Case 1: I want to update program or library to the latest version in a specific or current branch:**
+* I want to preserve local changes - `mbed update [branch]`
+* I want a clean update (and discard changes if any) - `mbed update [branch] --clean`
+
+**Case 2: I want to update program or library to a specific revision or a tag:**
+ * I want to preserve local changes - `mbed update <#rev|tag_name>`
+ * I want clean update (discard changes) - `mbed update <#rev|tag_name> --clean`
+
+The `--clean` option tells *mbed-cli* to update the current program or library and its dependencies, and discard all local changes. This is useful for when you modified something and you want to the original state of your source tree. 
+
+There are 2 addition options that define how unpublished local libraries are handled:
+
+`mbed update --ignore` - update the current program or library and its dependencies, and ignore any local unpublished libraries as if they are not present of your source tree (they won't be deleted or modified, just ignored)
+
+`mbed update --force` - update the current program or library and its dependencies, and discard all local unpublished repositories. Use this with caution as your local unpublished repositories cannot be restored unless you have a backup copy.
+
+You can combine the switches above for the following scenarios:
+
+`mbed update --clean --ignore` - update the current program or library and its depedencies, but ignore any local repositories, e.g. update whatever you can from public repositories.
+
+`mbed update --clean --force` - update the current program or library and all its depedencies, and restore my source tree to stock layout. This wipes every single change you made in the source tree that didn't belong to the original commit.
+
+Use these with caution as your uncommitted changes cannot be restored.
+
+## Publishing your changes
+
+### Checking status
+
+As you work on your code, you'll edit parts of it: either your own program code or code in some of the libraries that you depend on. You can get the status of all the repositories in your program (recursively) by running `mbed status`. If a repository has uncommitted changes, this command will display these changes.
+
+### Pushing upstream
+To push the changes in your local tree upstream, run `mbed publish`. `publish` works recursively, pushing the leaf dependencies first, then updating the dependents and pushing them too. 
+
+This is best explained by an example. Let's assume that the list of dependencies of your program (obtained by running `mbed ls`) looks like this:
+
+```
+mbed-Client-Morpheus-from-source (189949915b9c)
+`- mbed-os (71a471196d89)
+   |- net (96479b47e63d)
+   |  |- mbed-trace (506ad37c6bd7)
+   |  |- LWIPInterface (82796df87b0a)
+   |  |  |- lwip-sys (12e78a2462d0)
+   |  |  |- lwip (08f08bfc3f3d)
+   |  |  `- lwip-eth (4380f0749039)
+   |  |- nanostack-libservice (a87c5afee2a6)
+   |  |- mbed-client-classic (17cb48fbeb85)
+   |  |- mbed-client (ae5178938864)
+   |  |- mbed-client-mbedtls (b2db21f25041)
+   |  |- NetworkSocketAPI (aa343098aa61)
+   |  |  `- DnsQuery (248f32a9c48d)
+   |  `- mbed-client-c (5d91b0f5038c)
+   |- core (2f7f0a7fc6b3)
+   |  |- mbedtls (dee5972f341f)
+   |  |- mbed-uvisor (af27c87db9c2)
+   |  `- mbed-rtos (bdd541595fc5)
+   |- hal (e4b241e107f9)
+   |  `- TARGET_Freescale (a35ebe05b3bd)
+   |     |- TARGET_KPSDK_MCUS (e4d670b91a9a)
+   |     `- TARGET_MCU_K64F (c5e2f793b59a)
+   `- tools (042963870f7a)
+```
+
+Furthermore, let's assume that you make changes to `lwip-eth`. `publish` detects the change on the leaf `lwip-eth` dependency and asks you to commit it. Then it detects that `LWIPInterface` depends on `lwip-eth`, updates LWIPInterface's dependency on `lwip-eth` to its latest version (by updating the `lwip-eth.lib` file inside `LWIPINterface`) and asks you to commit it. This propagates up to `net`, `mbed-os` and finally `mbed-Client-Morpheus-from-source`.
+
+
+## Compiling code
 
 ### Toolchain selection
 
@@ -128,7 +230,7 @@ After importing a program or creating a new one, you need to tell *mbed-cli* whe
 * If you want to use the [armcc toolchain](https://developer.arm.com/products/software-development-tools/compilers/arm-compiler-5/downloads), set ``ARM_PATH`` to the *base* directory of your armcc installation (example: c:\software\armcc5.06). The recommended version of the armcc toolchain is 5.06 (5.05 will very likely work too).
 * If you want to use the [GCC ARM Embedded toolchain](https://launchpad.net/gcc-arm-embedded), set ``GCC_ARM_PATH`` to the *binary* directory of your GCC ARM installation (example: c:\software\GNUToolsARMEmbedded\4.82013q4\bin). Use versions 4.8 or 4.9 of GCC ARM Embedded, but **not** version 5.0 or any version above it.
 
-### Compiling
+### Compiling your program
 
 Use `mbed compile` to compile the code:
 
@@ -145,12 +247,21 @@ The arguments to *compile* are:
 
 The compiled binary (and ELF image) can be found in the `.build` subdirectory of your program.
 
-### Compiling Tests
+### Compiling binary library
+
+**Work in progress**
+```
+$ mbed compile --library=<output_dir> -t ARM -m K64F -j 0
+```
+**Work in progress**
+
+
+### Compiling tests
 
 Tests are compiled by adding argument ```--tests``` in the above compile command:
 
 ```
-$ mbed compile -t ARM -m K64F --tests -j 0
+$ mbed compile --tests -t ARM -m K64F -j 0
 ```
 
 Test code exists in following directory structure
@@ -190,18 +301,6 @@ Note: This feature does not work in application modules that contain ```main()``
 
 Using ``mbed target <target>`` and ``mbed toolchain <toolchain>`` you can set the default target and toolchain for your program, meaning you won't have to specify these every time you compile or generate IDE project files.
 
-### Debugging
-
-If you need to debug your code, a good way to do that is to export your source tree to an IDE project file, so that you can use the IDE's debugging facilities. Currently *mbed-cli* supports exporting to Keil uVision. 
-
-To export, run this command:
-
-```
-$ mbed export -i uvision -m K64F
-```
-
-After running this command, a ``.uvproj`` file is created at the top of your source tree. You can open that with uVision.
-
 ### Customizing the build
 
 *mbed-cli* uses the mbed Classic build system, which contains a few mechanisms that you can use to customize the way you build your code:
@@ -234,68 +333,20 @@ $ mbed compile -t GCC_ARM -m K64F -j 0 -o debug-info
 <span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Tip:** If you have files that you want to compile only in release mode, put them in a directory called `TARGET_RELEASE` at any level of your tree. If you have files that you want to compile only in debug mode, put them in a directory called `TARGET_DEBUG` at any level of your tree (then use `-o debug-info` as explained above).
 </span>
 
+## Exporting to desktop IDEs
 
-## Synchronizing your tree (WIP)
+If you need to debug your code, a good way to do that is to export your source tree to an IDE project file, so that you can use the IDE's debugging facilities. Currently *mbed-cli* supports exporting to Keil uVision, DS-5, IAR Workbench, Simplicity Studio and other IDEs.
 
-### Checking status
-
-As you work on your code, you'll edit parts of it: either your own program code or code in some of the libraries that you depend on. You can get the status of all the repositories in your program (recursively) by running `mbed status`. If a repository has uncommitted changes, this command will display these changes.
-
-### Synchronizing the directory structure 
-
-To synchronize changes that you made to the directory structure you can run ``mbed sync``, which will update the necessary library references and get rid of the invalid ones.
-
-### Updating to an upstream version
-
-To update your program to another upstream version, go to the root of the program and run `mbed update [rev]`. It will update the program to the specified revision (or to the latest one if `rev` is not specified), then update recursively all the other dependencies to match the top-level dependencies in `rev`. 
-
-<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: This command will fail if there are changes in your local repository that will be overwritten as a result of running `update`. This is by design: *mbed-cli* does not run operations that would result in overwriting local changes that are not yet committed. If you get an error, take care of your local changes (commit or use one of the switches below), then re-run `update`.</span>
-
-There are 3 `update` switches that define the handling of your source tree:
-
-`mbed update --clean` - update the current program or library and its dependencies, and discard all local changes. This is useful for when you modified something and you want to the original state of your source tree. Use this with caution as your uncommitted changes cannot be restored.
-
-`mbed update --ignore` - update the current program or library and its dependencies, and ignore any local unpublished libraries as if they are not present of your source tree (they won't be deleted or modified, just ignored)
-
-`mbed update --force` - update the current program or library and its dependencies, and discard all local unpublished repositories. Use this with caution as your local unpublished repositories cannot be restored unless you have a backupi copy.
-
-You can combine the switches above for the following scenarios:
-
-`mbed update --clean --ignore` - update the current program or library and its depedencies, but ignore any local repositories, e.g. update whatever you can from public repositories.
-
-`mbed update --clean --force` - update the current program or library and all its depedencies, and restore my source tree to stock layout. This wipes every single change you made in the source tree that didn't belong to the original commit.
-
-
-### Pushing upstream
-To push the changes in your local tree upstream, run `mbed publish`. `publish` works recursively, pushing the leaf dependencies first, then updating the dependents and pushing them too. 
-
-This is best explained by an example. Let's assume that the list of dependencies of your program (obtained by running `mbed ls`) looks like this:
+To export, run this command:
 
 ```
-mbed-Client-Morpheus-from-source (189949915b9c)
-`- mbed-os (71a471196d89)
-   |- net (96479b47e63d)
-   |  |- mbed-trace (506ad37c6bd7)
-   |  |- LWIPInterface (82796df87b0a)
-   |  |  |- lwip-sys (12e78a2462d0)
-   |  |  |- lwip (08f08bfc3f3d)
-   |  |  `- lwip-eth (4380f0749039)
-   |  |- nanostack-libservice (a87c5afee2a6)
-   |  |- mbed-client-classic (17cb48fbeb85)
-   |  |- mbed-client (ae5178938864)
-   |  |- mbed-client-mbedtls (b2db21f25041)
-   |  |- NetworkSocketAPI (aa343098aa61)
-   |  |  `- DnsQuery (248f32a9c48d)
-   |  `- mbed-client-c (5d91b0f5038c)
-   |- core (2f7f0a7fc6b3)
-   |  |- mbedtls (dee5972f341f)
-   |  |- mbed-uvisor (af27c87db9c2)
-   |  `- mbed-rtos (bdd541595fc5)
-   |- hal (e4b241e107f9)
-   |  `- TARGET_Freescale (a35ebe05b3bd)
-   |     |- TARGET_KPSDK_MCUS (e4d670b91a9a)
-   |     `- TARGET_MCU_K64F (c5e2f793b59a)
-   `- tools (042963870f7a)
+$ mbed export -i uvision -m K64F
 ```
 
-Furthermore, let's assume that you make changes to `lwip-eth`. `publish` detects the change on the leaf `lwip-eth` dependency and asks you to commit it. Then it detects that `LWIPInterface` depends on `lwip-eth`, updates LWIPInterface's dependency on `lwip-eth` to its latest version (by updating the `lwip-eth.lib` file inside `LWIPINterface`) and asks you to commit it. This propagates up to `net`, `mbed-os` and finally `mbed-Client-Morpheus-from-source`.
+After running this command, a ``.uvproj`` file is created at the top of your source tree. You can open that with uVision.
+
+# Known limitations
+
+<span style="background-color:#ffffe6;border:1px solid #000;display:block; height:100%; padding:10px">**Warning**: At this point, *mbed-cli* is alpha quality and very much in development. Breakages are fully expected. Please open issues on this repository for any problems that you find with *mbed-cli*.</span>
+
+1. *mbed-cli* does not check whether you have Mercurial or Git installed and assumes that they are available.
