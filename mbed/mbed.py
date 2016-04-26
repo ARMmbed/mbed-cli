@@ -16,6 +16,7 @@ from itertools import *
 hg_cmd = 'hg'
 git_cmd = 'git'
 ver = '0.1.1'
+mbed_os_url = 'https://github.com/ARMmbed/mbed-os'
 
 ignores = [
     # Version control folders
@@ -85,7 +86,7 @@ def warning(msg):
         sys.stderr.write("[mbed WARNING] %s\n" % line)
     sys.stderr.write("---\n")
 
-def error(msg, code):
+def error(msg, code=-1):
     for line in msg.splitlines():
         sys.stderr.write("[mbed ERROR] %s\n" % line)
     sys.stderr.write("---\n")
@@ -196,6 +197,9 @@ def scm(name):
         return cls
     return scm
 
+# pylint: disable=no-self-argument
+# pylint: disable=no-method-argument
+# pylint: disable=no-member
 @scm('hg')
 @staticclass
 class Hg(object):
@@ -377,6 +381,9 @@ class Hg(object):
         except IOError:
             error("Unable to write ignore file in \"%s\"" % exclude)
             
+# pylint: disable=no-self-argument
+# pylint: disable=no-method-argument
+# pylint: disable=no-member
 @scm('git')
 @staticclass
 class Git(object):
@@ -798,31 +805,35 @@ def subcommand(name, *args, **kwargs):
 
 # Clone command
 @subcommand('new', 
-    dict(name='scm', help='Source control management. Currently supported: %s' % ', '.join([s.name for s in scms.values()])),
-    dict(name='path', nargs='?', help='Destination name or path. Default: current folder.'),
+    dict(name='name', help='Destination name or path'),
+    dict(name='scm', nargs='?', help='Source control management. Currently supported: %s. Default: git' % ', '.join([s.name for s in scms.values()])),
+    dict(name='--depth', nargs='?', help='Number of revisions to fetch the mbed-os repository when creating new program. Default: all revisions.'),
+    dict(name='--protocol', nargs='?', help='Transport protocol when fetching the mbed-os repository when creating new program. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help='Create a new program based on the specified source control management. Will create a new library when called from inside a local program. Supported SCMs: %s.' % (', '.join([s.name for s in scms.values()])))
-def new(scm, path=None):
+def new(name, scm='git', depth=None, protocol=None):
+    global mbed_os_url
+    
+    d_path = name or os.getcwd()
+    if os.path.isdir(d_path):
+        if Repo.isrepo(d_path):
+            error("A %s is already exists in \"%s\". Please select a different name or location." % (cwd_dest, d_path), 1)
+        if len(os.listdir(d_path)) > 1:
+            warning("Directory \"%s\" is not empty." % d_path, 1)
+
+    p_path = Repo.findrepo(d_path)  # Find parent repository before the new one is created
+
     repo_scm = [s for s in scms.values() if s.name == scm.lower()]
     if not repo_scm:
         error("Please specify one of the following source control management systems: %s" % ', '.join([s.name for s in scms.values()]), 1)
-
-    d_path = path or os.getcwd()
-    if os.path.isdir(d_path) and len(os.listdir(d_path)) > 1:
-        error("Directory \"%s\" is not empty. Please select different path or manually remove all files." % d_path, 1)
-
-    if Repo.isrepo(d_path):
-        error("A %s is already initialized in \"%s\". Please select different path or manually remove all files." % (cwd_dest, d_path), 1)
-
-    p_path = Repo.findrepo(path)    # Find parent repository
     repo_scm[0].init(d_path)        # Initialize repository
-    
+
     if p_path:  # It's a library
         with cd(p_path):
             sync()
     else:       # It's a program. Add mbed-os
         try:
             with cd(d_path):
-                add("https://github.com/ARMmbed/mbed-os")
+                add(mbed_os_url, depth=depth, protocol=protocol)
         except:
             rmtree_readonly(d_path)
             raise
