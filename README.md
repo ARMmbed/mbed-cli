@@ -164,7 +164,7 @@ Before updating you might want to synchronize any changes that you made to the d
 
 ### Updating to an upstream version
 
-To update your program to another upstream version, go to the root folder of the program and run `mbed update [branch|tag|rev]`. This will fetch the latest revisions from the remote repository, update the program to the specified branch, tag or revision (or to the latest one in the current branch if `rev` is not specified), then fetch and update recursively all the other dependencies to match the top-level dependencies in `rev`. You can apply the same mechanism for libraries and their depedencies by executing the update command in the library folder, not the root of your program.
+To update your program to another upstream version, go to the root folder of the program and run `mbed update [branch|tag|#rev]`. This will fetch the latest revisions from the remote repository, update the program to the specified branch, tag or revision (or to the latest one in the current branch if `#rev` is not specified), then fetch and update recursively all the other dependencies to match the top-level dependencies in `#rev`. You can apply the same mechanism for libraries and their depedencies by executing the update command in the library folder, not the root of your program.
 
 <span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: This command will fail if there are changes in your program or library that will be overwritten as a result of running `update`. This is by design: *mbed-cli* does not run operations that would result in overwriting local changes that are not yet committed. If you get an error, take care of your local changes (commit or use one of the switches below), then re-run `update`.</span>
 
@@ -179,12 +179,12 @@ Each scanario have 2 variants - update with local uncommitted changes (or *dirty
 To help understand what options you can use with *mbed-cli*, please see examples below.
 
 **Case 1: I want to update a program or a library to the latest version in a specific or current branch:**
-* I want to preserve my uncommitted changes - run `mbed update [branch]`
+* I want to preserve my uncommitted changes - run `mbed update [branch]`. You might have to commit or stash your changes if the source control tool (Git or Mercurial) throws an error that the update overwrites local changes.
 * I want a clean update (and discard uncommitted changes) - run `mbed update [branch] --clean`
 
 **Case 2: I want to update a program or a library to a specific revision or a tag:**
- * I want to preserve my uncommitted changes - run `mbed update <#rev|tag_name>`
- * I want a clean update (discard changes) - `mbed update <#rev|tag_name> --clean`
+ * I want to preserve my uncommitted changes - run `mbed update <#rev|tag_name>`. Like above, you might have to commit or stash your changes if they conflict with the latest revision.
+ * I want a clean update (discard changes) - run `mbed update <#rev|tag_name> --clean`
 
 The `--clean` option tells *mbed-cli* to update that program or library and its dependencies, and discard all local changes.
 
