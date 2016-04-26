@@ -9,9 +9,9 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(
-    name="mbed",
+    name="mbed-cli",
     packages=["mbed"],
-    version="0.1.1",
+    version="0.1.2",
     url='http://github.com/ARMmbed/mbed-cli',
     author='ARM mbed',
     author_email='support@mbed.org',
@@ -19,6 +19,7 @@ setup(
     entry_points={
         'console_scripts': [
             'mbed=mbed.mbed',
+            'mbed-cli=mbed.mbed',
             'neo=mbed.mbed'
         ]
     },
