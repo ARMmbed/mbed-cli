@@ -1101,11 +1101,11 @@ def sync(recursive=True, keep_refs=False, top=True):
     dict(name=['-a', '--all'], action='store_true', help="List repository URL and hash pairs"),
     dict(name=['-I', '--ignore'], action="store_true", help="Ignore errors regarding missing libraries."),
     help='View the current %s dependency tree.' % cwd_type)
-def list_(all=False, prefix='', ignore=False):
+def list_(all=False, prefix='', p_path=None, ignore=False):
     repo = Repo.fromrepo()
-    print prefix + repo.name, '(%s)' % (repo.url if all else repo.hash)
+    print prefix + (relpath(p_path, repo.path) if p_path else repo.name), '(%s)' % ((repo.fullurl if all else repo.hash) or 'no revision')
 
-    for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.name)):
+    for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.path)):
         if prefix:
             nprefix = prefix[:-3] + ('|  ' if prefix[-3] == '|' else '   ')
         else:
@@ -1114,7 +1114,7 @@ def list_(all=False, prefix='', ignore=False):
 
         if lib.check_repo(ignore):
             with cd(lib.path):
-                list_(all, nprefix, ignore=False)
+                list_(all, nprefix, repo.path, ignore=ignore)
 
 
 @subcommand('status',
