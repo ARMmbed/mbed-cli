@@ -831,7 +831,7 @@ def new(name, scm='git', depth=None, protocol=None):
             sync()
     else:       # It's a program. Add mbed-os
         # This helps sub-commands to display relative paths to the created program
-        cwd_root = repo.path
+        cwd_root = d_path
         
         try:
             with cd(d_path):
