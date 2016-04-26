@@ -94,7 +94,7 @@ The compiled binary (and ELF image) can be found in the `.build` subdirectory of
 
 ### Compiling Tests
 
-Tests are compiled by adding argument ```--tests``` in the above compile command:
+Tests are compiled by adding the argument ```--tests``` in the above compile command:
 
 ```
 $ neo.py compile -t ARM -m K64F --tests -j 0
@@ -107,9 +107,11 @@ Test code exists in following directory structure
 |_main.cpp          # Optional main.cpp with ```main()``` if it is an application module.
 |_pqr.lib           # Required libs
 |_xyz.lib
-|_frameworks        # Test dependencies. Excluded from module sources while compilation.
-  \_greentea-client # Greentea client required by tests.
-\_TESTS             # Tests directory. Special name upper case TESTS is excluded just like frameworks.
+\_mbed-os
+  |_frameworks        # Test dependencies
+  |  \_greentea-client # Greentea client required by tests.
+  |...
+\_TESTS             # Tests directory. Special name upper case TESTS is excluded during application build process
   |_TestGroup1      # Test Group directory
   | \_TestCase1     # Test case source directory
   |   \_main.cpp    # Test source
@@ -127,7 +129,7 @@ Test code exists in following directory structure
 
 ```
 
-As shown above tests exist inside ```TESTS\testgroup\testcase\``` directory. Please observe TESTS is a special upper case directory that is excluded from module sources while compiling. Any Test case dependency libs can be put inside the ```frameworks``` directory. ```frameworks``` is also excluded when compiling module sources and only compiled and linked to the tests. 
+As shown above, tests exist inside ```TESTS\testgroup\testcase\``` directories. Please observe `TESTS` is a special upper case directory that is excluded from module sources while compiling. Any testing libraries can be put inside the ```frameworks``` directory. This is currently just a good convention, but in the future tests might be able to limit which libraries should and should not be included when compiling them.
 Compiled test binaries are created in ```.build/<TARGET>/<TOOLCHAIN>/TestCase1.bin```
 
 
