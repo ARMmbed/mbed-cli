@@ -1,86 +1,262 @@
 # Introduction
 
-*neo* is the name of the Morpheus command line tool. It enables workflows with Morpheus repositories and maintaining dependencies, code publishing and updating from remotely hosted repositories (GitHub, GitLab, mbed.org), as well as invoking Morpheus's own build system and export functions, and other operations.
+*mbed-cli* is the name of the ARM mbed command line tool, which enables workflows with version control repositories, maintaining dependencies, code publishing, updating from remotely hosted repositories (GitHub, GitLab, mbed.org), as well as invoking ARM mbed's own build system and export functions, and other operations.
 
-This document covers the installation and usage of *neo*.
+This document covers the installation and usage of *mbed-cli*.
 
-# Known limitations
-
-<span style="background-color:#ffffe6;border:1px solid #000;display:block; height:100%; padding:10px">**Warning**: At this point, *neo* is alpha quality and very much in development. Breakages are fully expected. Please open issues on this repository for any problems that you find with *neo*.</span>
-
-
-1. *neo* does not check whether you have Mercurial or Git installed and assumes that they are available.
+## Table of Contents
+1. [Requierements](#requierements)
+1. [Installing mbed-cli](#installing-mbed-cli)
+1. [Creating and importing programs](#creating-and-importing-programs)
+	1. [Importing an existing program](#importing-and-creating-programs)
+	2. [Creating a new program](#creating-a-new-program)
+1. [Adding and removing libraries](#adding-and-removing-libraries)
+	1. [Adding a library](#adding-a-library)
+	2. [Removing a library](#removing-a-library)
+1. [Updating programs and libraries](#updating-programs-and-libraries)
+	1. [Synchronizing library references](#synchronizing-library-references)
+	2. [Removing a library](#removing-a-library)
+	3. [Updating to an upstream version](#updating-to-an-upstream-version)
+1. [Publishing your changes](#publishing-your-changes)
+	1. [Checking status](#checking-status)
+	2. [Pushing upstream](#pushing-upstream)
+1. [Compiling code](#compiling-code)
+	1. [Toolchain selection](#toolchain-selection)
+	2. [Compiling your program](#compiling-your-program)
+	3. [Compiling tests](#compiling-tests)
+1. [Exporting to desktop IDEs](#exporting-to-desktop-ides)
+1. [Known limitations](#known-limitations)
 
 # Installation
 
-<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: *neo* lives in [https://github.com/ARMmbed/neo](https://github.com/ARMmbed/neo). If you don't have permissions to access the above repository, e-mail [mihail.stoyanov@arm.com](mailto:mihail.stoyanov@arm.com) or [bogdan.marinescu@arm.com](mailto:bogdan.marinescu@arm.com) with your GitHub account name.</span>
+<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: *mbed-cli* lives in [https://github.com/ARMmbed/mbed-cli](https://github.com/ARMmbed/mbed-cli). If you don't have permissions to access the above repository, e-mail [mihail.stoyanov@arm.com](mailto:mihail.stoyanov@arm.com) or [bogdan.marinescu@arm.com](mailto:bogdan.marinescu@arm.com) with your GitHub account name.</span>
+
 ## Requierements
 
-* You'll need an [mbed account](https://developer.mbed.org) to access some of the code used in this document.
+* *mbed-cli* is a Python script, so you'll need Python installed in order to use it. *mbed-cli* was tested with [version 2.7 of Python](https://www.python.org/download/releases/2.7/).
 
-* *neo* is a Python script, so you'll need Python installed in order to use it. *neo* was tested with [version 2.7 of Python](https://www.python.org/download/releases/2.7/).
-
-* *neo* supports both Git and Mercurial repositories, so you'll also need to install:
+* *mbed-cli* supports both Git and Mercurial repositories, so you'll also need to install:
     * [Mercurial](https://www.mercurial-scm.org/).
     * [Git](https://git-scm.com/).
 	
 <span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Tip:** Remember that the directories containing the executables of `hg` and `git` need to be in your system's PATH.</span>
 
-## Installing neo
 
-1. To get the latest version of *neo*, clone the repository [https://github.com/ARMmbed/neo](https://github.com/ARMmbed/neo):
+## Installing mbed-cli
 
-    ``$ git clone https://github.com/ARMmbed/neo``
+1. To get the latest version of *mbed-cli*, clone the repository [https://github.com/ARMmbed/mbed-cli](https://github.com/ARMmbed/mbed-cli):
 
-1. Make sure that the folder with `neo.py` (`neo` in this case) is in your system's PATH.
+``$ git clone https://github.com/ARMmbed/mbed-cli``
 
-# Using neo
+Once cloned you can install *mbed-cli* as a python package:
 
-## Importing and creating programs
+``$ python setup.py install`` (on Linux/Mac, you may need to run with ``sudo`` as well)
 
-### Importing an existing program
+To uninstall *mbed-cli* you can use:
 
-Use `neo.py import` to clone an existing program and all its dependencies to your machine:
+``pip uninstall mbed-cli``
 
-```
-$ neo.py import https://developer.mbed.org/teams/Morpheus/code/mbed-Client-Morpheus-from-source/
-$ cd mbed-Client-Morpheus-from-source
-```
 
-<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: some of the repositories that *neo* will clone might require special access (Mercurial will ask you for your credentials if that's the case). If you don't have access, e-mail [mihail.stoyanov@arm.com](mailto:mihail.stoyanov@arm.com) or [bogdan.marinescu@arm.com](mailto:bogdan.marinescu@arm.com) with your developer.mbed.org account name.</span>
+# Using mbed-cli
+
+## Creating and importing programs
+
 
 ### Creating a new program
 
-If you want to create a new program rather than importing an existing one, *neo* will automatically import the [mbed-os library] for you (https://developer.mbed.org/teams/Morpheus/code/mbed-os/). This library represents a **release** of mbed OS and will pull in all the components of the OS, including its build system and desktop IDE project generators. In the future, when we introduce mbed OS **releases**, you'll get the guarantee that all the components in *mbed-os* passed integration tests, so that you know they work properly together. 
+If you want to create a new program rather than importing an existing one, *mbed-cli* will automatically import the [mbed-os library] for you (https://github.com/ARMmbed/mbed-os/). This library represents a **release** of mbed OS and will pull in all the components of the OS, including its build system and desktop IDE project generators. In the future, when we introduce mbed OS **releases**, you'll get the guarantee that all the components in *mbed-os* passed integration tests, so that you know they work properly together. 
 
 With this in mind, these are the steps for creating a new program (we'll call it `myprog`):
 
 ```
-$ mkdir myprog
+$ mbed new myprog  # this creates new folder "myprog", initializes new repository and also imports the latest revision of mbed-os dependency to your program tree.
 $ cd myprog
-$ "neo.py new git" or "neo.py new hg"   # this creates new project in the current folder based on the source control management you specified, and also imports the latest revision of mbed-os dependency to your project tree
-<add your source files>
+$ mbed ls -a       # this will list all libraries in your program
+myprog (no revision)
+`- mbed-os (https://github.com/ARMmbed/mbed-os/#e472a51e45f30d793cbb430b6ebf3e1c53d82f57)
+   |- core\mbedtls (https://mbed.org/teams/sandbox/code/mbedtls/#bef26f687287)
+   |- core\uvisor-mbed-lib (https://github.com/ARMmbed/uvisor-mbed-lib/#32b6df4a39df49dd14624d1503c4f2a27ab62516)
+   |- frameworks\greentea-client (https://github.com/bridadan/greentea-client/#398d96e25630ed62dfa7436bda8556d8d7e16969)
+   |- net\atmel-rf-driver (https://github.com/ARMmbed/atmel-rf-driver-mirror/#f4c48e5e98f66f145882b404e67998ad5cf2fe28)
+   |- net\coap-service (https://github.com/ARMmbed/coap-service-mirror/#0c78050989706c54c3e25c2854c379bdd734d539)
+   |- net\mbed-client (https://github.com/ARMmbed/mbed-client-mirror/#2a839d6c5beff8c19b16f3edc7b3e7ae10d5a471)
+   |- net\mbed-client-c (https://github.com/ARMmbed/mbed-client-c-mirror/#753541105a6fa7e1c66d905e0f2ee28815b3ffba)
+   |- net\mbed-client-classic (https://github.com/ARMmbed/mbed-client-classic/#0cf03c143a2a612e8225c18a88ecb7918be69cf5)
+   |- net\mbed-client-mbedtls (https://github.com/ARMmbed/mbed-client-mbedtls-mirror/#582821c96be81cbd92b3a33019051ad10a0d0693)
+   |- net\mbed-client-randlib (https://github.com/ARMmbed/mbed-client-randlib-mirror/#237b3fa0255f00194113814e8cc47cc38ee7ac5b)
+   |- net\mbed-mesh-api (https://github.com/ARMmbed/mbed-mesh-api-mirror/#f7a198bb1e668e6640bf8c46b99adcbdb49d9020)
+   |- net\mbed-trace (https://github.com/ARMmbed/mbed-trace-mirror/#f9a11fcaa2b5be4dc85bb5721c0cabaf0a96ea6d)
+   |- net\nanostack-hal-mbed-cmsis-rtos (https://github.com/ARMmbed/nanostack-hal-mbed-cmsis-rtos/#ab64e255deb92f6a363886cd621d60475738508a)
+   |- net\nanostack-libservice (https://github.com/ARMmbed/nanostack-libservice-mirror/#e3f7da74a143fc5c822be6213e4b6eca3d7e007a)
+   |- net\sal-iface-6lowpan-morpheus-private (https://github.com/ARMmbed/sal-iface-6lowpan-morpheus-private-mirror/#2b4852e22679353c7f96e1a90120933d4eadd6f6)
+   |- net\sal-stack-nanostack-eventloop (https://github.com/ARMmbed/sal-stack-nanostack-eventloop-mirror/#627b9769e3521800161f3abab2be26b32b5fa91e)
+   `- net\sal-stack-nanostack-private (https://github.com/ARMmbed/sal-stack-nanostack-private-mirror/#1374c77b03fb900425c09a1dd9a0cb8b4e4904ea)
 ```
 
-`add` above works a lot like `clone`, except it adds an explicit dependency to the program that already exists on your local machine. You can get a list of all the dependencies of your program by running `neo.py ls`.
 
-<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: At the moment, you have to initialize a new Git or Mercurial repository in your newly created program (third command in the code block above) for *neo* to work properly. This limitation will likely go away in a future version.</span>
+<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: At the moment, if you want to start from an existing folder in your workspace, you can simply use `mbed new .`, which will initialize a new Git or Mercurial repository in that folder. While this might seem like a limitation, it helps start versioning all files in a program and also help *mbed-cli* find mbed-os and tooling. You can always drop the version control by removing the .git or .hg source management folders.</span>
 
-## Compiling and exporting programs
+
+### Importing an existing program
+
+Use `mbed import` to clone an existing program and all its dependencies to your machine:
+
+```
+$ mbed import https://developer.mbed.org/teams/Morpheus/code/mbed-Client-Morpheus-from-source/
+$ cd mbed-Client-Morpheus-from-source
+```
+
+<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: some of the repositories that *mbed-cli* will clone might require special access (Mercurial will ask you for your credentials if that's the case). If you don't have access, e-mail [mihail.stoyanov@arm.com](mailto:mihail.stoyanov@arm.com) or [bogdan.marinescu@arm.com](mailto:bogdan.marinescu@arm.com) with your developer.mbed.org account name.</span>
+
+
+
+## Adding and removing libraries
+
+### Adding a library
+
+___The add command___
+
+While working on your code, you might need to add another library (dependency) to your application. Use `mbed add` to do that:
+
+```
+$ mbed add https://developer.mbed.org/users/wim/code/TextLCD/
+```
+
+To add a library at a specific revision you can use the full URL#hash:
+
+``
+$ mbed add https://developer.mbed.org/users/wim/code/TextLCD/#e5a0dcb43ecc
+``
+
+___Specifying a directory___
+
+You can give an additional argument to "add" to specify the directory in which you want to add your library. If you'd rather clone the previous library in a directory called "text-lcd", do this:
+
+```
+$ mbed add https://developer.mbed.org/users/wim/code/TextLCD/ text-lcd
+```
+
+Note that this behavior (cloning a repository in a directory with a different name than the name of the repository) is not encouraged, since it can easily lead to confusion.
+
+<span style="background-color:#ffffe6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: Adding a new library to your Morpheus program is not the same thing as just cloning the library locally. Don't clone a library using hg or git; use `mbed add` to add the library, and it will ensure that all library (or sub-library) dependencies are populated as well</span>
+
+
+### Removing a library
+
+If at some point you decide that you don't need a library anymore, you can use `mbed remove` with the path of the library:
+
+```
+$ mbed remove TextLCD
+```
+
+<span style="background-color:#ffffe6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: Removing a library from your Morpheus program is not the same thing as just deleting its local clone. Use `mbed remove` to remove the library, don't simply remove its directory with 'rm'.</span>
+
+<span style="background-color:#ffffe6;border:1px solid #000;display:block; height:100%; padding:10px">**Warning**: *mbed-cli* stores information about libraries and dependencies in lib_name.lib reference files. While these files are human-readable, we *strongly* advise that you don't edit these manually and let *mbed-cli* manage them instead.</span>
+
+
+## Updating programs and libraries
+
+### Synchronizing library references
+
+Before updating you might want to synchronize any changes that you made to the directory structure by running ``mbed sync``, which will update the necessary library references and get rid of the invalid ones.
+
+
+### Updating to an upstream version
+
+To update your program to another upstream version, go to the root folder of the program and run `mbed update [branch|tag|#rev]`. This will fetch the latest revisions from the remote repository, update the program to the specified branch, tag or revision (or to the latest one in the current branch if `#rev` is not specified), then fetch and update recursively all the other dependencies to match the top-level dependencies in `#rev`. You can apply the same mechanism for libraries and their depedencies by executing the update command in the library folder, not the root of your program.
+
+<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: This command will fail if there are changes in your program or library that will be overwritten as a result of running `update`. This is by design: *mbed-cli* does not run operations that would result in overwriting local changes that are not yet committed. If you get an error, take care of your local changes (commit or use one of the switches below), then re-run `update`.</span>
+
+### Update use-cases
+
+There are 2 major scanarios for when updating your code:
+* Update to a "moving" revision, e.g. the tip of a particular or current branch; and
+* Update to a "specific" revision, identified by revision hash or tag name
+
+Each scanario have 2 variants - update with local uncommitted changes (or *dirty* update); and update without local uncommitted changes (or *clean* update).
+
+To help understand what options you can use with *mbed-cli*, please see examples below.
+
+**Case 1: I want to update a program or a library to the latest version in a specific or current branch:**
+* I want to preserve my uncommitted changes - run `mbed update [branch]`. You might have to commit or stash your changes if the source control tool (Git or Mercurial) throws an error that the update overwrites local changes.
+* I want a clean update (and discard uncommitted changes) - run `mbed update [branch] --clean`
+
+**Case 2: I want to update a program or a library to a specific revision or a tag:**
+ * I want to preserve my uncommitted changes - run `mbed update <#rev|tag_name>`. Like above, you might have to commit or stash your changes if they conflict with the latest revision.
+ * I want a clean update (discard changes) - run `mbed update <#rev|tag_name> --clean`
+
+The `--clean` option tells *mbed-cli* to update that program or library and its dependencies, and discard all local changes.
+
+There are 2 addition options that define how unpublished local libraries are handled:
+
+`mbed update --ignore` - update the current program or library and its dependencies, and ignore any local unpublished libraries as if they are not present of your source tree (they won't be deleted or modified, just ignored)
+
+`mbed update --force` - update the current program or library and its dependencies, and discard all local unpublished repositories. Use this with caution as your local unpublished repositories cannot be restored unless you have a backup copy.
+
+You can combine the switches above for the following scenarios:
+
+`mbed update --clean --ignore` - update the current program or library and its depedencies, but ignore any local repositories, e.g. update whatever you can from public repositories.
+
+`mbed update --clean --force` - update the current program or library and all its depedencies, and restore my source tree to stock layout. This wipes every change that you made in the source tree that didn't belong to the original commit, including uncommitted changes and unpublished local libraries.
+
+Use these with caution as your uncommitted changes and unpublished libraries cannot be restored.
+
+## Publishing your changes
+
+### Checking status
+
+As you work on your code, you'll edit parts of it: either your own program code or code in some of the libraries that you depend on. You can get the status of all the repositories in your program (recursively) by running `mbed status`. If a repository has uncommitted changes, this command will display these changes.
+
+### Pushing upstream
+To push the changes in your local tree upstream, run `mbed publish`. `publish` works recursively, pushing the leaf dependencies first, then updating the dependents and pushing them too. 
+
+This is best explained by an example. Let's assume that the list of dependencies of your program (obtained by running `mbed ls`) looks like this:
+
+```
+mbed-Client-Morpheus-from-source (189949915b9c)
+`- mbed-os (71a471196d89)
+   |- net (96479b47e63d)
+   |  |- mbed-trace (506ad37c6bd7)
+   |  |- LWIPInterface (82796df87b0a)
+   |  |  |- lwip-sys (12e78a2462d0)
+   |  |  |- lwip (08f08bfc3f3d)
+   |  |  `- lwip-eth (4380f0749039)
+   |  |- nanostack-libservice (a87c5afee2a6)
+   |  |- mbed-client-classic (17cb48fbeb85)
+   |  |- mbed-client (ae5178938864)
+   |  |- mbed-client-mbedtls (b2db21f25041)
+   |  |- NetworkSocketAPI (aa343098aa61)
+   |  |  `- DnsQuery (248f32a9c48d)
+   |  `- mbed-client-c (5d91b0f5038c)
+   |- core (2f7f0a7fc6b3)
+   |  |- mbedtls (dee5972f341f)
+   |  |- mbed-uvisor (af27c87db9c2)
+   |  `- mbed-rtos (bdd541595fc5)
+   |- hal (e4b241e107f9)
+   |  `- TARGET_Freescale (a35ebe05b3bd)
+   |     |- TARGET_KPSDK_MCUS (e4d670b91a9a)
+   |     `- TARGET_MCU_K64F (c5e2f793b59a)
+   `- tools (042963870f7a)
+```
+
+Furthermore, let's assume that you make changes to `lwip-eth`. `publish` detects the change on the leaf `lwip-eth` dependency and asks you to commit it. Then it detects that `LWIPInterface` depends on `lwip-eth`, updates LWIPInterface's dependency on `lwip-eth` to its latest version (by updating the `lwip-eth.lib` file inside `LWIPINterface`) and asks you to commit it. This propagates up to `net`, `mbed-os` and finally `mbed-Client-Morpheus-from-source`.
+
+
+## Compiling code
 
 ### Toolchain selection
 
-After importing a program or creating a new one, you need to tell *neo* where to find the toolchains that you want to use for compiling your source tree. *neo* gets this information from a file named `mbed_settings.py`, which is automatically created at the top of your cloned repository (if it doesn't already exist). As a rule, since `mbed_settings.py` contains local settings (possibly relevant only to a single OS on a single machine), it should not be versioned. In this file:
+After importing a program or creating a new one, you need to tell *mbed-cli* where to find the toolchains that you want to use for compiling your source tree. *mbed-cli* gets this information from a file named `mbed_settings.py`, which is automatically created at the top of your cloned repository (if it doesn't already exist). As a rule, since `mbed_settings.py` contains local settings (possibly relevant only to a single OS on a single machine), it should not be versioned. In this file:
 
 * If you want to use the [armcc toolchain](https://developer.arm.com/products/software-development-tools/compilers/arm-compiler-5/downloads), set ``ARM_PATH`` to the *base* directory of your armcc installation (example: c:\software\armcc5.06). The recommended version of the armcc toolchain is 5.06 (5.05 will very likely work too).
 * If you want to use the [GCC ARM Embedded toolchain](https://launchpad.net/gcc-arm-embedded), set ``GCC_ARM_PATH`` to the *binary* directory of your GCC ARM installation (example: c:\software\GNUToolsARMEmbedded\4.82013q4\bin). Use versions 4.8 or 4.9 of GCC ARM Embedded, but **not** version 5.0 or any version above it.
 
-### Compiling
+### Compiling your program
 
-Use `neo.py compile` to compile the code:
+Use `mbed compile` to compile the code:
 
 ```
-$ neo.py compile -t ARM -m K64F -j 0
+$ mbed compile -t ARM -m K64F -j 0
 ```
 
 The arguments to *compile* are:
@@ -90,14 +266,15 @@ The arguments to *compile* are:
 * `-j <jobs>` (optional): to use multiple threads on your machine to compile the source. Use 0 to infer the number of threads from the number of cores on your machine, or an actual number to specify the maximum number of thread.
 * `-c ` (optional): will build from scratch; a clean build or rebuild.
 
-The compiled binary (and ELF image) can be found in the `.build` subdirectory of your project.
+The compiled binary (and ELF image) can be found in the `.build` subdirectory of your program.
 
-### Compiling Tests
+
+### Compiling tests
 
 Tests are compiled by adding the argument ```--tests``` in the above compile command:
 
 ```
-$ neo.py compile -t ARM -m K64F --tests -j 0
+$ mbed compile --tests -t ARM -m K64F -j 0
 ```
 
 Test code exists in following directory structure
@@ -137,27 +314,15 @@ Note: This feature does not work in application modules that contain ```main()``
 
 ### Automating toolchain and target selection
 
-Using ``neo.py target <target>`` and ``neo.py toolchain <toolchain>`` you can set the default target and toolchain for your program, meaning you won't have to specify these every time you compile or generate IDE project files.
-
-### Debugging
-
-If you need to debug your code, a good way to do that is to export your source tree to an IDE project file, so that you can use the IDE's debugging facilities. Currently *neo* supports exporting to Keil uVision. 
-
-To export, run this command:
-
-```
-$ neo.py export -i uvision -m K64F
-```
-
-After running this command, a ``.uvproj`` file is created at the top of your source tree. You can open that with uVision.
+Using ``mbed target <target>`` and ``mbed toolchain <toolchain>`` you can set the default target and toolchain for your program, meaning you won't have to specify these every time you compile or generate IDE project files.
 
 ### Customizing the build
 
-*neo* uses the mbed Classic build system, which contains a few mechanisms that you can use to customize the way you build your code:
+*mbed-cli* uses the mbed Classic build system, which contains a few mechanisms that you can use to customize the way you build your code:
 
 ___Macros___
 
-To add new macro definitions, create a file named `MACROS.txt` in the top level directory of your project and list your macros there, line by line. 
+To add new macro definitions, create a file named `MACROS.txt` in the top level directory of your program and list your macros there, line by line. 
 
 An example of `MACROS.txt` (taken from the `mbed-Client-Morpheus-from-source` above):
 
@@ -170,114 +335,33 @@ TARGET_LIKE_CORTEX_M4
 
 Alternatively, you can specify macros in your command line using the -D switch. For example:
 
-``$ neo.py compile -t GCC_ARM -m K64F -c -DUVISOR_PRESENT``
+``$ mbed compile -t GCC_ARM -m K64F -c -DUVISOR_PRESENT``
 
 ___Compile in debug mode___
 
 To compile in debug mode (as opposed to the default *release* mode) use `-o debug-info` in the compiler command line, for example:
 
 ```
-$ neo.py compile -t GCC_ARM -m K64F -j 0 -o debug-info
+$ mbed compile -t GCC_ARM -m K64F -j 0 -o debug-info
 ```
 
 <span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Tip:** If you have files that you want to compile only in release mode, put them in a directory called `TARGET_RELEASE` at any level of your tree. If you have files that you want to compile only in debug mode, put them in a directory called `TARGET_DEBUG` at any level of your tree (then use `-o debug-info` as explained above).
 </span>
 
-## Adding and removing libraries
+## Exporting to desktop IDEs
 
+If you need to debug your code, a good way to do that is to export your source tree to an IDE project file, so that you can use the IDE's debugging facilities. Currently *mbed-cli* supports exporting to Keil uVision, DS-5, IAR Workbench, Simplicity Studio and other IDEs.
 
-### Adding a library
-
-___The add command___
-
-While working on your code, you might need to add another library (dependency) to your application. Use `neo.py add` to do that:
+To export, run this command:
 
 ```
-$ neo.py add https://developer.mbed.org/components/HD44780-Text-LCD/
+$ mbed export -i uvision -m K64F
 ```
 
-___Specifying a directory___
+After running this command, a ``.uvproj`` file is created at the top of your source tree. You can open that with uVision.
 
-You can give an additional argument to "add" to specify the directory in which you want to add your library. If you'd rather clone the previous library in a directory called "text-lcd", do this:
+# Known limitations
 
-```
-$ neo.py add https://developer.mbed.org/components/HD44780-Text-LCD text-lcd
-```
+<span style="background-color:#ffffe6;border:1px solid #000;display:block; height:100%; padding:10px">**Warning**: At this point, *mbed-cli* is alpha quality and very much in development. Breakages are fully expected. Please open issues on this repository for any problems that you find with *mbed-cli*.</span>
 
-Note that this behavior (cloning a repository in a directory with a different name than the name of the repository) is not encouraged, since it can easily lead to confusion.
-
-<span style="background-color:#ffffe6;border:1px solid #000;display:block; height:100%; padding:10px">**Warning**: Adding a new library to your Morpheus project is not the same thing as just cloning the library locally. Don't clone a library using hg or git; use `neo.py add` to add the library, and it will ensure that all library (or sub-library) dependencies are populated as well</span>
-### Removing a library
-
-If at some point you decide that you don't need a library anymore, you can use `neo.py remove` with the path of the library:
-
-```
-$ neo.py remove HD44780-Text-LCD
-```
-
-<span style="background-color:#ffffe6;border:1px solid #000;display:block; height:100%; padding:10px">**Warning**: Removing a library from your Morpheus project is not the same thing as just deleting its local clone. Use `neo.py remove` to remove the library, don't simply remove its directory with 'rm'.</span>
-
-## Synchronizing your tree (WIP)
-
-### Checking status
-
-As you work on your code, you'll edit parts of it: either your own program code or code in some of the libraries that you depend on. You can get the status of all the repositories in your project (recursively) by running `neo.py status`. If a repository has uncommitted changes, this command will display these changes.
-
-### Synchronizing the directory structure 
-
-To synchronize changes that you made to the directory structure you can run ``neo.py sync``, which will update the necessary library references and get rid of the invalid ones.
-
-### Updating to an upstream version
-
-To update your program to another upstream version, go to the root of the program and run `neo.py update [rev]`. It will update the program to the specified revision (or to the latest one if `rev` is not specified), then update recursively all the other dependencies to match the top-level dependencies in `rev`. 
-
-<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: This command will fail if there are changes in your local repository that will be overwritten as a result of running `update`. This is by design: *neo* does not run operations that would result in overwriting local changes that are not yet committed. If you get an error, take care of your local changes (commit or use one of the switches below), then re-run `update`.</span>
-
-There are 3 `update` switches that define the handling of your source tree:
-
-`neo.py update --clean` - update the current program or library and its dependencies, and discard all local changes. This is useful for when you modified something and you want to the original state of your source tree. Use this with caution as your uncommitted changes cannot be restored.
-
-`neo.py update --ignore` - update the current program or library and its dependencies, and ignore any local unpublished libraries as if they are not present of your source tree (they won't be deleted or modified, just ignored)
-
-`neo.py update --force` - update the current program or library and its dependencies, and discard all local unpublished repositories. Use this with caution as your local unpublished repositories cannot be restored unless you have a backupi copy.
-
-You can combine the switches above for the following scenarios:
-
-`neo.py update --clean --ignore` - update the current program or library and its depedencies, but ignore any local repositories, e.g. update whatever you can from public repositories.
-
-`neo.py update --clean --force` - update the current program or library and all its depedencies, and restore my source tree to stock layout. This wipes every single change you made in the source tree that didn't belong to the original commit.
-
-
-### Pushing upstream
-To push the changes in your local tree upstream, run `neo.py publish`. `publish` works recursively, pushing the leaf dependencies first, then updating the dependents and pushing them too. 
-
-This is best explained by an example. Let's assume that the list of dependencies of your program (obtained by running `neo.py ls`) looks like this:
-
-```
-mbed-Client-Morpheus-from-source (189949915b9c)
-`- mbed-os (71a471196d89)
-   |- net (96479b47e63d)
-   |  |- mbed-trace (506ad37c6bd7)
-   |  |- LWIPInterface (82796df87b0a)
-   |  |  |- lwip-sys (12e78a2462d0)
-   |  |  |- lwip (08f08bfc3f3d)
-   |  |  `- lwip-eth (4380f0749039)
-   |  |- nanostack-libservice (a87c5afee2a6)
-   |  |- mbed-client-classic (17cb48fbeb85)
-   |  |- mbed-client (ae5178938864)
-   |  |- mbed-client-mbedtls (b2db21f25041)
-   |  |- NetworkSocketAPI (aa343098aa61)
-   |  |  `- DnsQuery (248f32a9c48d)
-   |  `- mbed-client-c (5d91b0f5038c)
-   |- core (2f7f0a7fc6b3)
-   |  |- mbedtls (dee5972f341f)
-   |  |- mbed-uvisor (af27c87db9c2)
-   |  `- mbed-rtos (bdd541595fc5)
-   |- hal (e4b241e107f9)
-   |  `- TARGET_Freescale (a35ebe05b3bd)
-   |     |- TARGET_KPSDK_MCUS (e4d670b91a9a)
-   |     `- TARGET_MCU_K64F (c5e2f793b59a)
-   `- tools (042963870f7a)
-```
-
-Furthermore, let's assume that you make changes to `lwip-eth`. `publish` detects the change on the leaf `lwip-eth` dependency and asks you to commit it. Then it detects that `LWIPInterface` depends on `lwip-eth`, updates LWIPInterface's dependency on `lwip-eth` to its latest version (by updating the `lwip-eth.lib` file inside `LWIPINterface`) and asks you to commit it. This propagates up to `net`, `mbed-os` and finally `mbed-Client-Morpheus-from-source`.
+1. *mbed-cli* does not check whether you have Mercurial or Git installed and assumes that they are available.

@@ -11,6 +11,7 @@ import stat
 from collections import *
 from itertools import *
 
+
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
 git_cmd = 'git'
@@ -89,7 +90,7 @@ verbose = False
 
 # Logging and output
 def message(msg):
-    return "[%s] %s\n" % (os.path.basename(sys.argv[0]), msg)
+    return "[mbed] %s\n" % msg
 
 def log(msg, level=1):
     if level <= 0 or verbose:
@@ -100,12 +101,12 @@ def action(msg):
 
 def warning(msg):
     for line in msg.splitlines():
-        sys.stderr.write("[%s WARNING] %s\n" % (os.path.basename(sys.argv[0]), line))
+        sys.stderr.write("[mbed WARNING] %s\n" % line)
     sys.stderr.write("---\n")
 
 def error(msg, code=-1):
     for line in msg.splitlines():
-        sys.stderr.write("[%s ERROR] %s\n" % (os.path.basename(sys.argv[0]), line))
+        sys.stderr.write("[mbed ERROR] %s\n" % line)
     sys.stderr.write("---\n")
     sys.exit(code)
 
@@ -1022,7 +1023,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
     repo = Repo.fromrepo()
     
     if top and not rev and repo.scm.isdetached():
-        error("This %s is in detached HEAD state, and you won't be able to receive updates from the remote repository until you either checkout a branch or create a new one.\nYou can checkout a branch using \"%s checkout <branch_name>\" command before running \"%s update\"." % (cwd_type, repo.scm.name, os.path.basename(sys.argv[0])), 1)
+        error("This %s is in detached HEAD state, and you won't be able to receive updates from the remote repository until you either checkout a branch or create a new one.\nYou can checkout a branch using \"%s checkout <branch_name>\" command before running \"mbed update\"." % (cwd_type, repo.scm.name),1)
     
     # Fetch from remote repo
     action("Updating %s \"%s\" to %s" % (cwd_type if top else cwd_dest, os.path.basename(repo.path) if top else relpath(cwd_root, repo.path), "rev #"+rev if rev else "latest revision in the current branch"))
@@ -1181,7 +1182,7 @@ def compile(toolchain=None, mcu=None, compile_tests=False):
 
         args = remainder
         repo = Repo.fromrepo()
-        file = os.path.join(repo.scm.store, 'neo')
+        file = os.path.join(repo.scm.store, 'mbed')
 
         target = mcu if mcu else get_cfg(file, 'TARGET')
         if target is None:
@@ -1247,7 +1248,7 @@ def export(ide=None, mcu=None):
 
         args = remainder
         repo = Repo.fromrepo()
-        file = os.path.join(repo.scm.store, 'neo')
+        file = os.path.join(repo.scm.store, 'mbed')
         
         target = mcu if mcu else get_cfg(file, 'TARGET')
         if target is None:
@@ -1275,7 +1276,7 @@ def target(name=None):
     root_path = Repo.findroot(os.getcwd())
     with cd(root_path):
         repo = Repo.fromrepo()
-        file = os.path.join(repo.scm.store, 'neo')
+        file = os.path.join(repo.scm.store, 'mbed')
         if name is None:
             name = get_cfg(file, 'TARGET')
             action(('The default target for program "%s" is "%s"' % (repo.name, name)) if name else 'No default target is specified for program "%s"' % repo.name)
@@ -1290,7 +1291,7 @@ def toolchain(name=None):
     root_path = Repo.findroot(os.getcwd())
     with cd(root_path):
         repo = Repo.fromrepo()        
-        file = os.path.join(repo.scm.store, 'neo')
+        file = os.path.join(repo.scm.store, 'mbed')
         if name is None:
             name = get_cfg(file, 'TOOLCHAIN')
             action(('The default toolchain for program "%s" is "%s"' % (repo.name, name)) if name else 'No default toolchain is specified for program "%s"' % repo.name)
