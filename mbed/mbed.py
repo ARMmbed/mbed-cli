@@ -1251,14 +1251,16 @@ def test(list=False):
         # Gather remaining arguments and prepare environment variables
         args = remainder
         repo = Repo.fromrepo()
-        file = os.path.join(repo.scm.store, 'neo')
         env = os.environ.copy()
         env['PYTHONPATH'] = '.'
         
         if list:
             # List all available tests (by default in a human-readable format)
-            popen(['python', 'mbed-os/tools/test.py', '-l'] + args,
-                env=env)
+            try:
+                popen(['python', 'mbed-os/tools/test.py', '-l'] + args,
+                    env=env)
+            except ProcessException as e:
+                error('Failed to run test script')
 
 # Export command
 @subcommand('export',
