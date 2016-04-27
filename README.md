@@ -23,8 +23,7 @@ This document covers the installation and usage of *mbed-cli*.
 1. [Compiling code](#compiling-code)
 	1. [Toolchain selection](#toolchain-selection)
 	2. [Compiling your program](#compiling-your-program)
-	4. [Compiling binary library](#compiling-binary-library)
-	4. [Compiling tests](#compiling-tests)
+	3. [Compiling tests](#compiling-tests)
 1. [Exporting to desktop IDEs](#exporting-to-desktop-ides)
 1. [Known limitations](#known-limitations)
 
@@ -51,7 +50,7 @@ This document covers the installation and usage of *mbed-cli*.
 
 Once cloned you can install *mbed-cli* as a python package:
 
-``$ sudo ./setup.py install`` on Linux/Mac or ``> setup.py install`` on Windows
+``$ python setup.py install`` (on Linux/Mac, you may need to run with ``sudo`` as well)
 
 To uninstall *mbed-cli* you can use:
 
@@ -268,14 +267,6 @@ The arguments to *compile* are:
 * `-c ` (optional): will build from scratch; a clean build or rebuild.
 
 The compiled binary (and ELF image) can be found in the `.build` subdirectory of your program.
-
-### Compiling binary library
-
-**Work in progress**
-```
-$ mbed compile --library=<output_dir> -t ARM -m K64F -j 0
-```
-**Work in progress**
 
 
 ### Compiling tests
