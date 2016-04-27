@@ -300,7 +300,24 @@ The compiled binary (and ELF image) can be found in the `.build` subdirectory of
 
 #### Compiling tests
 
-Tests are compiled by adding the argument ```--tests``` to the compile command:
+Use `mbed test --list` to list the tests available:
+
+```
+$ mbed tests --list
+Test Case:
+    Name: mbed-os-core-mbed-rtos-TESTS-mbed-rtos-signals
+    Path: ./mbed-os/core/mbed-rtos/TESTS/mbed-rtos/signals
+Test Case:
+    Name: mbed-os-core-mbed-rtos-TESTS-mbed-rtos-basic
+    Path: ./mbed-os/core/mbed-rtos/TESTS/mbed-rtos/basic
+Test Case:
+    Name: mbed-os-TESTS-integration-basic
+    Path: ./mbed-os/TESTS/integration/basic
+  
+...
+```
+
+Tests are compiled by adding the argument ```--tests``` in the above compile command:
 
 ```
 $ mbed compile --tests -t ARM -m K64F -j 0
@@ -327,7 +344,7 @@ Test code exists in the following directory structure:
   \_host_tests      # Python host tests script directory
     |_host_test1.py
     \_host_test2.py
-\.build             # Build directory
+\_.build             # Build directory
   |_<TARGET>        # Target directory
   | \_<TOOLCHAIN>   # Toolchain directory
   |   |_TestCase1.bin    # Test binary
