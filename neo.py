@@ -65,12 +65,27 @@ ignores = [
     "# subrepo ignores",
     ]
 
+# reference to local (unpublished) repo - dir#rev
+regex_local_ref = '^([\w.+-][\w./+-]*?)/?(?:#(.*))?$'
+
+# reference to repo - url#rev
+regex_url_ref = '^(.*/([\w+-]+)(?:\.\w+)?)/?(?:#(.*))?$'
+
+# git url (no #rev)
 regex_git_url = '^(git@|git\://|ssh\://|https?\://)([^/:]+)[:/](.+?)(\.git|\/?)$'
+
+# hg url (no #rev)
 regex_hg_url = '^(file|ssh|https?)://([^/:]+)/([^/]+)/?([^/]+?)?$'
+
+# mbed url is subset of hg. mbed doesn't support ssh transport
 regex_mbed_url = '^(https?)://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+)/?$'
 
+# default mbed OS url
 mbed_os_url = 'https://github.com/ARMmbed/mbed-os'
+
+# verbose logging
 verbose = False
+
 
 # Logging and output
 def message(msg):
@@ -209,7 +224,11 @@ class Hg(object):
     store = '.hg'
 
     def isurl(url):
-        return re.match('^https?\:\/\/(developer\.)?mbed\.(org|com)', url)
+        m_url = re.match(regex_url_ref, url.strip().replace('\\', '/'))
+        if m_url:
+            return re.match(regex_hg_url, m_url.group(1)) or re.match(regex_mbed_url, m_url.group(1))
+        else:
+            return False
 
     def init(path=None):
         popen([hg_cmd, 'init'] + ([path] if path else []) + (['-v'] if verbose else ['-q']))
@@ -389,7 +408,11 @@ class Git(object):
     store = '.git'
 
     def isurl(url):
-        return re.match('\.git$', url) or re.match('^https?\:\/\/github\.com', url)
+        m_url = re.match(regex_url_ref, url.strip().replace('\\', '/'))
+        if m_url:
+            return re.match(regex_git_url, m_url.group(1)) and not re.match(regex_mbed_url, m_url.group(1))
+        else:
+            return False
 
     def init(path=None):
         popen([git_cmd, 'init'] + ([path] if path else []) + ([] if verbose else ['-q']))
@@ -520,8 +543,8 @@ class Repo(object):
     @classmethod
     def fromurl(cls, url, path=None):
         repo = cls()
-        m_local = re.match('^([\w.+-][\w./+-]+)/?(?:#(.*))?$', url.strip().replace('\\', '/'))
-        m_url = re.match('^(.*/([\w+-]+)(?:\.\w+)?)/?(?:#(.*))?$', url.strip().replace('\\', '/'))
+        m_local = re.match(regex_local_ref, url.strip().replace('\\', '/'))
+        m_url = re.match(regex_url_ref, url.strip().replace('\\', '/'))
         if m_local:
             repo.name = os.path.basename(path or m_local.group(1))
             repo.path = os.path.abspath(path or os.path.join(os.getcwd(), m_local.group(1)))
@@ -689,7 +712,10 @@ class Repo(object):
     def write(self):
         if os.path.isfile(self.lib):
             with open(self.lib) as f:
-                if f.read().strip() == self.fullurl.strip():
+                lib_repo = Repo.fromurl(f.read().strip())
+                if (formaturl(lib_repo.url, 'https') == formaturl(self.url, 'https') # match URLs in common format (https)
+                    and (lib_repo.hash == self.hash                                  # match hashes, even if hash is None (valid for repos with no revisions)
+                    or lib_repo.hash == self.hash[0:len(lib_repo.hash)])):           # match long and short hash formats
                     #print self.name, 'unmodified'
                     progress()
                     return
@@ -737,7 +763,10 @@ def formaturl(url, format="default"):
     url = "%s" % url
     m = re.match(regex_mbed_url, url)
     if m:
-        url = 'https://mbed.org/'+m.group(4)+'/'+m.group(5)+'/code/'+m.group(7)
+        if format == "http":
+            url = 'http://%s/%s/%s/%s/%s' % (m.group(2), m.group(4), m.group(5), m.group(6), m.group(7))
+        else:
+            url = 'https://%s/%s/%s/%s/%s' % (m.group(2), m.group(4), m.group(5), m.group(6), m.group(7))
     else:
         m = re.match(regex_git_url, url)
         if m:
@@ -1101,11 +1130,11 @@ def sync(recursive=True, keep_refs=False, top=True):
     dict(name=['-a', '--all'], action='store_true', help="List repository URL and hash pairs"),
     dict(name=['-I', '--ignore'], action="store_true", help="Ignore errors regarding missing libraries."),
     help='View the current %s dependency tree.' % cwd_type)
-def list_(all=False, prefix='', ignore=False):
+def list_(all=False, prefix='', p_path=None, ignore=False):
     repo = Repo.fromrepo()
-    print prefix + repo.name, '(%s)' % (repo.url if all else repo.hash)
+    print prefix + (relpath(p_path, repo.path) if p_path else repo.name), '(%s)' % ((repo.fullurl if all else repo.hash) or 'no revision')
 
-    for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.name)):
+    for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.path)):
         if prefix:
             nprefix = prefix[:-3] + ('|  ' if prefix[-3] == '|' else '   ')
         else:
@@ -1114,7 +1143,7 @@ def list_(all=False, prefix='', ignore=False):
 
         if lib.check_repo(ignore):
             with cd(lib.path):
-                list_(all, nprefix, ignore=False)
+                list_(all, nprefix, repo.path, ignore=ignore)
 
 
 @subcommand('status',
