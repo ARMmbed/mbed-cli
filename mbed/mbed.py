@@ -1201,7 +1201,7 @@ def compile(toolchain=None, mcu=None, compile_tests=False):
         env['PYTHONPATH'] = '.'
 
         # Only compile a program
-        if mbed_os_path == 'mbed-os':
+        if mbed_os_path in ['mbed-os', '.']:
             popen(['python', os.path.join(mbed_os_path, 'tools', 'make.py')]
                 + list(chain.from_iterable(izip(repeat('-D'), macros)))
                 + ['-t', tchain, '-m', target, '--source=.', '--build=%s' % os.path.join('.build', target, tchain)]
