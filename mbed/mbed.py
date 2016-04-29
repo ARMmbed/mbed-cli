@@ -1232,7 +1232,36 @@ def compile(toolchain=None, mcu=None, compile_tests=False):
                                 env=env)
                             if "-c" in args: args.remove('-c')
 
+# Test command
+@subcommand('test',
+    dict(name=['-l', '--list'], action="store_true", help="List all of the available tests"),
+    help='Find and build tests in a project and its libraries.')
+def test(list=False):
+    # Find the root of the project
+    root_path = Repo.findroot(os.getcwd())
+    if not root_path:
+        Repo.fromrepo()
+    
+    # Change directories to the project root to use mbed OS tools
+    with cd(root_path):
+        # If "mbed-os" folder doesn't exist, error
+        if not os.path.isdir('mbed-os'):
+            error('The mbed-os codebase and tools were not found in this program.', -1)
         
+        # Gather remaining arguments and prepare environment variables
+        args = remainder
+        repo = Repo.fromrepo()
+        env = os.environ.copy()
+        env['PYTHONPATH'] = '.'
+        
+        if list:
+            # List all available tests (by default in a human-readable format)
+            try:
+                popen(['python', 'mbed-os/tools/test.py', '-l'] + args,
+                    env=env)
+            except ProcessException as e:
+                error('Failed to run test script')
+
 # Export command
 @subcommand('export',
     dict(name=['-i', '--ide'], help="IDE to create project files for. Example: UVISION,DS5,IAR", required=True),
