@@ -23,7 +23,8 @@ This document covers the installation and usage of *mbed CLI*.
 1. [Compiling code](#compiling-code)
 	1. [Toolchain selection](#toolchain-selection)
 	2. [Compiling your program](#compiling-your-program)
-	3. [Compiling tests](#compiling-tests)
+	3. [Compiling static libraries](#compiling-static-libraries)
+	4. [Compiling tests](#compiling-tests)
 1. [Exporting to desktop IDEs](#exporting-to-desktop-ides)
 1. [Known limitations](#known-limitations)
 
@@ -298,12 +299,48 @@ The arguments to *compile* are:
 The compiled binary (and ELF image) can be found in the `.build` subdirectory of your program.
 
 
+#### Compiling static libraries
+
+You can build a static library of your code by adding `--library` argument to `mbed compile`, for example:
+
+```
+$ cd mbed-os
+$ mbed compile -t ARM -m K64F --library
+```
+
+A typical application for static libraries is when you want to build multiple applications from the same mbed-os codebase without having to recompile for every application. To achieve this:
+1. Build a static library for mbed-os
+2. Compile multiple applications or tests against the static library
+
+```
+$ cd mbed-os # unles you are in mbed-os already
+$ mbed compile -t ARM -m K64F --library --no-archive --build=..\..\mbed-os-build
+Building library mbed-os (K64F, ARM)
+[...]
+Completed in: (47.4)s
+
+$ mbed compile -t ARM -m K64F --source=TESTS\integration\basic --source=..\..\mbed-os-build --build=..\..\basic-out
+Building project basic (K64F, ARM)
+Compile: main.cpp
+Link: basic
+Elf2Bin: basic
+Image: ..\..\basic-out\basic.bin
+
+$ mbed compile -t ARM -m K64F --source=TESTS\integration\threaded_blinky --source=..\..\mbed-os-build --build=..\..\threaded_blinky-out
+Building project threaded_blinky (K64F, ARM)
+Compile: main.cpp
+Link: threaded_blinky
+Elf2Bin: threaded_blinky
+Image: ..\..\threaded_blinky-out\threaded_blinky.bin
+```
+
+
 #### Compiling tests
 
 Use `mbed test --list` to list the tests available:
 
 ```
-$ mbed tests --list
+$ mbed test --list
 Test Case:
     Name: mbed-os-core-mbed-rtos-TESTS-mbed-rtos-signals
     Path: ./mbed-os/core/mbed-rtos/TESTS/mbed-rtos/signals
