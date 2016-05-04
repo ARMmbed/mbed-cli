@@ -1228,35 +1228,38 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
                             + ['-t', tchain, '-m', target]
                             + ['--source', os.path.join(tests_path, d, td), '--source', '.']
                             + ['--build', build]
+                            + (['-v'] if verbose else [])
                             + args,
                             env=env)
                         if "-c" in args: args.remove('-c')
     elif compile_library:
         # Compile as a library (current dir is default)
         if not source or len(source) == 0:
-            source = [orig_path if orig_path != root_path else '.']
+            source = [os.path.relpath(root_path, orig_path)]
         if not build:
-            build = os.path.join(root_path, '.build', 'libraries', os.path.basename(orig_path), target, tchain)
+            build = os.path.join(os.path.relpath(root_path, orig_path), '.build', 'libraries', os.path.basename(orig_path), target, tchain)
 
         popen(['python', os.path.join(tools_dir, 'build.py')]
             + list(chain.from_iterable(izip(repeat('-D'), macros)))
             + ['-t', tchain, '-m', target]
             + list(chain.from_iterable(izip(repeat('--source'), source)))
             + ['--build', build]
+            + (['-v'] if verbose else [])
             + args,
             env=env)
     else:
         # Compile as application (root is default)
         if not source or len(source) == 0:
-            source = [root_path if root_path != orig_path else '.']
+            source = [os.path.relpath(root_path, orig_path)]
         if not build:
-            build = os.path.join(root_path, '.build', target, tchain)
+            build = os.path.join(os.path.relpath(root_path, orig_path), '.build', target, tchain)
 
         popen(['python', os.path.join(tools_dir, 'make.py')]
             + list(chain.from_iterable(izip(repeat('-D'), macros)))
             + ['-t', tchain, '-m', target]
             + list(chain.from_iterable(izip(repeat('--source'), source)))
             + ['--build', build]
+            + (['-v'] if verbose else [])
             + args,
             env=env)
 
