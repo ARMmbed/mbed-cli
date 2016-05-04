@@ -15,7 +15,7 @@ from itertools import *
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
 git_cmd = 'git'
-ver = '0.1.2'
+ver = '0.1.3'
 
 ignores = [
     # Version control folders
@@ -821,7 +821,7 @@ def subcommand(name, *args, **kwargs):
             argv = [(arg if isinstance(arg, basestring) else arg[-1]).strip('-')
                     for arg in argv]
             argv = {arg: vars(parsed_args)[arg] for arg in argv
-                    if vars(parsed_args)[arg]}
+                    if vars(parsed_args)[arg] is not None}
 
             return command(**argv)
     
@@ -1165,22 +1165,26 @@ def status(ignore=False):
 @subcommand('compile',
     dict(name=['-t', '--toolchain'], help="Compile toolchain. Example: ARM, uARM, GCC_ARM, IAR"),
     dict(name=['-m', '--mcu'], help="Compile target. Example: K64F, NUCLEO_F401RE, NRF51822..."),
+    dict(name='--source', action="append", help="Source directory. Default: . (current dir)"),
+    dict(name='--build', help="Build directory. Default: .build/"),
+    dict(name='--library', dest="compile_library", action="store_true", help="Compile the current %s as a static library." % cwd_type),
     dict(name='--tests', dest="compile_tests", action="store_true", help="Compile tests in TESTS directory."),
     help='Compile program using the native mbed OS build system.')
-def compile(toolchain=None, mcu=None, compile_tests=False):
+def compile(toolchain=None, mcu=None, source=False, build=False, compile_library=False, compile_tests=False):
+    args = remainder
+    orig_path = os.getcwd() # remember the original path. this is needed for compiling only the libraries and tests for the current folder.
     root_path = Repo.findroot(os.getcwd())
     if not root_path:
         Repo.fromrepo()
-    with cd(root_path):
-        mbed_os_path = None
-        if os.path.split(os.getcwd())[1] == 'mbed-os':
-            mbed_os_path = "." 
-        elif os.path.isdir('mbed-os'):
-            mbed_os_path = "mbed-os" 
-        if mbed_os_path is None:
-            error('The mbed-os codebase and tools were not found in this program.', -1)
 
-        args = remainder
+    with cd(root_path):
+        if os.path.isdir('mbed-os'):                    # its application with mbed-os sub dir
+            mbed_os_path = os.path.abspath('mbed-os')
+        elif os.path.basename(os.getcwd()) == 'mbed-os':# its standalone mbed-os (is root)
+            mbed_os_path = os.path.abspath('.')
+        else:
+            error('The mbed-os codebase and tools were not found.', -1)
+
         repo = Repo.fromrepo()
         file = os.path.join(repo.scm.store, 'mbed')
 
@@ -1197,40 +1201,68 @@ def compile(toolchain=None, mcu=None, compile_tests=False):
             with open('MACROS.txt') as f:
                 macros = f.read().splitlines()
 
+        tools_dir = os.path.abspath(os.path.join(mbed_os_path, 'tools'))
+
         env = os.environ.copy()
-        env['PYTHONPATH'] = '.'
+        env['PYTHONPATH'] = os.path.abspath(root_path)
+        
+    def test(arg, env):
+        print arg
 
-        # Only compile a program
-        if mbed_os_path == 'mbed-os':
-            popen(['python', os.path.join(mbed_os_path, 'tools', 'make.py')]
-                + list(chain.from_iterable(izip(repeat('-D'), macros)))
-                + ['-t', tchain, '-m', target, '--source=.', '--build=%s' % os.path.join('.build', target, tchain)]
-                + args,
-                env=env)
-            # remove clean build flag onec exercised 
-            if "-c" in args: args.remove('-c')
-        else:
-            action("Skipping module compilation as it is a library!")
-
+    if compile_tests:
         # Compile tests
-        if compile_tests:
-            tests_path = 'TESTS'
-            if os.path.exists(tests_path):
-                # Loop on test group directories
-                for d in os.listdir(tests_path):
-                    # dir name host_tests is reserved for host python scripts.
-                    if d != "host_tests":
-                        # Loop on test case directories
-                        for td in os.listdir(os.path.join(tests_path, d)):
-                            # compile each test
-                            popen(['python', os.path.join(mbed_os_path, 'tools', 'make.py')]
-                                + list(chain.from_iterable(izip(repeat('-D'), macros)))
-                                + ['-t', tchain, '-m', target]
-                                + ['--source=%s' % os.path.join(tests_path, d, td), '--source=.']
-                                + ['--build=%s' % os.path.join('.build', target, tchain)]
-                                + args,
-                                env=env)
-                            if "-c" in args: args.remove('-c')
+        if not build:
+            build = os.path.join('.build', target, tchain)
+
+        tests_path = 'TESTS'
+        if os.path.exists(tests_path):
+            # Loop on test group directories
+            for d in os.listdir(tests_path):
+                # dir name host_tests is reserved for host python scripts.
+                if d != "host_tests":
+                    # Loop on test case directories
+                    for td in os.listdir(os.path.join(tests_path, d)):
+                        # compile each test
+                        popen(['python', os.path.join(tools_dir, 'make.py')]
+                            + list(chain.from_iterable(izip(repeat('-D'), macros)))
+                            + ['-t', tchain, '-m', target]
+                            + ['--source', os.path.join(tests_path, d, td), '--source', '.']
+                            + ['--build', build]
+                            + (['-v'] if verbose else [])
+                            + args,
+                            env=env)
+                        if "-c" in args: args.remove('-c')
+    elif compile_library:
+        # Compile as a library (current dir is default)
+        if not source or len(source) == 0:
+            source = [os.path.relpath(root_path, orig_path)]
+        if not build:
+            build = os.path.join(os.path.relpath(root_path, orig_path), '.build', 'libraries', os.path.basename(orig_path), target, tchain)
+
+        popen(['python', os.path.join(tools_dir, 'build.py')]
+            + list(chain.from_iterable(izip(repeat('-D'), macros)))
+            + ['-t', tchain, '-m', target]
+            + list(chain.from_iterable(izip(repeat('--source'), source)))
+            + ['--build', build]
+            + (['-v'] if verbose else [])
+            + args,
+            env=env)
+    else:
+        # Compile as application (root is default)
+        if not source or len(source) == 0:
+            source = [os.path.relpath(root_path, orig_path)]
+        if not build:
+            build = os.path.join(os.path.relpath(root_path, orig_path), '.build', target, tchain)
+
+        popen(['python', os.path.join(tools_dir, 'make.py')]
+            + list(chain.from_iterable(izip(repeat('-D'), macros)))
+            + ['-t', tchain, '-m', target]
+            + list(chain.from_iterable(izip(repeat('--source'), source)))
+            + ['--build', build]
+            + (['-v'] if verbose else [])
+            + args,
+            env=env)
+
 
 # Test command
 @subcommand('test',
@@ -1262,6 +1294,7 @@ def test(list=False):
             except ProcessException as e:
                 error('Failed to run test script')
 
+                
 # Export command
 @subcommand('export',
     dict(name=['-i', '--ide'], help="IDE to create project files for. Example: UVISION,DS5,IAR", required=True),
