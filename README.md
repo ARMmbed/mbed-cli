@@ -441,7 +441,7 @@ For example, to export to uVision run:
 $ mbed export -i uvision -m K64F
 ```
 
-A ``.uvproj`` file is created at the top of your source tree. You can open that with uVision.
+A ``.uvproj`` file is created in the projectfiles/uvision folder. You can open the project file with uVision.
 
 ## Known limitations
 
