@@ -1233,8 +1233,9 @@ def status(ignore=False):
     dict(name='--build', help="Build directory. Default: .build/"),
     dict(name='--library', dest="compile_library", action="store_true", help="Compile the current %s as a static library." % cwd_type),
     dict(name='--tests', dest="compile_tests", action="store_true", help="Compile tests in TESTS directory."),
+    dict(name='--test_spec', dest="test_spec", help="Destination path for a test spec file that can be used by the Greentea automated test tool"),
     help='Compile program using the native mbed OS build system.')
-def compile(toolchain=None, mcu=None, source=False, build=False, compile_library=False, compile_tests=False):
+def compile(toolchain=None, mcu=None, source=False, build=False, compile_library=False, compile_tests=False, test_spec="test_spec.json"):
     args = remainder
     orig_path = os.getcwd() # remember the original path. this is needed for compiling only the libraries and tests for the current folder.
     root_path = Repo.findroot(os.getcwd())
@@ -1270,37 +1271,24 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
         env = os.environ.copy()
         env['PYTHONPATH'] = os.path.abspath(root_path)
 
-    def test(arg, env):
-        print arg
+    if not source or len(source) == 0:
+        source = [os.path.relpath(root_path, orig_path)]
 
     if compile_tests:
         # Compile tests
         if not build:
-            build = os.path.join('.build', target, tchain)
-
-        tests_path = 'TESTS'
-        if os.path.exists(tests_path):
-            # Loop on test group directories
-            for d in os.listdir(tests_path):
-                # dir name host_tests is reserved for host python scripts.
-                if d != "host_tests":
-                    # Loop on test case directories
-                    for td in os.listdir(os.path.join(tests_path, d)):
-                        # compile each test
-                        popen(['python', os.path.join(tools_dir, 'make.py')]
-                              + list(chain.from_iterable(izip(repeat('-D'), macros)))
-                              + ['-t', tchain, '-m', target]
-                              + ['--source', os.path.join(tests_path, d, td), '--source', '.']
-                              + ['--build', build]
-                              + (['-v'] if verbose else [])
-                              + args,
-                              env=env)
-                        if "-c" in args:
-                            args.remove('-c')
+            build = os.path.join(os.path.relpath(root_path, orig_path), '.build', target, tchain)
+        
+        popen(['python', os.path.join(tools_dir, 'test.py')]
+            + ['-t', tchain, '-m', target]
+            + list(chain.from_iterable(izip(repeat('--source'), source)))
+            + ['--build', build]
+            + ['--test-spec', test_spec]
+            + (['-v'] if verbose else [])
+            + args,
+            env=env)
     elif compile_library:
         # Compile as a library (current dir is default)
-        if not source or len(source) == 0:
-            source = [os.path.relpath(root_path, orig_path)]
         if not build:
             build = os.path.join(os.path.relpath(root_path, orig_path), '.build', 'libraries', os.path.basename(orig_path), target, tchain)
 
@@ -1314,8 +1302,6 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
               env=env)
     else:
         # Compile as application (root is default)
-        if not source or len(source) == 0:
-            source = [os.path.relpath(root_path, orig_path)]
         if not build:
             build = os.path.join(os.path.relpath(root_path, orig_path), '.build', target, tchain)
 
