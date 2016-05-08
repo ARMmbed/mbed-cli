@@ -272,9 +272,10 @@ class Hg(object):
         popen([hg_cmd, 'pull'] + (['-v'] if verbose else ['-q']))
 
     def update(repo, hash=None, clean=False):
-        log("Pulling remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
-        popen([hg_cmd, 'pull'] + (['-v'] if verbose else ['-q']))
-        log("Updating \"%s\" to %s" % (repo.name, repo.hashtype(hash, True) if hash else "latest revision in the current branch"))
+        if not repo.is_local:
+            log("Pulling remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
+            popen([hg_cmd, 'pull'] + (['-v'] if verbose else ['-q']))
+        log("Updating \"%s\" to %s" % (repo.name, repo.hashtype(hash, True)))
         popen([hg_cmd, 'update'] + (['-r', hash] if hash else []) + (['-C'] if clean else []) + (['-v'] if verbose else ['-q']))
 
     def status():
@@ -461,13 +462,15 @@ class Git(object):
             popen([git_cmd, 'checkout', '.'] + ([] if verbose else ['-q'])) # undo  modified files
             popen([git_cmd, 'clean', '-fdq'] + ([] if verbose else ['-q'])) # cleans up untracked files and folders
         if hash:
-            log("Fetching remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
-            popen([git_cmd, 'fetch', '-v', '--all'] + (['-v'] if verbose else ['-q']))
+            if not repo.is_local:
+                log("Fetching remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
+                popen([git_cmd, 'fetch', '-v', '--all'] + (['-v'] if verbose else ['-q']))
             log("Updating \"%s\" to %s" % (repo.name, repo.hashtype(hash, True)))
             popen([git_cmd, 'checkout'] + [hash] + ([] if verbose else ['-q']))
         else:
-            log("Fetching remote repository \"%s\" to local \"%s\" and updating to latest revision in the current branch" % (repo.url, repo.name))
-            popen([git_cmd, 'pull', '--all'] + (['-v'] if verbose else ['-q']))
+            if not repo.is_local:
+                log("Fetching remote repository \"%s\" to local \"%s\" and updating to latest revision in the current branch" % (repo.url, repo.name))
+                popen([git_cmd, 'pull', '--all'] + (['-v'] if verbose else ['-q']))
 
     def status():
         return pquery([git_cmd, 'status', '-s'] + (['-v'] if verbose else []))
@@ -650,6 +653,8 @@ class Repo(object):
 
     @classmethod
     def hashtype(cls, hash, ret_hash=False):
+        if hash is None or len(hash) == 0:
+            return 'latest' + (' revision in the current branch' if ret_hash else '')
         if re.match(r'^([a-zA-Z0-9]{12,40})$', hash):
             return 'rev' + (' #'+hash if ret_hash else '')
         else:
@@ -750,11 +755,11 @@ class Repo(object):
                 "Preserving local library \"%s\" in \"%s\".\nPlease publish this library to a remote URL to be able to restore it at any time."
                 "You can use --ignore switch to ignore all local libraries and update only the published ones.\n"
                 "You can also use --force switch to remove all local libraries. WARNING: This action cannot be undone." % (self.name, self.path))
-        if not clean and self.scm.dirty():
+        elif not clean and self.scm.dirty():
             err = (
                 "Uncommitted changes in \"%s\" in \"%s\".\nPlease discard or stash them first and then retry update.\n"
                 "You can also use --clean switch to discard all uncommitted changes. WARNING: This action cannot be undone." % (self.name, self.path))
-        if not force and self.scm.outgoing():
+        elif not force and self.scm.outgoing():
             err = (
                 "Unpublished changes in \"%s\" in \"%s\".\nPlease publish them first using the \"publish\" command.\n"
                 "You can also use --force to discard all local commits and replace the library with the one included in this revision. WARNING: This action cannot be undone." % (self.name, self.path))
@@ -919,7 +924,7 @@ def import_(url, path=None, depth=None, protocol=None, top=True):
     sorted_scms = sorted(sorted_scms, key=lambda (m, _): not m)
 
     text = "Importing program" if top else "Adding library"
-    action("%s \"%s\" from \"%s/\"%s" % (text, relpath(cwd_root, repo.path), repo.url, ' at '+(repo.hashtype(repo.hash, True) if repo.hash else '')))
+    action("%s \"%s\" from \"%s/\"%s" % (text, relpath(cwd_root, repo.path), repo.url, ' at '+(repo.hashtype(repo.hash, True))))
     for _, scm in sorted_scms:
         try:
             scm.clone(repo.url, repo.path, repo.hash, depth=depth, protocol=protocol)
@@ -1053,13 +1058,18 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
             "This %s is in detached HEAD state, and you won't be able to receive updates from the remote repository until you either checkout a branch or create a new one.\n"
             "You can checkout a branch using \"%s checkout <branch_name>\" command before running \"mbed update\"." % (cwd_type, repo.scm.name), 1)
 
-    # Fetch from remote repo
-    action("Updating %s \"%s\" to %s" % (
-        cwd_type if top else cwd_dest,
-        os.path.basename(repo.path) if top else relpath(cwd_root, repo.path),
-        repo.hashtype(rev, True) if rev else "latest revision in the current branch"))
-    repo.scm.update(repo, rev, clean)
-    repo.rm_untracked()
+    if repo.is_local and not repo.hash:
+        action("Skipping unpublished empty %s \"%s\"" % (
+            cwd_type if top else cwd_dest,
+            os.path.basename(repo.path) if top else relpath(cwd_root, repo.path)))
+    else:
+        # Fetch from remote repo
+        action("Updating %s \"%s\" to %s" % (
+            cwd_type if top else cwd_dest,
+            os.path.basename(repo.path) if top else relpath(cwd_root, repo.path),
+            repo.hashtype(rev, True)))
+        repo.scm.update(repo, rev, clean)
+        repo.rm_untracked()
 
     # Compare library references (.lib) before and after update, and remove libraries that do not have references in the current revision
     for lib in repo.libs:
