@@ -274,7 +274,7 @@ class Hg(object):
     def update(repo, hash=None, clean=False):
         log("Pulling remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
         popen([hg_cmd, 'pull'] + (['-v'] if verbose else ['-q']))
-        log("Updating \"%s\" to %s" % (repo.name, "rev #"+hash if hash else "latest revision in the current branch"))
+        log("Updating \"%s\" to %s" % (repo.name, repo.hashtype(hash, True) if hash else "latest revision in the current branch"))
         popen([hg_cmd, 'update'] + (['-r', hash] if hash else []) + (['-C'] if clean else []) + (['-v'] if verbose else ['-q']))
 
     def status():
@@ -463,7 +463,7 @@ class Git(object):
         if hash:
             log("Fetching remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
             popen([git_cmd, 'fetch', '-v', '--all'] + (['-v'] if verbose else ['-q']))
-            log("Updating \"%s\" to rev #%s" % (repo.name, hash))
+            log("Updating \"%s\" to %s" % (repo.name, repo.hashtype(hash, True)))
             popen([git_cmd, 'checkout'] + [hash] + ([] if verbose else ['-q']))
         else:
             log("Fetching remote repository \"%s\" to local \"%s\" and updating to latest revision in the current branch" % (repo.url, repo.name))
@@ -629,7 +629,7 @@ class Repo(object):
         return rpath
 
     @classmethod
-    def typerepo(cls, path=None):
+    def pathtype(cls, path=None):
         path = os.path.abspath(path or os.getcwd())
 
         depth = 0
@@ -645,6 +645,13 @@ class Repo(object):
                 break
 
         return "directory" if depth == 0 else ("program" if depth == 1 else "library")
+
+    @classmethod
+    def hashtype(cls, hash, ret_hash=False):
+        if re.match(r'^([a-zA-Z0-9]{12,40})$', hash):
+            return 'rev' + (' #'+hash if ret_hash else '')
+        else:
+            return 'branch' + (' '+hash if ret_hash else '')
 
     @property
     def lib(self):
@@ -791,9 +798,9 @@ def formaturl(url, format="default"):
 
 
 # Help messages adapt based on current dir
-cwd_type = Repo.typerepo()
-cwd_dest = "program" if cwd_type == "directory" else "library"
 cwd_root = os.getcwd()
+cwd_type = Repo.pathtype(cwd_root)
+cwd_dest = "program" if cwd_type == "directory" else "library"
 
 # Subparser handling
 parser = argparse.ArgumentParser(description="Command-line code management tool for ARM mbed OS - http://www.mbed.com\nversion %s" % ver)
@@ -885,7 +892,7 @@ def import_(url, path=None, depth=None, protocol=None, top=True):
 
     repo = Repo.fromurl(url, path)
     if top and cwd_type != "directory":
-        error("Cannot import program in the specified location \"%s\" because it's already part of a program.\nPlease change your working directory to a different location or use command \"add\" to import the URL as a library." % os.path.abspath(repo.path), 1)
+        error("Cannot import program in the specified location \"%s\" because it's already part of a program.\nPlease change your working directory to a different location or use command \"mbed add\" to import the URL as a library." % os.path.abspath(repo.path), 1)
 
     if os.path.isdir(repo.path) and len(os.listdir(repo.path)) > 1:
         error("Directory \"%s\" is not empty. Please ensure that the destination folder is empty." % repo.path, 1)
@@ -895,7 +902,7 @@ def import_(url, path=None, depth=None, protocol=None, top=True):
     sorted_scms = sorted(sorted_scms, key=lambda (m, _): not m)
 
     text = "Importing program" if top else "Adding library"
-    action("%s \"%s\" from \"%s/\"%s" % (text, relpath(cwd_root, repo.path), repo.url, ' at rev #'+repo.hash if repo.hash else ''))
+    action("%s \"%s\" from \"%s/\"%s" % (text, relpath(cwd_root, repo.path), repo.url, ' at '+(repo.hashtype(repo.hash, True) if repo.hash else '')))
     for _, scm in sorted_scms:
         try:
             scm.clone(repo.url, repo.path, repo.hash, depth=depth, protocol=protocol)
@@ -1026,7 +1033,10 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
         error("This %s is in detached HEAD state, and you won't be able to receive updates from the remote repository until you either checkout a branch or create a new one.\nYou can checkout a branch using \"%s checkout <branch_name>\" command before running \"mbed update\"." % (cwd_type, repo.scm.name), 1)
 
     # Fetch from remote repo
-    action("Updating %s \"%s\" to %s" % (cwd_type if top else cwd_dest, os.path.basename(repo.path) if top else relpath(cwd_root, repo.path), "rev #"+rev if rev else "latest revision in the current branch"))
+    action("Updating %s \"%s\" to %s" % (
+        cwd_type if top else cwd_dest,
+        os.path.basename(repo.path) if top else relpath(cwd_root, repo.path),
+        repo.hashtype(rev, True) if rev else "latest revision in the current branch"))
     repo.scm.update(repo, rev, clean)
     repo.rm_untracked()
 
