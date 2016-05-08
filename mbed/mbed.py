@@ -724,8 +724,9 @@ class Repo(object):
             with open(self.lib) as f:
                 lib_repo = Repo.fromurl(f.read().strip())
                 if (formaturl(lib_repo.url, 'https') == formaturl(self.url, 'https') # match URLs in common format (https)
-                        and (lib_repo.hash == self.hash                                  # match hashes, even if hash is None (valid for repos with no revisions)
-                             or lib_repo.hash == self.hash[0:len(lib_repo.hash)])):           # match long and short hash formats
+                        and (lib_repo.hash == self.hash                              # match hashes, even if hash is None (valid for repos with no revisions)
+                             or (lib_repo.hash and self.hash
+                                 and lib_repo.hash == self.hash[0:len(lib_repo.hash)]))):  # match long and short hash formats
                     #print self.name, 'unmodified'
                     progress()
                     return
