@@ -573,7 +573,9 @@ class Repo(object):
         if path is None:
             path = Repo.findrepo(os.getcwd())
             if path is None:
-                error('Cannot find the program or library in the current path \"%s\".\nPlease change your working directory to a different location or use command \"new\" to create a new program.' % os.getcwd(), 1)
+                error(
+                    "Cannot find the program or library in the current path \"%s\".\n"
+                    "Please change your working directory to a different location or use \"mbed new\" to create a new program." % os.getcwd(), 1)
 
         repo.path = os.path.abspath(path)
         repo.name = os.path.basename(repo.path)
@@ -741,29 +743,42 @@ class Repo(object):
                 os.remove(file)
 
     def can_update(self, clean, force):
+        err = None
         if (self.is_local or self.url is None) and not force:
-            return False, "Preserving local library \"%s\" in \"%s\".\nPlease publish this library to a remote URL to be able to restore it at any time.\nYou can use --ignore switch to ignore all local libraries and update only the published ones.\nYou can also use --force switch to remove all local libraries. WARNING: This action cannot be undone." % (self.name, self.path)
+            err = (
+                "Preserving local library \"%s\" in \"%s\".\nPlease publish this library to a remote URL to be able to restore it at any time."
+                "You can use --ignore switch to ignore all local libraries and update only the published ones.\n"
+                "You can also use --force switch to remove all local libraries. WARNING: This action cannot be undone." % (self.name, self.path))
         if not clean and self.scm.dirty():
-            return False, "Uncommitted changes in \"%s\" in \"%s\".\nPlease discard or stash them first and then retry update.\nYou can also use --clean switch to discard all uncommitted changes. WARNING: This action cannot be undone." % (self.name, self.path)
+            err = (
+                "Uncommitted changes in \"%s\" in \"%s\".\nPlease discard or stash them first and then retry update.\n"
+                "You can also use --clean switch to discard all uncommitted changes. WARNING: This action cannot be undone." % (self.name, self.path))
         if not force and self.scm.outgoing():
-            return False, "Unpublished changes in \"%s\" in \"%s\".\nPlease publish them first using the \"publish\" command.\nYou can also use --force to discard all local commits and replace the library with the one included in this revision. WARNING: This action cannot be undone." % (self.name, self.path)
+            err = (
+                "Unpublished changes in \"%s\" in \"%s\".\nPlease publish them first using the \"publish\" command.\n"
+                "You can also use --force to discard all local commits and replace the library with the one included in this revision. WARNING: This action cannot be undone." % (self.name, self.path))
 
-        return True, "OK"
+        return (False, err) if err else (True, "OK")
 
     def check_repo(self, show_warning=None):
+        err = None
         if not os.path.isdir(self.path):
-            if show_warning:
-                warning("Library reference \"%s\" points to non-existing library in \"%s\"\nYou can use \"deploy\" command to import the missing libraries.\nYou can also use \"sync\" command to synchronize and remove all invalid library references." % (os.path.basename(self.lib), self.path))
-            else:
-                error("Library reference \"%s\" points to non-existing library in \"%s\"\nYou can use \"deploy\" command to import the missing libraries\nYou can also use \"sync\" command to synchronize and remove all invalid library references." % (os.path.basename(self.lib), self.path), 1)
-            return False
+            err = (
+                "Library reference \"%s\" points to non-existing library in \"%s\"\n"
+                "You can use \"mbed deploy\" to import the missing libraries.\n"
+                "You can also use \"mbed sync\" to synchronize and remove all invalid library references." % (os.path.basename(self.lib), self.path))
         elif not self.isrepo(self.path):
-            if show_warning:
-                warning("Library reference \"%s\" points to a folder \"%s\", which is not a valid repository.\nYou can remove the conflicting folder manually and use \"deploy\" command to import the missing libraries\nYou can also remove library reference \"%s\" and use the \"sync\" command again." % (os.path.basename(self.lib), self.path, self.lib))
-            else:
-                error("Library reference \"%s\" points to a folder \"%s\", which is not a valid repository.\nYou can remove the conflicting folder manually and use \"deploy\" command to import the missing libraries\nYou can also remove library reference \"%s\" and use the \"sync\" command again." % (os.path.basename(self.lib), self.path, self.lib), 1)
-            return False
+            err = (
+                "Library reference \"%s\" points to a folder \"%s\", which is not a valid repository.\n"
+                "You can remove the conflicting folder manually and use \"mbed deploy\" to import the missing libraries\n"
+                "You can also remove library reference \"%s\" and use \"mbed sync\" again." % (os.path.basename(self.lib), self.path, self.lib))
 
+        if err:
+            if show_warning:
+                warning(err)
+            else:
+                error(err, 1)
+            return False
         return True
 
 
@@ -892,7 +907,8 @@ def import_(url, path=None, depth=None, protocol=None, top=True):
 
     repo = Repo.fromurl(url, path)
     if top and cwd_type != "directory":
-        error("Cannot import program in the specified location \"%s\" because it's already part of a program.\nPlease change your working directory to a different location or use command \"mbed add\" to import the URL as a library." % os.path.abspath(repo.path), 1)
+        error("Cannot import program in the specified location \"%s\" because it's already part of a program.\n"
+              "Please change your working directory to a different location or use \"mbed add\" to import the URL as a library." % os.path.abspath(repo.path), 1)
 
     if os.path.isdir(repo.path) and len(os.listdir(repo.path)) > 1:
         error("Directory \"%s\" is not empty. Please ensure that the destination folder is empty." % repo.path, 1)
@@ -990,7 +1006,9 @@ def publish(all=None, top=True):
 
     repo = Repo.fromrepo()
     if repo.is_local:
-        error("%s \"%s\" in \"%s\" is a local repository.\nPlease associate it with a remote repository URL before attempting to publish.\nRead more about %s repositories here:\nhttp://developer.mbed.org/handbook/how-to-publish-with-%s/" % ("Program" if top else "Library", repo.name, repo.path, repo.scm.name, repo.scm.name), 1)
+        error(
+            "%s \"%s\" in \"%s\" is a local repository.\nPlease associate it with a remote repository URL before attempting to publish.\n"
+            "Read more about %s repositories here:\nhttp://developer.mbed.org/handbook/how-to-publish-with-%s/" % ("Program" if top else "Library", repo.name, repo.path, repo.scm.name, repo.scm.name), 1)
 
     for lib in repo.libs:
         if lib.check_repo():
@@ -1030,7 +1048,9 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
     repo = Repo.fromrepo()
 
     if top and not rev and repo.scm.isdetached():
-        error("This %s is in detached HEAD state, and you won't be able to receive updates from the remote repository until you either checkout a branch or create a new one.\nYou can checkout a branch using \"%s checkout <branch_name>\" command before running \"mbed update\"." % (cwd_type, repo.scm.name), 1)
+        error(
+            "This %s is in detached HEAD state, and you won't be able to receive updates from the remote repository until you either checkout a branch or create a new one.\n"
+            "You can checkout a branch using \"%s checkout <branch_name>\" command before running \"mbed update\"." % (cwd_type, repo.scm.name), 1)
 
     # Fetch from remote repo
     action("Updating %s \"%s\" to %s" % (
@@ -1387,7 +1407,10 @@ except ProcessException as e:
     error('Subrocess exit with error code %d' % e[0], e[0])
 except OSError as e:
     if e[0] == 2:
-        error('Could not detect one of the command-line tools.\nPlease verify that you have Git and Mercurial installed and accessible from your current path by executing commands "git" and "hg".\nHint: check the last executed command above.', e[0])
+        error(
+            "Could not detect one of the command-line tools.\n"
+            "Please verify that you have Git and Mercurial installed and accessible from your current path by executing commands \"git\" and \"hg\".\n"
+            "Hint: check the last executed command above.", e[0])
     else:
         error('OS Error: %s' % e[1], e[0])
 except KeyboardInterrupt as e:
