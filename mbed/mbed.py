@@ -568,7 +568,13 @@ class Repo(object):
     def fromlib(cls, lib=None):
         assert lib.endswith('.lib')
         with open(lib) as f:
-            return cls.fromurl(f.read(), lib[:-4])
+            ref = f.read(200)
+            if ref.startswith('!<arch>'):
+                error(
+                    "A Keil uVision static library \"%s\" in \"%s\" uses a non-standard .lib file extension (should be .ar), which is not compatible with the mbed build tools.\n"
+                    "Please rename the static library to \"%s\" and try again.\n" % (os.path.basename(lib), os.path.split(lib)[0], os.path.basename(lib).replace('.lib', '.ar')))
+            else:
+                return cls.fromurl(ref, lib[:-4])
 
     @classmethod
     def fromrepo(cls, path=None):
