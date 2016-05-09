@@ -62,6 +62,17 @@ To uninstall *mbed-cli* you can use:
 
 ## Using mbed-cli
 
+### Working context and command help
+
+All *mbed CLI* commands use the current directory as a working context, meaning that before calling any *mbed* command, you should first change your working directory to the one you want to operate in. For example:
+```
+$ cd my-program
+$ cd mbed-os
+$ mbed update master # updates "mbed-os", not "my-program"
+```
+
+*mbed CLI* provides list of all available commnads and global help via `mbed --help`, and also command-specific help via `--help` param to the command, e.g. `mbed update --help`. 
+
 ### Creating and importing programs
 
 mbed CLI allows creating new programs and importing existing ones, always with the full mbed-os release as the program's basis.
@@ -187,6 +198,8 @@ You can apply the same mechanism for libraries and their dependencies by executi
 
 #### Update options
 
+<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: As with any *mbed CLI* command, `mbed update` uses the current directory as a working context, meaning that before calling `mbed update` you should first change your working directory to the one you want to update, e.g. `cd mbed-os`.</span>
+
 To help understand what options you can use with *mbed-cli*, please see the examples below.
 
 **Case 1: I want to update a program or a library to the latest version in a specific or current branch**
@@ -198,6 +211,8 @@ Run `mbed update [branch]`. You might have to commit or stash your changes if th
 __I want a clean update (and discard uncommitted changes)__
 
 Run `mbed update [branch] --clean`
+
+It's important to remember that specifying a branch to `mbed update` would only checkout that branch and won't automatically merge/fast-forward to the remote/upstream branch. You can run `mbed update` to merge (fast-forward) your local branch with the latest remote branch. On git you can do `git pull`.
 
 **Case 2: I want to update a program or a library to a specific revision or a tag**
  
