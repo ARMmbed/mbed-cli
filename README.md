@@ -229,7 +229,7 @@ Run `mbed update <#rev|tag_name> --clean`
 
 The `--clean` option tells *mbed-cli* to update that program or library and its dependencies, and discard all local changes.
 
-__When you have unpublished local libraries
+__When you have unpublished local libraries__
 
 There are two additional options that define how unpublished local libraries are handled:
 
