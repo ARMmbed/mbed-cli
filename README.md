@@ -6,7 +6,8 @@ This document covers the installation and usage of *mbed CLI*.
 
 ## Table of Contents
 1. [Requirements](#requirements)
-1. [Installing mbed-cli](#installing-mbed-cli)
+1. [Installing and uninstalling](#installing-mbed-cli)
+1. [Working context and command help](#working-context-and-command-help)
 1. [Creating and importing programs](#creating-and-importing-programs)
 	1. [Importing an existing program](#importing-and-creating-programs)
 	2. [Creating a new program](#creating-a-new-program)
