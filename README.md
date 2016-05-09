@@ -72,6 +72,8 @@ $ cd mbed-os
 $ mbed update master # updates "mbed-os", not "my-program"
 ```
 
+Also note *mbed CLI* requires that the root of your program is under version control (either Git or Mercurial), which makes it possible to seamlessly switch between revisions the whole program and its libraries/dependencies, synchronize the program with remote repositories; share it with others, and much more. Version control is also the primary/preferred delivery mechanism for mbed OS source code, which allows anyone to contribute back to the OS at any time.
+
 *mbed CLI* provides list of all available commnads and global help via `mbed --help`, and also command-specific help via `--help` param to the command, e.g. `mbed update --help`. 
 
 ### Creating and importing programs
@@ -122,7 +124,7 @@ $ mbed import https://developer.mbed.org/teams/Morpheus/code/mbed-Client-Morpheu
 $ cd mbed-Client-Morpheus-from-source
 ```
 
-<span class="notes">**Note**:Asome of the repositories that *mbed-cli* will clone might require special access (Mercurial will ask you for your credentials if that's the case). If you don't have access, e-mail [mihail.stoyanov@arm.com](mailto:mihail.stoyanov@arm.com) or [bogdan.marinescu@arm.com](mailto:bogdan.marinescu@arm.com) with your developer.mbed.org account name.</span>
+<span class="notes">**Note**: Some of the repositories that *mbed-cli* will clone might require special access (Mercurial will ask you for your credentials if that's the case). If you don't have access, e-mail [mihail.stoyanov@arm.com](mailto:mihail.stoyanov@arm.com) or [bogdan.marinescu@arm.com](mailto:bogdan.marinescu@arm.com) with your developer.mbed.org account name.</span>
 
 ### Adding and removing libraries
 
