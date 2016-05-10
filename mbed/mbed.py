@@ -132,14 +132,30 @@ class ProcessException(Exception):
 def popen(command, stdin=None, **kwargs):
     # print for debugging
     log('"'+' '.join(command)+'"')
-    proc = subprocess.Popen(command, **kwargs)
-
+    try:
+        proc = subprocess.Popen(command, **kwargs)
+    except OSError as e:
+        if e[0] == 2:
+            error(
+                "Could not execute \"%s\".\n"
+                "Please verify that it's installed and accessible from your current path by executing \"%s\".\n" % (command[0], command[0]), e[0])
+        else:
+            raise
+            
     if proc.wait() != 0:
         raise ProcessException(proc.returncode)
 
 def pquery(command, stdin=None, **kwargs):
     #log("Query "+' '.join(command)+" in "+os.getcwd())
-    proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
+    try:
+        proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
+    except OSError as e:
+        if e[0] == 2:
+            error(
+                "Could not execute \"%s\".\n"
+                "Please verify that it's installed and accessible from your current path by executing \"%s\".\n" % (command[0], command[0]), e[0])
+        else:
+            raise
     stdout, _ = proc.communicate(stdin)
 
     if proc.returncode != 0:
@@ -1426,8 +1442,7 @@ except OSError as e:
     if e[0] == 2:
         error(
             "Could not detect one of the command-line tools.\n"
-            "Please verify that you have Git and Mercurial installed and accessible from your current path by executing commands \"git\" and \"hg\".\n"
-            "Hint: check the last executed command above.", e[0])
+            "You could retry the last command with \"-v\" flag for verbose output\n", e[0])
     else:
         error('OS Error: %s' % e[1], e[0])
 except KeyboardInterrupt as e:
