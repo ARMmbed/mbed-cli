@@ -949,7 +949,7 @@ def subcommand(name, *args, **kwargs):
     dict(name='--depth', nargs='?', help='Number of revisions to fetch the mbed-os repository when creating new program. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol when fetching the mbed-os repository when creating new program. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help='Create a new program based on the specified source control management. Will create a new library when called from inside a local program. Supported SCMs: %s.' % (', '.join([s.name for s in scms.values()])))
-def new(name, scm='git', depth=None, protocol=None):
+def new(name, tscm='git', depth=None, protocol=None):
     global cwd_root
 
     d_path = name or os.getcwd()
@@ -962,7 +962,7 @@ def new(name, scm='git', depth=None, protocol=None):
     # Find parent repository before the new one is created
     p_path = Repo.findrepo(d_path)
 
-    repo_scm = [s for s in scms.values() if s.name == scm.lower()]
+    repo_scm = [s for s in scms.values() if s.name == tscm.lower()]
     if not repo_scm:
         error("Please specify one of the following source control management systems: %s" % ', '.join([s.name for s in scms.values()]), 1)
 
@@ -1041,7 +1041,7 @@ def import_(url, path=None, depth=None, protocol=None, top=True):
 @subcommand('deploy',
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
-    help="Import missing dependencies in the current program or library.")
+    help='Import missing dependencies in the current program or library.')
 def deploy(depth=None, protocol=None):
     repo = Repo.fromrepo()
     repo.scm.ignores(repo)
@@ -1058,8 +1058,8 @@ def deploy(depth=None, protocol=None):
 
 # Add library command
 @subcommand('add',
-    dict(name='url', help="URL of the library"),
-    dict(name='path', nargs='?', help="Destination name or path. Default: current folder."),
+    dict(name='url', help='URL of the library'),
+    dict(name='path', nargs='?', help='Destination name or path. Default: current folder.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help='Add a library and its dependencies into the current %s or specified destination path.' % cwd_type)
@@ -1077,7 +1077,7 @@ def add(url, path=None, depth=None, protocol=None):
 
 # Remove library
 @subcommand('remove',
-    dict(name='path', help="Local library name or path"),
+    dict(name='path', help='Local library name or path'),
     help='Remove specified library and its dependencies from the current %s.' % cwd_type)
 def remove(path):
     repo = Repo.fromrepo()
@@ -1093,7 +1093,7 @@ def remove(path):
 
 # Publish command
 @subcommand('publish',
-    dict(name=['-A', '--all'], action="store_true", help="Publish all branches, including new. Default: push only the current branch."),
+    dict(name=['-A', '--all'], action='store_true', help='Publish all branches, including new. Default: push only the current branch.'),
     help='Publish current %s and its dependencies to associated remote repository URLs.' % cwd_type)
 def publish(all=None, top=True):
     if top:
@@ -1129,10 +1129,10 @@ def publish(all=None, top=True):
 
 # Update command
 @subcommand('update',
-    dict(name='rev', nargs='?', help="Revision hash, tag or branch"),
-    dict(name=['-C', '--clean'], action="store_true", help="Perform a clean update and discard all local changes. WARNING: This action cannot be undone. Use with caution."),
-    dict(name=['-F', '--force'], action="store_true", help="Enforce the original layout and will remove any local libraries and also libraries containing uncommitted or unpublished changes. WARNING: This action cannot be undone. Use with caution."),
-    dict(name=['-I', '--ignore'], action="store_true", help="Ignore errors regarding unpiblished libraries, unpublished or uncommitted changes, and attempt to update from associated remote repository URLs."),
+    dict(name='rev', nargs='?', help='Revision hash, tag or branch'),
+    dict(name=['-C', '--clean'], action='store_true', help='Perform a clean update and discard all local changes. WARNING: This action cannot be undone. Use with caution.'),
+    dict(name=['-F', '--force'], action='store_true', help='Enforce the original layout and will remove any local libraries and also libraries containing uncommitted or unpublished changes. WARNING: This action cannot be undone. Use with caution.'),
+    dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors regarding unpublished libraries, unpublished or uncommitted changes, and attempt to update from associated remote repository URLs.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help='Update current %s and its dependencies from associated remote repository URLs.' % cwd_type)
@@ -1259,8 +1259,8 @@ def sync(recursive=True, keep_refs=False, top=True):
 
 # List command
 @subcommand('ls',
-    dict(name=['-a', '--all'], action='store_true', help="List repository URL and hash pairs"),
-    dict(name=['-I', '--ignore'], action="store_true", help="Ignore errors regarding missing libraries."),
+    dict(name=['-a', '--all'], action='store_true', help='List repository URL and hash pairs'),
+    dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors regarding missing libraries.'),
     help='View the current %s dependency tree.' % cwd_type)
 def list_(all=False, prefix='', p_path=None, ignore=False):
     repo = Repo.fromrepo()
@@ -1280,7 +1280,7 @@ def list_(all=False, prefix='', p_path=None, ignore=False):
 
 # Command status for cross-SCM status of repositories
 @subcommand('status',
-    dict(name=['-I', '--ignore'], action="store_true", help="Ignore errors regarding missing libraries."),
+    dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors regarding missing libraries.'),
     help='Show status of the current %s and its dependencies.' % cwd_type)
 def status(ignore=False):
     repo = Repo.fromrepo()
@@ -1296,12 +1296,12 @@ def status(ignore=False):
 
 # Compile command which invokes the mbed OS native build system
 @subcommand('compile',
-    dict(name=['-t', '--toolchain'], help="Compile toolchain. Example: ARM, uARM, GCC_ARM, IAR"),
-    dict(name=['-m', '--mcu'], help="Compile target. Example: K64F, NUCLEO_F401RE, NRF51822..."),
-    dict(name='--source', action="append", help="Source directory. Default: . (current dir)"),
-    dict(name='--build', help="Build directory. Default: .build/"),
-    dict(name='--library', dest="compile_library", action="store_true", help="Compile the current %s as a static library." % cwd_type),
-    dict(name='--tests', dest="compile_tests", action="store_true", help="Compile tests in TESTS directory."),
+    dict(name=['-t', '--toolchain'], help='Compile toolchain. Example: ARM, uARM, GCC_ARM, IAR'),
+    dict(name=['-m', '--mcu'], help='Compile target. Example: K64F, NUCLEO_F401RE, NRF51822...'),
+    dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
+    dict(name='--build', help='Build directory. Default: .build/'),
+    dict(name='--library', dest='compile_library', action='store_true', help='Compile the current %s as a static library.' % cwd_type),
+    dict(name='--tests', dest='compile_tests', action='store_true', help='Compile tests in TESTS directory.'),
     dict(name='--test_spec', dest="test_spec", help="Destination path for a test spec file that can be used by the Greentea automated test tool. (Default is 'test_spec.json')"),
     help='Compile program using the native mbed OS build system.')
 def compile(toolchain=None, mcu=None, source=False, build=False, compile_library=False, compile_tests=False, test_spec="test_spec.json"):
@@ -1384,9 +1384,9 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
 
 # Test command
 @subcommand('test',
-    dict(name=['-l', '--list'], action="store_true", help="List all of the available tests"),
+    dict(name=['-l', '--list'], dest='tlist', action='store_true', help='List all of the available tests'),
     help='Find and build tests in a program and its libraries.')
-def test(list=False):
+def test(tlist=False):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
@@ -1400,7 +1400,7 @@ def test(list=False):
         # Prepare environment variables
         env = os.environ.copy()
         env['PYTHONPATH'] = '.'
-        if list:
+        if tlist:
             # List all available tests (by default in a human-readable format)
             try:
                 popen(['python', 'mbed-os/tools/test.py', '-l'] + args, env=env)
@@ -1410,8 +1410,8 @@ def test(list=False):
 
 # Export command
 @subcommand('export',
-    dict(name=['-i', '--ide'], help="IDE to create project files for. Example: UVISION,DS5,IAR", required=True),
-    dict(name=['-m', '--mcu'], help="Export for target MCU. Example: K64F, NUCLEO_F401RE, NRF51822..."),
+    dict(name=['-i', '--ide'], help='IDE to create project files for. Example: UVISION,DS5,IAR', required=True),
+    dict(name=['-m', '--mcu'], help='Export for target MCU. Example: K64F, NUCLEO_F401RE, NRF51822...'),
     help='Generate project files for desktop IDEs for the current program.')
 def export(ide=None, mcu=None):
     # Gather remaining arguments
@@ -1443,9 +1443,9 @@ def export(ide=None, mcu=None):
 
 # Build system and exporters
 @subcommand('target',
-    dict(name='name', nargs='?', help="Default target name. Example: K64F, NUCLEO_F401RE, NRF51822..."),
+    dict(name='name', nargs='?', help='Default target name. Example: K64F, NUCLEO_F401RE, NRF51822...'),
     help='Set default target for the current program.')
-def target(name=None):
+def target_(name=None):
     # Find the root of the program
     program = Program.get_program(os.getcwd(), True)
     # Change directories to the program root to use mbed OS tools
@@ -1458,9 +1458,9 @@ def target(name=None):
             action('"%s" now set as default target for program "%s"' % (name, program.name))
 
 @subcommand('toolchain',
-    dict(name='name', nargs='?', help="Default toolchain name. Example: ARM, uARM, GCC_ARM, IAR"),
+    dict(name='name', nargs='?', help='Default toolchain name. Example: ARM, uARM, GCC_ARM, IAR'),
     help='Sets default toolchain for the current program.')
-def toolchain(name=None):
+def toolchain_(name=None):
     # Find the root of the program
     program = Program.get_program(os.getcwd(), True)
     # Change directories to the program root to use mbed OS tools
