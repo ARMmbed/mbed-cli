@@ -6,7 +6,8 @@ This document covers the installation and usage of *mbed CLI*.
 
 ## Table of Contents
 1. [Requirements](#requirements)
-1. [Installing mbed-cli](#installing-mbed-cli)
+1. [Installing and uninstalling](#installing-mbed-cli)
+1. [Working context and command help](#working-context-and-command-help)
 1. [Creating and importing programs](#creating-and-importing-programs)
 	1. [Importing an existing program](#importing-and-creating-programs)
 	2. [Creating a new program](#creating-a-new-program)
@@ -62,6 +63,19 @@ To uninstall *mbed-cli* you can use:
 
 ## Using mbed-cli
 
+### Working context and command help
+
+All *mbed CLI* commands use the current directory as a working context, meaning that before calling any *mbed* command, you should first change your working directory to the one you want to operate in. For example:
+```
+$ cd my-program
+$ cd mbed-os
+$ mbed update master # updates "mbed-os", not "my-program"
+```
+
+Also note that *mbed CLI* requires that a program, the root of the code tree, is under version control - either Git or Mercurial. This makes it possible to seamlessly switch between revisions of the whole program and its libraries, control the program history, synchronize the program with remote repositories, share it with others, etc. Version control is also the primary and preferred delivery mechanism for mbed OS source code, which allows everyone to contribute to mbed OS at any time!
+
+*mbed CLI* provides list of all available commnads and global help via `mbed --help`, and also command-specific help via `--help` param to the command, e.g. `mbed update --help`. 
+
 ### Creating and importing programs
 
 mbed CLI allows creating new programs and importing existing ones, always with the full mbed-os release as the program's basis.
@@ -110,7 +124,7 @@ $ mbed import https://developer.mbed.org/teams/Morpheus/code/mbed-Client-Morpheu
 $ cd mbed-Client-Morpheus-from-source
 ```
 
-<span class="notes">**Note**:Asome of the repositories that *mbed-cli* will clone might require special access (Mercurial will ask you for your credentials if that's the case). If you don't have access, e-mail [mihail.stoyanov@arm.com](mailto:mihail.stoyanov@arm.com) or [bogdan.marinescu@arm.com](mailto:bogdan.marinescu@arm.com) with your developer.mbed.org account name.</span>
+<span class="notes">**Note**: Some of the repositories that *mbed-cli* will clone might require special access (Mercurial will ask you for your credentials if that's the case). If you don't have access, e-mail [mihail.stoyanov@arm.com](mailto:mihail.stoyanov@arm.com) or [bogdan.marinescu@arm.com](mailto:bogdan.marinescu@arm.com) with your developer.mbed.org account name.</span>
 
 ### Adding and removing libraries
 
@@ -187,6 +201,8 @@ You can apply the same mechanism for libraries and their dependencies by executi
 
 #### Update options
 
+<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: As with any *mbed CLI* command, `mbed update` uses the current directory as a working context, meaning that before calling `mbed update` you should first change your working directory to the one you want to update, e.g. `cd mbed-os`.</span>
+
 To help understand what options you can use with *mbed-cli*, please see the examples below.
 
 **Case 1: I want to update a program or a library to the latest version in a specific or current branch**
@@ -198,6 +214,8 @@ Run `mbed update [branch]`. You might have to commit or stash your changes if th
 __I want a clean update (and discard uncommitted changes)__
 
 Run `mbed update [branch] --clean`
+
+It's important to remember that specifying a branch to `mbed update` would only checkout that branch and won't automatically merge/fast-forward to the remote/upstream branch. You can run `mbed update` to merge (fast-forward) your local branch with the latest remote branch. On git you can do `git pull`.
 
 **Case 2: I want to update a program or a library to a specific revision or a tag**
  
@@ -211,7 +229,7 @@ Run `mbed update <#rev|tag_name> --clean`
 
 The `--clean` option tells *mbed-cli* to update that program or library and its dependencies, and discard all local changes.
 
-__When you have unpublished local libraries
+__When you have unpublished local libraries__
 
 There are two additional options that define how unpublished local libraries are handled:
 
