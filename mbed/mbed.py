@@ -973,16 +973,17 @@ def new(name, tscm='git', depth=None, protocol=None):
     if p_path:  # It's a library
         with cd(p_path):
             sync()
-    else:       # It's a program. Add mbed-os
+    else:       # It's a program
         # This helps sub-commands to display relative paths to the created program
         cwd_root = os.path.abspath(d_path)
 
-        try:
-            with cd(d_path):
-                add(mbed_os_url, depth=depth, protocol=protocol)
-        except:
-            rmtree_readonly(d_path)
-            raise
+        if len(os.listdir(d_path)) <= 1:
+            try:
+                with cd(d_path):
+                    add(mbed_os_url, depth=depth, protocol=protocol)
+            except:
+                rmtree_readonly(d_path)
+                raise
         if d_path:
             os.chdir(d_path)
 
