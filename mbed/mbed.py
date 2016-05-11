@@ -10,6 +10,7 @@ import os
 import contextlib
 import shutil
 import stat
+import errno
 from itertools import chain, izip, repeat
 
 
@@ -135,7 +136,7 @@ def popen(command, stdin=None, **kwargs):
     try:
         proc = subprocess.Popen(command, **kwargs)
     except OSError as e:
-        if e[0] == 2:
+        if e[0] == errno.EPERM:
             error(
                 "Could not execute \"%s\".\n"
                 "Please verify that it's installed and accessible from your current path by executing \"%s\".\n" % (command[0], command[0]), e[0])
@@ -150,7 +151,7 @@ def pquery(command, stdin=None, **kwargs):
     try:
         proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
     except OSError as e:
-        if e[0] == 2:
+        if e[0] == errno.EPERM:
             error(
                 "Could not execute \"%s\".\n"
                 "Please verify that it's installed and accessible from your current path by executing \"%s\".\n" % (command[0], command[0]), e[0])
@@ -1439,7 +1440,7 @@ try:
 except ProcessException as e:
     error('Subrocess exit with error code %d' % e[0], e[0])
 except OSError as e:
-    if e[0] == 2:
+    if e[0] == errno.EPERM:
         error(
             "Could not detect one of the command-line tools.\n"
             "You could retry the last command with \"-v\" flag for verbose output\n", e[0])
