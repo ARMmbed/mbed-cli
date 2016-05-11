@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# pylint: disable=too-many-arguments, too-many-locals, too-many-branches, too-many-lines, line-too-long
+# pylint: disable=too-many-arguments, too-many-locals, too-many-branches, too-many-lines, line-too-long, too-many-nested-blocks
 # pylint: disable=invalid-name, missing-docstring
 
 import argparse
@@ -142,7 +142,7 @@ def popen(command, stdin=None, **kwargs):
                 "Please verify that it's installed and accessible from your current path by executing \"%s\".\n" % (command[0], command[0]), e[0])
         else:
             raise
-            
+
     if proc.wait() != 0:
         raise ProcessException(proc.returncode)
 
@@ -202,9 +202,7 @@ def scm(name):
         return cls
     return scm
 
-# pylint: disable=no-self-argument
-# pylint: disable=no-method-argument
-# pylint: disable=no-member
+# pylint: disable=no-self-argument, no-method-argument, no-member, no-self-use
 @scm('hg')
 @staticclass
 class Hg(object):
@@ -386,9 +384,7 @@ class Hg(object):
         except IOError:
             error("Unable to write ignore file in \"%s\"" % exclude, 1)
 
-# pylint: disable=no-self-argument
-# pylint: disable=no-method-argument
-# pylint: disable=no-member
+# pylint: disable=no-self-argument, no-method-argument, no-member, no-self-use
 @scm('git')
 @staticclass
 class Git(object):
@@ -528,6 +524,12 @@ class Git(object):
 # Repository object
 class Repo(object):
     is_local = False
+    name = None
+    path = None
+    url = None
+    hash = None
+    scm = None
+    libs = []
 
     @classmethod
     def fromurl(cls, url, path=None):
@@ -583,11 +585,9 @@ class Repo(object):
 
     @classmethod
     def isrepo(cls, path=None):
-        for name, scm in scms.items():
+        for name, _ in scms.items():
             if os.path.isdir(os.path.join(path, '.'+name)):
                 return True
-        else:
-            return False
 
         return False
 
@@ -764,11 +764,14 @@ class Repo(object):
 # Program object, used to indicate the root of the code base
 class Program(object):
     config_file = ".mbed"
+    path = None
+    name = None
+    is_cwd = False
+    is_repo = False
 
     @classmethod
     def get_program(cls, path=None, warnings=False):
         path = os.path.abspath(path or os.getcwd())
-        rpath = None
 
         program = cls()
         program.path = os.getcwd()
@@ -776,22 +779,16 @@ class Program(object):
 
         while cd(path):
             tpath = path
-            if os.path.isfile(os.path.join(path, program.config_file)):
+            if Repo.isrepo(path):
                 program.path = path
                 program.is_cwd = False
-                program.is_repo = Repo.isrepo(program.path)
+                program.is_repo = True
+            path = os.path.split(path)[0]
+            if tpath == path:       # Reached root.
                 break
-            else:
-                if Repo.isrepo(path):
-                    program.path = path
-                    program.is_cwd = False
-                    program.is_repo = True
-                path = os.path.split(path)[0]
-                if tpath == path:       # Reached root.
-                    break
 
         program.name = os.path.basename(program.path)
-                    
+
         if warnings:
             if program.is_cwd:
                 warning(
@@ -1024,7 +1021,6 @@ def import_(url, path=None, depth=None, protocol=None, top=True):
         except ProcessException:
             if os.path.isdir(repo.path):
                 rmtree_readonly(repo.path)
-            pass
     else:
         error("Unable to clone repository (%s)" % url, 1)
 
@@ -1047,7 +1043,6 @@ def import_(url, path=None, depth=None, protocol=None, top=True):
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help="Import missing dependencies in the current program or library.")
 def deploy(depth=None, protocol=None):
-    sys.exit(1)
     repo = Repo.fromrepo()
     repo.scm.ignores(repo)
 
@@ -1262,7 +1257,7 @@ def sync(recursive=True, keep_refs=False, top=True):
                     sync(keep_refs=keep_refs, top=False)
 
 
-# List command 
+# List command
 @subcommand('ls',
     dict(name=['-a', '--all'], action='store_true', help="List repository URL and hash pairs"),
     dict(name=['-I', '--ignore'], action="store_true", help="Ignore errors regarding missing libraries."),
@@ -1346,7 +1341,6 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
 
     if not source or len(source) == 0:
         source = [os.path.relpath(root_path, orig_path)]
-
     if compile_tests:
         # Compile tests
         if not build:
@@ -1410,7 +1404,7 @@ def test(list=False):
             # List all available tests (by default in a human-readable format)
             try:
                 popen(['python', 'mbed-os/tools/test.py', '-l'] + args, env=env)
-            except ProcessException as e:
+            except ProcessException:
                 error('Failed to run test script')
 
 
