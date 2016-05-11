@@ -769,33 +769,29 @@ class Program(object):
     is_cwd = False
     is_repo = False
 
-    @classmethod
-    def get_program(cls, path=None, warnings=False):
+    def __init__(self, path=None, warnings=False):
         path = os.path.abspath(path or os.getcwd())
 
-        program = cls()
-        program.path = os.getcwd()
-        program.is_cwd = True
+        self.path = os.getcwd()
+        self.is_cwd = True
 
         while cd(path):
             tpath = path
             if Repo.isrepo(path):
-                program.path = path
-                program.is_cwd = False
-                program.is_repo = True
+                self.path = path
+                self.is_cwd = False
+                self.is_repo = True
             path = os.path.split(path)[0]
             if tpath == path:       # Reached root.
                 break
 
-        program.name = os.path.basename(program.path)
+        self.name = os.path.basename(self.path)
 
         if warnings:
-            if program.is_cwd:
+            if self.is_cwd:
                 warning(
                     "Could not mbed program in current path. Assuming current dir.\n"
                     "You can fix this by calling \"mbed new .\" in the root dir of your program")
-
-        return program
 
     # Sets config value
     def set_cfg(self, var, val):
@@ -987,7 +983,7 @@ def new(name, tscm='git', depth=None, protocol=None):
         if d_path:
             os.chdir(d_path)
 
-    program = Program.get_program(d_path)
+    program = Program(d_path)
     program.post_clone()
 
 
@@ -1034,7 +1030,7 @@ def import_(url, path=None, depth=None, protocol=None, top=True):
         deploy(depth=depth, protocol=protocol)
 
     if top:
-        program = Program.get_program(repo.path)
+        program = Program(repo.path)
         program.post_clone()
 
 
@@ -1310,7 +1306,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
-    program = Program.get_program(os.getcwd(), True)
+    program = Program(os.getcwd(), True)
     # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
     orig_path = os.getcwd()
 
@@ -1391,7 +1387,7 @@ def test(tlist=False):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
-    program = Program.get_program(os.getcwd(), True)
+    program = Program(os.getcwd(), True)
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
         # If "mbed-os" folder doesn't exist, error
@@ -1418,7 +1414,7 @@ def export(ide=None, mcu=None):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
-    program = Program.get_program(os.getcwd(), True)
+    program = Program(os.getcwd(), True)
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
         if not os.path.isdir('mbed-os'):
@@ -1448,7 +1444,7 @@ def export(ide=None, mcu=None):
     help='Set default target for the current program.')
 def target_(name=None):
     # Find the root of the program
-    program = Program.get_program(os.getcwd(), True)
+    program = Program(os.getcwd(), True)
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
         if name is None:
@@ -1463,7 +1459,7 @@ def target_(name=None):
     help='Sets default toolchain for the current program.')
 def toolchain_(name=None):
     # Find the root of the program
-    program = Program.get_program(os.getcwd(), True)
+    program = Program(os.getcwd(), True)
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
         if name is None:
