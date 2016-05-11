@@ -836,18 +836,29 @@ class Program(object):
         else:
             return None
 
+    # Gets mbed OS tools dir (unified)
+    def get_tools_dir(self):
+        mbed_os_path = self.get_os_dir()
+        if mbed_os_path and os.path.isdir(os.path.join(mbed_os_path, 'tools')):
+            return os.path.join(mbed_os_path, 'tools')
+        else:
+            return None
+
     # Routines after cloning mbed-os
     def post_clone(self):
         mbed_os_path = self.get_os_dir()
         if not mbed_os_path:
+            warning("Cannot find the mbed-os directory in \"%s\"" % self.path)
             return False
-        if not os.path.isdir(os.path.join(mbed_os_path, 'tools')):
+
+        mbed_tools_path = self.get_tools_dir()
+        if not mbed_tools_path:
             warning("Cannot find the mbed-os tools directory in \"%s\"" % mbed_os_path)
             return False
 
         if (not os.path.isfile(os.path.join(self.path, 'mbed_settings.py')) and
-                os.path.isfile(os.path.join(mbed_os_path, 'tools/default_settings.py'))):
-            shutil.copy(os.path.join(mbed_os_path, 'tools/default_settings.py'), os.path.join(self.path, 'mbed_settings.py'))
+                os.path.isfile(os.path.join(mbed_tools_path, 'default_settings.py'))):
+            shutil.copy(os.path.join(mbed_tools_path, 'default_settings.py'), os.path.join(self.path, 'mbed_settings.py'))
 
 
         missing = []
@@ -1311,12 +1322,10 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
     orig_path = os.getcwd()
 
     with cd(program.path):
-        if os.path.isdir('mbed-os'):                    # its application with mbed-os sub dir
-            mbed_os_path = os.path.abspath('mbed-os')
-        elif os.path.basename(os.getcwd()) == 'mbed-os':# its standalone mbed-os (is root)
-            mbed_os_path = os.path.abspath('.')
-        else:
-            error('The mbed-os codebase and tools were not found.', -1)
+        mbed_os_path = program.get_os_dir()
+        tools_dir = os.path.abspath(program.get_tools_dir())
+        if not mbed_os_path or not tools_dir:
+            error('The mbed-os codebase or tools were not found in "%s".' % program.path, -1)
 
         target = mcu if mcu else program.get_cfg('TARGET')
         if target is None:
@@ -1330,8 +1339,6 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
         if os.path.isfile('MACROS.txt'):
             with open('MACROS.txt') as f:
                 macros = f.read().splitlines()
-
-        tools_dir = os.path.abspath(os.path.join(mbed_os_path, 'tools'))
 
         env = os.environ.copy()
         env['PYTHONPATH'] = os.path.abspath(program.path)
@@ -1390,9 +1397,8 @@ def test(tlist=False):
     program = Program(os.getcwd(), True)
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
-        # If "mbed-os" folder doesn't exist, error
-        if not os.path.isdir('mbed-os'):
-            error('The mbed-os codebase and tools were not found in this program.', -1)
+        if not program.get_tools_dir():
+            error('The mbed-os codebase or tools were not found in "%s".' % program.path, -1)
 
         # Prepare environment variables
         env = os.environ.copy()
@@ -1400,7 +1406,7 @@ def test(tlist=False):
         if tlist:
             # List all available tests (by default in a human-readable format)
             try:
-                popen(['python', 'mbed-os/tools/test.py', '-l'] + args, env=env)
+                popen(['python', os.path.join(program.get_tools_dir(), 'test.py'), '-l'] + args, env=env)
             except ProcessException:
                 error('Failed to run test script')
 
@@ -1417,8 +1423,8 @@ def export(ide=None, mcu=None):
     program = Program(os.getcwd(), True)
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
-        if not os.path.isdir('mbed-os'):
-            error('The mbed-os codebase and tools were not found in this program.', -1)
+        if not program.get_tools_dir():
+            error('The mbed-os codebase or tools were not found in "%s".' % program.path, -1)
 
         target = mcu if mcu else program.get_cfg('TARGET')
         if target is None:
@@ -1431,7 +1437,7 @@ def export(ide=None, mcu=None):
 
         env = os.environ.copy()
         env['PYTHONPATH'] = '.'
-        popen(['python', 'mbed-os/tools/project.py']
+        popen(['python', os.path.join(program.get_tools_dir(), 'project.py')]
               + list(chain.from_iterable(izip(repeat('-D'), macros)))
               + ['-i', ide, '-m', target, '--source=%s' % program.path]
               + args,
