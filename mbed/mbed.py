@@ -17,7 +17,7 @@ from itertools import chain, izip, repeat
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
 git_cmd = 'git'
-ver = '0.1.5'
+ver = '0.1.6'
 
 ignores = [
     # Version control folders
@@ -170,38 +170,6 @@ def rmtree_readonly(directory):
         func(path)
 
     shutil.rmtree(directory, onerror=remove_readonly)
-
-
-# Defaults config file
-def set_cfg(file, var, val):
-    try:
-        with open(file) as f:
-            lines = f.read().splitlines()
-    except:
-        lines = []
-
-    for line in lines:
-        m = re.match(r'^([\w+-]+)\=(.*)?$', line)
-        if m and m.group(1) == var:
-            lines.remove(line)
-
-    lines += [var+"="+val]
-
-    with open(file, 'w') as f:
-        f.write('\n'.join(lines) + '\n')
-
-def get_cfg(file, var, default_val=None):
-    try:
-        with open(file) as f:
-            lines = f.read().splitlines()
-    except:
-        lines = []
-
-    for line in lines:
-        m = re.match(r'^([\w+-]+)\=(.*)?$', line)
-        if m and m.group(1) == var:
-            return m.group(2)
-    return default_val
 
 
 # Directory navigation
@@ -639,24 +607,6 @@ class Repo(object):
         return None
 
     @classmethod
-    def findroot(cls, path=None):
-        path = os.path.abspath(path or os.getcwd())
-        rpath = None
-
-        while cd(path):
-            tpath = path
-            path = Repo.findrepo(path)
-            if path:
-                rpath = path
-                path = os.path.split(path)[0]
-                if tpath == path:       # Reached root.
-                    break
-            else:
-                break
-
-        return rpath
-
-    @classmethod
     def pathtype(cls, path=None):
         path = os.path.abspath(path or os.getcwd())
 
@@ -811,6 +761,120 @@ class Repo(object):
         return True
 
 
+# Program object, used to indicate the root of the code base
+class Program(object):
+    config_file = ".mbed"
+
+    @classmethod
+    def get_program(cls, path=None, warnings=False):
+        path = os.path.abspath(path or os.getcwd())
+        rpath = None
+
+        program = cls()
+        program.path = os.getcwd()
+        program.is_cwd = True
+
+        while cd(path):
+            tpath = path
+            if os.path.isfile(os.path.join(path, program.config_file)):
+                program.path = path
+                program.is_cwd = False
+                program.is_repo = Repo.isrepo(program.path)
+                break
+            else:
+                if Repo.isrepo(path):
+                    program.path = path
+                    program.is_cwd = False
+                    program.is_repo = True
+                path = os.path.split(path)[0]
+                if tpath == path:       # Reached root.
+                    break
+
+        program.name = os.path.basename(program.path)
+                    
+        if warnings:
+            if program.is_cwd:
+                warning(
+                    "Could not mbed program in current path. Assuming current dir.\n"
+                    "You can fix this by calling \"mbed new .\" in the root dir of your program")
+
+        return program
+
+    # Sets config value
+    def set_cfg(self, var, val):
+        fl = os.path.join(self.path, self.config_file)
+        try:
+            with open(fl) as f:
+                lines = f.read().splitlines()
+        except:
+            lines = []
+
+        for line in lines:
+            m = re.match(r'^([\w+-]+)\=(.*)?$', line)
+            if m and m.group(1) == var:
+                lines.remove(line)
+
+        lines += [var+"="+val]
+
+        with open(fl, 'w') as f:
+            f.write('\n'.join(lines) + '\n')
+
+    # Gets config value
+    def get_cfg(self, var, default_val=None):
+        fl = os.path.join(self.path, self.config_file)
+        try:
+            with open(fl) as f:
+                lines = f.read().splitlines()
+        except:
+            lines = []
+
+        for line in lines:
+            m = re.match(r'^([\w+-]+)\=(.*)?$', line)
+            if m and m.group(1) == var:
+                return m.group(2)
+        return default_val
+
+    # Gets mbed OS dir (unified)
+    def get_os_dir(self):
+        if os.path.isdir(os.path.join(self.path, 'mbed-os')):
+            return os.path.join(self.path, 'mbed-os')
+        elif self.name == 'mbed-os':
+            return self.path
+        else:
+            return None
+
+    # Routines after cloning mbed-os
+    def post_clone(self):
+        mbed_os_path = self.get_os_dir()
+        if not mbed_os_path:
+            return False
+        if not os.path.isdir(os.path.join(mbed_os_path, 'tools')):
+            warning("Cannot find the mbed-os tools directory in \"%s\"" % mbed_os_path)
+            return False
+
+        if (not os.path.isfile(os.path.join(self.path, 'mbed_settings.py')) and
+                os.path.isfile(os.path.join(mbed_os_path, 'tools/default_settings.py'))):
+            shutil.copy(os.path.join(mbed_os_path, 'tools/default_settings.py'), os.path.join(self.path, 'mbed_settings.py'))
+
+        missing = []
+        fname = 'requirements.txt'
+        with open(os.path.join(mbed_os_path, fname), 'r') as f:
+            for line in f.read().splitlines():
+                print line
+                try:
+                    exec("import " + line)
+                except:
+                    missing.append(line)
+                    raise
+
+        if len(missing):
+            print missing
+            warning(
+                "mbed OS and tools in this program have unmet dependencies with your Python environment, which might prevent you from compiling or exporting.\n"
+                "The missing Python modules are: %s\n"
+                "You can install all missing dependecies by opening a command prompt in \"%s\" and running \"pip install %s\"" % (', '.join(missing), mbed_os_path, fname))
+
+
 def formaturl(url, format="default"):
     url = "%s" % url
     m = re.match(regex_mbed_url, url)
@@ -838,7 +902,6 @@ def formaturl(url, format="default"):
                 else:
                     url = 'https://%s/%s' % (m.group(2), m.group(3)) # https is default
     return url
-
 
 
 # Help messages adapt based on current dir
@@ -881,7 +944,7 @@ def subcommand(name, *args, **kwargs):
     return subcommand
 
 
-# Clone command
+# New command
 @subcommand('new',
     dict(name='name', help='Destination name or path'),
     dict(name='scm', nargs='?', help='Source control management. Currently supported: %s. Default: git' % ', '.join([s.name for s in scms.values()])),
@@ -894,18 +957,20 @@ def new(name, scm='git', depth=None, protocol=None):
     d_path = name or os.getcwd()
     if os.path.isdir(d_path):
         if Repo.isrepo(d_path):
-            error("A %s is already exists in \"%s\". Please select a different name or location." % (cwd_dest, d_path), 1)
+            error("A %s already exists in \"%s\". Please select a different name or location." % (cwd_dest, d_path), 1)
         if len(os.listdir(d_path)) > 1:
             warning("Directory \"%s\" is not empty." % d_path)
 
-    p_path = Repo.findrepo(d_path)  # Find parent repository before the new one is created
+    # Find parent repository before the new one is created
+    p_path = Repo.findrepo(d_path)
 
     repo_scm = [s for s in scms.values() if s.name == scm.lower()]
     if not repo_scm:
         error("Please specify one of the following source control management systems: %s" % ', '.join([s.name for s in scms.values()]), 1)
 
     action("Creating new %s \"%s\" (%s)" % (cwd_dest, os.path.basename(d_path), repo_scm[0].name))
-    repo_scm[0].init(d_path)        # Initialize repository
+    # Initialize repository
+    repo_scm[0].init(d_path)
 
     if p_path:  # It's a library
         with cd(p_path):
@@ -924,7 +989,7 @@ def new(name, scm='git', depth=None, protocol=None):
             os.chdir(d_path)
 
 
-# Clone command
+# Import command
 @subcommand('import',
     dict(name='url', help='URL of the %s' % cwd_dest),
     dict(name='path', nargs='?', help='Destination name or path. Default: current %s.' % cwd_type),
@@ -967,6 +1032,7 @@ def import_(url, path=None, depth=None, protocol=None, top=True):
     with cd(repo.path):
         deploy(depth=depth, protocol=protocol)
 
+
 # Deploy command
 @subcommand('deploy',
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
@@ -985,13 +1051,11 @@ def deploy(depth=None, protocol=None):
             import_(lib.fullurl, lib.path, depth=depth, protocol=protocol, top=False)
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
 
-    # This has to be replaced by one time python script from tools that sets up everything the developer needs to use the tools
-    if (not os.path.isfile('mbed_settings.py') and
-            os.path.isfile('mbed-os/tools/default_settings.py')):
-        shutil.copy('mbed-os/tools/default_settings.py', 'mbed_settings.py')
+    program = Program.get_program()
+    program.post_clone()
 
 
-# Install/uninstall command
+# Add library command
 @subcommand('add',
     dict(name='url', help="URL of the library"),
     dict(name='path', nargs='?', help="Destination name or path. Default: current folder."),
@@ -1010,6 +1074,7 @@ def add(url, path=None, depth=None, protocol=None):
     repo.scm.add(lib.lib)
 
 
+# Remove library
 @subcommand('remove',
     dict(name='path', help="Local library name or path"),
     help='Remove specified library and its dependencies from the current %s.' % cwd_type)
@@ -1191,6 +1256,7 @@ def sync(recursive=True, keep_refs=False, top=True):
                     sync(keep_refs=keep_refs, top=False)
 
 
+# List command 
 @subcommand('ls',
     dict(name=['-a', '--all'], action='store_true', help="List repository URL and hash pairs"),
     dict(name=['-I', '--ignore'], action="store_true", help="Ignore errors regarding missing libraries."),
@@ -1211,6 +1277,7 @@ def list_(all=False, prefix='', p_path=None, ignore=False):
                 list_(all, nprefix, repo.path, ignore=ignore)
 
 
+# Command status for cross-SCM status of repositories
 @subcommand('status',
     dict(name=['-I', '--ignore'], action="store_true", help="Ignore errors regarding missing libraries."),
     help='Show status of the current %s and its dependencies.' % cwd_type)
@@ -1226,6 +1293,7 @@ def status(ignore=False):
                 status(ignore)
 
 
+# Compile command which invokes the mbed OS native build system
 @subcommand('compile',
     dict(name=['-t', '--toolchain'], help="Compile toolchain. Example: ARM, uARM, GCC_ARM, IAR"),
     dict(name=['-m', '--mcu'], help="Compile target. Example: K64F, NUCLEO_F401RE, NRF51822..."),
@@ -1237,12 +1305,14 @@ def status(ignore=False):
     help='Compile program using the native mbed OS build system.')
 def compile(toolchain=None, mcu=None, source=False, build=False, compile_library=False, compile_tests=False, test_spec="test_spec.json"):
     args = remainder
-    orig_path = os.getcwd() # remember the original path. this is needed for compiling only the libraries and tests for the current folder.
-    root_path = Repo.findroot(os.getcwd())
-    if not root_path:
-        Repo.fromrepo()
+    # Gather remaining arguments
+    args = remainder
+    # Find the root of the program
+    program = Program.get_program(os.getcwd(), True)
+    # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
+    orig_path = os.getcwd()
 
-    with cd(root_path):
+    with cd(program.path):
         if os.path.isdir('mbed-os'):                    # its application with mbed-os sub dir
             mbed_os_path = os.path.abspath('mbed-os')
         elif os.path.basename(os.getcwd()) == 'mbed-os':# its standalone mbed-os (is root)
@@ -1250,14 +1320,11 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
         else:
             error('The mbed-os codebase and tools were not found.', -1)
 
-        repo = Repo.fromrepo()
-        file = os.path.join('.mbed')
-
-        target = mcu if mcu else get_cfg(file, 'TARGET')
+        target = mcu if mcu else program.get_cfg('TARGET')
         if target is None:
             error('Please specify compile target using the -m switch or set default target using command "target"', 1)
 
-        tchain = toolchain if toolchain else get_cfg(file, 'TOOLCHAIN')
+        tchain = toolchain if toolchain else program.get_cfg('TOOLCHAIN')
         if tchain is None:
             error('Please specify compile toolchain using the -t switch or set default toolchain using command "toolchain"', 1)
 
@@ -1269,7 +1336,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
         tools_dir = os.path.abspath(os.path.join(mbed_os_path, 'tools'))
 
         env = os.environ.copy()
-        env['PYTHONPATH'] = os.path.abspath(root_path)
+        env['PYTHONPATH'] = os.path.abspath(program.path)
 
     if not source or len(source) == 0:
         source = [os.path.relpath(root_path, orig_path)]
@@ -1290,7 +1357,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
     elif compile_library:
         # Compile as a library (current dir is default)
         if not build:
-            build = os.path.join(os.path.relpath(root_path, orig_path), '.build', 'libraries', os.path.basename(orig_path), target, tchain)
+            build = os.path.join(os.path.relpath(program.path, orig_path), '.build', 'libraries', os.path.basename(orig_path), target, tchain)
 
         popen(['python', os.path.join(tools_dir, 'build.py')]
               + list(chain.from_iterable(izip(repeat('-D'), macros)))
@@ -1303,7 +1370,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
     else:
         # Compile as application (root is default)
         if not build:
-            build = os.path.join(os.path.relpath(root_path, orig_path), '.build', target, tchain)
+            build = os.path.join(os.path.relpath(program.path, orig_path), '.build', target, tchain)
 
         popen(['python', os.path.join(tools_dir, 'make.py')]
               + list(chain.from_iterable(izip(repeat('-D'), macros)))
@@ -1318,25 +1385,21 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
 # Test command
 @subcommand('test',
     dict(name=['-l', '--list'], action="store_true", help="List all of the available tests"),
-    help='Find and build tests in a project and its libraries.')
+    help='Find and build tests in a program and its libraries.')
 def test(list=False):
-    # Find the root of the project
-    root_path = Repo.findroot(os.getcwd())
-    if not root_path:
-        Repo.fromrepo()
-
-    # Change directories to the project root to use mbed OS tools
-    with cd(root_path):
+    # Gather remaining arguments
+    args = remainder
+    # Find the root of the program
+    program = Program.get_program(os.getcwd(), True)
+    # Change directories to the program root to use mbed OS tools
+    with cd(program.path):
         # If "mbed-os" folder doesn't exist, error
         if not os.path.isdir('mbed-os'):
             error('The mbed-os codebase and tools were not found in this program.', -1)
 
-        # Gather remaining arguments and prepare environment variables
-        args = remainder
-        repo = Repo.fromrepo()
+        # Prepare environment variables
         env = os.environ.copy()
         env['PYTHONPATH'] = '.'
-
         if list:
             # List all available tests (by default in a human-readable format)
             try:
@@ -1351,18 +1414,16 @@ def test(list=False):
     dict(name=['-m', '--mcu'], help="Export for target MCU. Example: K64F, NUCLEO_F401RE, NRF51822..."),
     help='Generate project files for desktop IDEs for the current program.')
 def export(ide=None, mcu=None):
-    root_path = Repo.findroot(os.getcwd())
-    if not root_path:
-        Repo.fromrepo()
-    with cd(root_path):
+    # Gather remaining arguments
+    args = remainder
+    # Find the root of the program
+    program = Program.get_program(os.getcwd(), True)
+    # Change directories to the program root to use mbed OS tools
+    with cd(program.path):
         if not os.path.isdir('mbed-os'):
             error('The mbed-os codebase and tools were not found in this program.', -1)
 
-        args = remainder
-        repo = Repo.fromrepo()
-        file = os.path.join('.mbed')
-
-        target = mcu if mcu else get_cfg(file, 'TARGET')
+        target = mcu if mcu else program.get_cfg('TARGET')
         if target is None:
             error('Please specify export target using the -m switch or set default target using command "target"', 1)
 
@@ -1375,7 +1436,7 @@ def export(ide=None, mcu=None):
         env['PYTHONPATH'] = '.'
         popen(['python', 'mbed-os/tools/project.py']
               + list(chain.from_iterable(izip(repeat('-D'), macros)))
-              + ['-i', ide, '-m', target, '--source=%s' % repo.path]
+              + ['-i', ide, '-m', target, '--source=%s' % program.path]
               + args,
               env=env)
 
@@ -1385,31 +1446,31 @@ def export(ide=None, mcu=None):
     dict(name='name', nargs='?', help="Default target name. Example: K64F, NUCLEO_F401RE, NRF51822..."),
     help='Set default target for the current program.')
 def target(name=None):
-    root_path = Repo.findroot(os.getcwd())
-    with cd(root_path):
-        repo = Repo.fromrepo()
-        file = os.path.join('.mbed')
+    # Find the root of the program
+    program = Program.get_program(os.getcwd(), True)
+    # Change directories to the program root to use mbed OS tools
+    with cd(program.path):
         if name is None:
-            name = get_cfg(file, 'TARGET')
-            action(('The default target for program "%s" is "%s"' % (repo.name, name)) if name else 'No default target is specified for program "%s"' % repo.name)
+            name = program.get_cfg('TARGET')
+            action(('The default target for program "%s" is "%s"' % (program.name, name)) if name else 'No default target is specified for program "%s"' % program.name)
         else:
-            set_cfg(file, 'TARGET', name)
-            action('"%s" now set as default target for program "%s"' % (name, repo.name))
+            program.set_cfg('TARGET', name)
+            action('"%s" now set as default target for program "%s"' % (name, program.name))
 
 @subcommand('toolchain',
     dict(name='name', nargs='?', help="Default toolchain name. Example: ARM, uARM, GCC_ARM, IAR"),
     help='Sets default toolchain for the current program.')
 def toolchain(name=None):
-    root_path = Repo.findroot(os.getcwd())
-    with cd(root_path):
-        repo = Repo.fromrepo()
-        file = os.path.join('.mbed')
+    # Find the root of the program
+    program = Program.get_program(os.getcwd(), True)
+    # Change directories to the program root to use mbed OS tools
+    with cd(program.path):
         if name is None:
-            name = get_cfg(file, 'TOOLCHAIN')
-            action(('The default toolchain for program "%s" is "%s"' % (repo.name, name)) if name else 'No default toolchain is specified for program "%s"' % repo.name)
+            name = program.get_cfg('TOOLCHAIN')
+            action(('The default toolchain for program "%s" is "%s"' % (program.name, name)) if name else 'No default toolchain is specified for program "%s"' % program.name)
         else:
-            set_cfg(file, 'TOOLCHAIN', name)
-            action('"%s" now set as default toolchain for program "%s"' % (name, repo.name))
+            program.set_cfg('TOOLCHAIN', name)
+            action('"%s" now set as default toolchain for program "%s"' % (name, program.name))
 
 
 # Parse/run command
