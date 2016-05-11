@@ -848,12 +848,12 @@ class Program(object):
     def post_clone(self):
         mbed_os_path = self.get_os_dir()
         if not mbed_os_path:
-            warning("Cannot find the mbed-os directory in \"%s\"" % self.path)
+            warning("Cannot find the mbed OS directory in \"%s\"" % self.path)
             return False
 
         mbed_tools_path = self.get_tools_dir()
         if not mbed_tools_path:
-            warning("Cannot find the mbed-os tools directory in \"%s\"" % mbed_os_path)
+            warning("Cannot find the mbed OS tools directory in \"%s\"" % mbed_os_path)
             return False
 
         if (not os.path.isfile(os.path.join(self.path, 'mbed_settings.py')) and
@@ -953,8 +953,8 @@ def subcommand(name, *args, **kwargs):
 @subcommand('new',
     dict(name='name', help='Destination name or path'),
     dict(name='scm', nargs='?', help='Source control management. Currently supported: %s. Default: git' % ', '.join([s.name for s in scms.values()])),
-    dict(name='--depth', nargs='?', help='Number of revisions to fetch the mbed-os repository when creating new program. Default: all revisions.'),
-    dict(name='--protocol', nargs='?', help='Transport protocol when fetching the mbed-os repository when creating new program. Supported: https, http, ssh, git. Default: inferred from URL.'),
+    dict(name='--depth', nargs='?', help='Number of revisions to fetch the mbed OS repository when creating new program. Default: all revisions.'),
+    dict(name='--protocol', nargs='?', help='Transport protocol when fetching the mbed OS repository when creating new program. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help='Create a new program based on the specified source control management. Will create a new library when called from inside a local program. Supported SCMs: %s.' % (', '.join([s.name for s in scms.values()])))
 def new(name, tscm='git', depth=None, protocol=None):
     global cwd_root
@@ -984,7 +984,8 @@ def new(name, tscm='git', depth=None, protocol=None):
         # This helps sub-commands to display relative paths to the created program
         cwd_root = os.path.abspath(d_path)
 
-        if len(os.listdir(d_path)) <= 1:
+        program = Program(d_path)
+        if not program.get_os_dir():
             try:
                 with cd(d_path):
                     add(mbed_os_url, depth=depth, protocol=protocol)
@@ -1323,9 +1324,10 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
 
     with cd(program.path):
         mbed_os_path = program.get_os_dir()
-        tools_dir = os.path.abspath(program.get_tools_dir())
-        if not mbed_os_path or not tools_dir:
-            error('The mbed-os codebase or tools were not found in "%s".' % program.path, -1)
+        mbed_tools_path = program.get_tools_dir()
+        if not mbed_os_path or not mbed_tools_path:
+            error('The mbed OS codebase or tools were not found in "%s".' % program.path, -1)
+        tools_dir = os.path.abspath(mbed_tools_path)
 
         target = mcu if mcu else program.get_cfg('TARGET')
         if target is None:
@@ -1398,7 +1400,7 @@ def test(tlist=False):
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
         if not program.get_tools_dir():
-            error('The mbed-os codebase or tools were not found in "%s".' % program.path, -1)
+            error('The mbed OS codebase or tools were not found in "%s".' % program.path, -1)
 
         # Prepare environment variables
         env = os.environ.copy()
@@ -1424,7 +1426,7 @@ def export(ide=None, mcu=None):
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
         if not program.get_tools_dir():
-            error('The mbed-os codebase or tools were not found in "%s".' % program.path, -1)
+            error('The mbed OS codebase or tools were not found in "%s".' % program.path, -1)
 
         target = mcu if mcu else program.get_cfg('TARGET')
         if target is None:
