@@ -856,23 +856,24 @@ class Program(object):
                 os.path.isfile(os.path.join(mbed_os_path, 'tools/default_settings.py'))):
             shutil.copy(os.path.join(mbed_os_path, 'tools/default_settings.py'), os.path.join(self.path, 'mbed_settings.py'))
 
+
         missing = []
         fname = 'requirements.txt'
-        with open(os.path.join(mbed_os_path, fname), 'r') as f:
-            for line in f.read().splitlines():
-                print line
-                try:
-                    exec("import " + line)
-                except:
-                    missing.append(line)
-                    raise
+        try:
+            import pkgutil
+            with open(os.path.join(mbed_os_path, fname), 'r') as f:
+                for line in f.read().splitlines():
+                    if pkgutil.find_loader(line) is None:
+                        missing.append(line)
+        except:
+            pass
 
         if len(missing):
-            print missing
             warning(
-                "mbed OS and tools in this program have unmet dependencies with your Python environment, which might prevent you from compiling or exporting.\n"
+                "Detected unmet Python environment dependencies for mbed OS and tools in this program.\n"
+                "This might prevent you from compiling your code or exporting to IDEs and other toolchains.\n"
                 "The missing Python modules are: %s\n"
-                "You can install all missing dependecies by opening a command prompt in \"%s\" and running \"pip install %s\"" % (', '.join(missing), mbed_os_path, fname))
+                "You can install all missing dependencies by opening a command prompt in \"%s\" and running \"pip install %s\"" % (', '.join(missing), mbed_os_path, fname))
 
 
 def formaturl(url, format="default"):
@@ -988,6 +989,9 @@ def new(name, scm='git', depth=None, protocol=None):
         if d_path:
             os.chdir(d_path)
 
+    program = Program.get_program(d_path)
+    program.post_clone()
+
 
 # Import command
 @subcommand('import',
@@ -1032,6 +1036,10 @@ def import_(url, path=None, depth=None, protocol=None, top=True):
     with cd(repo.path):
         deploy(depth=depth, protocol=protocol)
 
+    if top:
+        program = Program.get_program(repo.path)
+        program.post_clone()
+
 
 # Deploy command
 @subcommand('deploy',
@@ -1039,6 +1047,7 @@ def import_(url, path=None, depth=None, protocol=None, top=True):
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help="Import missing dependencies in the current program or library.")
 def deploy(depth=None, protocol=None):
+    sys.exit(1)
     repo = Repo.fromrepo()
     repo.scm.ignores(repo)
 
@@ -1050,9 +1059,6 @@ def deploy(depth=None, protocol=None):
         else:
             import_(lib.fullurl, lib.path, depth=depth, protocol=protocol, top=False)
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
-
-    program = Program.get_program()
-    program.post_clone()
 
 
 # Add library command
