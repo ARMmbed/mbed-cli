@@ -990,7 +990,7 @@ def new(name, tscm='git', depth=None, protocol=None):
                 with cd(d_path):
                     add(mbed_os_url, depth=depth, protocol=protocol)
             except:
-                rmtree_readonly(d_path)
+                rmtree_readonly(os.path.join(d_path, 'mbed-os'))
                 raise
         if d_path:
             os.chdir(d_path)
