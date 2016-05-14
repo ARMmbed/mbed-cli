@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# pylint: disable=too-many-arguments, too-many-locals, too-many-branches, too-many-lines, line-too-long, too-many-nested-blocks
+# pylint: disable=too-many-arguments, too-many-locals, too-many-branches, too-many-lines, line-too-long, too-many-nested-blocks, too-many-public-methods
 # pylint: disable=invalid-name, missing-docstring
 
 import argparse
@@ -132,7 +132,7 @@ class ProcessException(Exception):
 
 def popen(command, stdin=None, **kwargs):
     # print for debugging
-    log('"'+' '.join(command)+'"')
+    log('Exec "'+' '.join(command)+'"" in '+os.getcwd())
     try:
         proc = subprocess.Popen(command, **kwargs)
     except OSError as e:
@@ -141,13 +141,13 @@ def popen(command, stdin=None, **kwargs):
                 "Could not execute \"%s\".\n"
                 "Please verify that it's installed and accessible from your current path by executing \"%s\".\n" % (command[0], command[0]), e[0])
         else:
-            raise
+            raise e
 
     if proc.wait() != 0:
-        raise ProcessException(proc.returncode)
+        raise ProcessException(proc.returncode, command[0], ' '.join(command), os.getcwd())
 
 def pquery(command, stdin=None, **kwargs):
-    #log("Query "+' '.join(command)+" in "+os.getcwd())
+    log('Query "'+' '.join(command)+'" in '+os.getcwd())
     try:
         proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
     except OSError as e:
@@ -156,11 +156,12 @@ def pquery(command, stdin=None, **kwargs):
                 "Could not execute \"%s\".\n"
                 "Please verify that it's installed and accessible from your current path by executing \"%s\".\n" % (command[0], command[0]), e[0])
         else:
-            raise
+            raise e
+
     stdout, _ = proc.communicate(stdin)
 
     if proc.returncode != 0:
-        raise ProcessException(proc.returncode)
+        raise ProcessException(proc.returncode, command[0], ' '.join(command), os.getcwd())
 
     return stdout
 
@@ -274,11 +275,11 @@ class Hg(object):
     def outgoing():
         try:
             pquery([hg_cmd, 'outgoing'])
-            return True
+            return 1
         except ProcessException as e:
             if e[0] != 1:
-                raise
-            return False
+                raise e
+            return 0
 
     def isdetached():
         return False
@@ -309,6 +310,9 @@ class Hg(object):
                 return ''.join('%02x'%ord(i) for i in f.read(6))
         else:
             return ""
+
+    def getbranch():
+        return pquery([hg_cmd, 'branch']).strip() or ""
 
     def ignores(repo):
         hook = 'ignore.local = .hg/hgignore'
@@ -463,30 +467,65 @@ class Git(object):
         return pquery([git_cmd, 'ls-files', '--others', '--exclude-standard']).splitlines()
 
     def outgoing():
+        # Find the default remote
+        remote = None
+        remotes = Git.getremotes('push')
+        for r in remotes:
+            remote = r[0]
+            # Prefer origin which is the default when you clone locally
+            if r[0] == "origin":
+                break
+
+        if not remote:
+            return -1
+
+        # Get current branch
+        branch = Git.getbranch()
+        if not branch:
+            # Detached mode is okay as we don't expect the user to publish from detached state without branch
+            return 0
+
         try:
-            return True if pquery([git_cmd, 'log', 'origin..']) else False
+            # Check if remote branch exists
+            if not pquery([git_cmd, 'rev-parse', '%s/%s' % (remote, branch)]):
+                return 1
         except ProcessException as e:
-            if e[0] != 1:
-                raise
-            return True
+            return 1
 
+        # Check for outgoing commits for the same remote branch
+        return 1 if pquery([git_cmd, 'log', '%s/%s..%s' % (remote, branch, branch)]) else 0
+
+    # Checks whether current working tree is detached
     def isdetached():
-        branch = pquery([git_cmd, 'rev-parse', '--symbolic-full-name', '--abbrev-ref', 'HEAD']).strip()
-        return branch == "HEAD"
+        return Git.getbranch() == "HEAD"
 
-    def geturl(repo):
-        url = ""
+    # Finds all associated remotes for the specified remote type
+    def getremotes(rtype='fetch'):
+        result = [] 
         remotes = pquery([git_cmd, 'remote', '-v']).strip().splitlines()
         for remote in remotes:
             remote = re.split(r'\s', remote)
-            if "(fetch)" in remote:
-                url = remote[1]
-                if remote[0] == "origin": # Prefer origin URL
-                    break
+            t = re.sub('[()]', '', remote[2])
+            if not rtype or rtype == t:
+                result.append([remote[0], remote[1], t])
+        return result
+
+    def geturl(repo):
+        url = ""
+        remotes = Git.getremotes()
+        for remote in remotes:
+            url = remote[1]
+            if remote[0] == "origin": # Prefer origin URL
+                break
         return formaturl(url)
 
     def gethash(repo):
         return pquery([git_cmd, 'rev-parse', 'HEAD']).strip()
+
+    # Finds current branch or returns empty string if detached
+    def getbranch():
+        branch = pquery([git_cmd, 'rev-parse', '--symbolic-full-name', '--abbrev-ref', 'HEAD']).strip()
+        return branch if branch != "HEAD" else ""
 
     def ignores(repo):
         with open(os.path.join(repo.path, '.git/info/exclude'), 'w') as f:
@@ -1124,17 +1163,18 @@ def publish(all=None, top=True):
     sync(recursive=False)
 
     if repo.scm.dirty():
-        action('Uncommitted changes in \"%s\" (%s)' % (repo.name, relpath(cwd_root, repo.path)))
+        action('Uncommitted changes in \"%s\" (%s)' % (repo.name, relpath(cwd_root, repo.path) or "."))
         raw_input('Press enter to commit and push: ')
         repo.scm.commit()
 
     try:
-        if repo.scm.outgoing():
+        outgoing = repo.scm.outgoing()
+        if outgoing > 0:
             action("Pushing local repository \"%s\" to remote \"%s\"" % (repo.name, repo.url))
             repo.scm.push(repo, all)
     except ProcessException as e:
         if e[0] != 1:
-            raise
+            raise e
 
 
 # Update command
@@ -1492,7 +1532,9 @@ try:
     log('Working path \"%s\" (%s)' % (os.getcwd(), cwd_type))
     status = args.command(args)
 except ProcessException as e:
-    error('Subrocess exit with error code %d' % e[0], e[0])
+    error(
+        "\"%s\" returned error code %d.\n"
+        "Command \"%s\" in \"%s\"" % (e[1], e[0], e[2], e[3]), e[0])
 except OSError as e:
     if e[0] == errno.ENOENT:
         error(
