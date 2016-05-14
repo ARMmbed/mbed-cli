@@ -474,7 +474,7 @@ class Git(object):
         return pquery([git_cmd, 'status', '-s'] + (['-v'] if verbose else []))
 
     def dirty():
-        return pquery([git_cmd, 'diff', '--name-only', 'HEAD'])
+        return pquery([git_cmd, 'status', '-uno', '--porcelain'])
 
     def untracked():
         return pquery([git_cmd, 'ls-files', '--others', '--exclude-standard']).splitlines()
@@ -1180,7 +1180,7 @@ def publish(all=None, top=True):
     sync(recursive=False)
 
     if repo.scm.dirty():
-        action('Uncommitted changes in \"%s\" (%s)' % (repo.name, relpath(cwd_root, repo.path) or "."))
+        action("Uncommitted changes in %s \"%s\" in \"%s\"" % (repo.pathtype(repo.path), repo.name, repo.path))
         raw_input('Press enter to commit and push: ')
         repo.scm.commit()
 
