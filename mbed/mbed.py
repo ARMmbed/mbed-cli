@@ -136,7 +136,7 @@ def popen(command, stdin=None, **kwargs):
     try:
         proc = subprocess.Popen(command, **kwargs)
     except OSError as e:
-        if e[0] == errno.EPERM:
+        if e[0] == errno.ENOENT:
             error(
                 "Could not execute \"%s\".\n"
                 "Please verify that it's installed and accessible from your current path by executing \"%s\".\n" % (command[0], command[0]), e[0])
@@ -151,7 +151,7 @@ def pquery(command, stdin=None, **kwargs):
     try:
         proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
     except OSError as e:
-        if e[0] == errno.EPERM:
+        if e[0] == errno.ENOENT:
             error(
                 "Could not execute \"%s\".\n"
                 "Please verify that it's installed and accessible from your current path by executing \"%s\".\n" % (command[0], command[0]), e[0])
@@ -956,7 +956,7 @@ def subcommand(name, *args, **kwargs):
     dict(name='--depth', nargs='?', help='Number of revisions to fetch the mbed OS repository when creating new program. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol when fetching the mbed OS repository when creating new program. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help='Create a new program based on the specified source control management. Will create a new library when called from inside a local program. Supported SCMs: %s.' % (', '.join([s.name for s in scms.values()])))
-def new(name, tscm='git', depth=None, protocol=None):
+def new(name, scm='git', depth=None, protocol=None):
     global cwd_root
 
     d_path = name or os.getcwd()
@@ -969,7 +969,7 @@ def new(name, tscm='git', depth=None, protocol=None):
     # Find parent repository before the new one is created
     p_path = Repo.findrepo(d_path)
 
-    repo_scm = [s for s in scms.values() if s.name == tscm.lower()]
+    repo_scm = [s for s in scms.values() if s.name == scm.lower()]
     if not repo_scm:
         error("Please specify one of the following source control management systems: %s" % ', '.join([s.name for s in scms.values()]), 1)
 
@@ -989,9 +989,10 @@ def new(name, tscm='git', depth=None, protocol=None):
             try:
                 with cd(d_path):
                     add(mbed_os_url, depth=depth, protocol=protocol)
-            except:
-                rmtree_readonly(os.path.join(d_path, 'mbed-os'))
-                raise
+            except Exception as e:
+                if os.path.isdir(os.path.join(d_path, 'mbed-os')):
+                    rmtree_readonly(os.path.join(d_path, 'mbed-os'))
+                raise e
         if d_path:
             os.chdir(d_path)
 
@@ -1291,7 +1292,7 @@ def list_(all=False, prefix='', p_path=None, ignore=False):
 @subcommand('status',
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors regarding missing libraries.'),
     help='Show status of the current %s and its dependencies.' % cwd_type)
-def status(ignore=False):
+def status_(ignore=False):
     repo = Repo.fromrepo()
     if repo.scm.dirty():
         action("Status for \"%s\":" % repo.name)
@@ -1484,6 +1485,7 @@ if len(sys.argv) <= 1:
     sys.exit(1)
 
 args, remainder = parser.parse_known_args()
+status = 1
 
 try:
     verbose = args.verbose
@@ -1492,7 +1494,7 @@ try:
 except ProcessException as e:
     error('Subrocess exit with error code %d' % e[0], e[0])
 except OSError as e:
-    if e[0] == errno.EPERM:
+    if e[0] == errno.ENOENT:
         error(
             "Could not detect one of the command-line tools.\n"
             "You could retry the last command with \"-v\" flag for verbose output\n", e[0])
