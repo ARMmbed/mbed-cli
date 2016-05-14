@@ -1301,7 +1301,7 @@ def status_(ignore=False):
     for lib in repo.libs:
         if lib.check_repo(ignore):
             with cd(lib.path):
-                status(ignore)
+                status_(ignore)
 
 
 # Compile command which invokes the mbed OS native build system
