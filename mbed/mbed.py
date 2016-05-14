@@ -435,7 +435,20 @@ class Git(object):
         popen([git_cmd, 'commit', '-a'] + (['-v'] if verbose else ['-q']))
 
     def push(repo, all=None):
-        popen([git_cmd, 'push'] + (['--all'] if all else []) + (['-v'] if verbose else ['-q']))
+        if all:
+            popen([git_cmd, 'push', '--all'] + (['-v'] if verbose else ['-q']))
+        else:
+            remote = Git.getremote()
+            branch = Git.getbranch()
+            if remote and branch:
+                popen([git_cmd, 'push', remote, branch] + (['-v'] if verbose else ['-q']))
+            else:
+                err = "Unable to push outgoing changes for \"%s\" in \"%s\".\n" % (repo.name, repo.path)
+                if not remote:
+                    error(err+"The local repository is not associated with a remote one.\n", 1)
+                if not branch:
+                    error(err+"Working set is not on a branch.\n", 1)
+
 
     def pull(repo):
         popen([git_cmd, 'fetch', '--all'] + (['-v'] if verbose else ['-q']))
@@ -467,15 +480,8 @@ class Git(object):
         return pquery([git_cmd, 'ls-files', '--others', '--exclude-standard']).splitlines()
 
     def outgoing():
-        # Find the default remote
-        remote = None
-        remotes = Git.getremotes('push')
-        for r in remotes:
-            remote = r[0]
-            # Prefer origin which is the default when you clone locally
-            if r[0] == "origin":
-                break
-
+        # Get default remote
+        remote = Git.getremote()
         if not remote:
             return -1
 
@@ -498,6 +504,17 @@ class Git(object):
     # Checks whether current working tree is detached
     def isdetached():
         return Git.getbranch() == "HEAD"
+
+    # Finds default remote
+    def getremote(rtype='fetch'):
+        remote = None
+        remotes = Git.getremotes('push')
+        for r in remotes:
+            remote = r[0]
+            # Prefer origin which is Git's default remote when cloning
+            if r[0] == "origin":
+                break
+        return remote
 
     # Finds all associated remotes for the specified remote type
     def getremotes(rtype='fetch'):
