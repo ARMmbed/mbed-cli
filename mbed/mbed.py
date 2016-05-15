@@ -89,6 +89,7 @@ mbed_os_url = 'https://github.com/ARMmbed/mbed-os'
 
 # verbose logging
 verbose = False
+very_verbose = False
 
 
 # Logging and output
@@ -159,6 +160,9 @@ def pquery(command, stdin=None, **kwargs):
             raise e
 
     stdout, _ = proc.communicate(stdin)
+
+    if very_verbose:
+        print str(stdout).strip()
 
     if proc.returncode != 0:
         raise ProcessException(proc.returncode, command[0], ' '.join(command), os.getcwd())
@@ -249,18 +253,21 @@ class Hg(object):
     def commit():
         popen([hg_cmd, 'commit'] + (['-v'] if verbose else ['-q']))
 
-    def push(repo, all=None):
+    def publish(repo, all=None):
         popen([hg_cmd, 'push'] + (['--new-branch'] if all else []) + (['-v'] if verbose else ['-q']))
 
-    def pull(repo):
+    def fetch(repo):
+        log("Pulling remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
         popen([hg_cmd, 'pull'] + (['-v'] if verbose else ['-q']))
+
+    def checkout(repo, hash=None, clean=False):
+        log("Checkout \"%s\" to %s" % (repo.name, repo.hashtype(hash, True)))
+        popen([hg_cmd, 'update'] + (['-r', hash] if hash else []) + (['-C'] if clean else []) + (['-v'] if verbose else ['-q']))
 
     def update(repo, hash=None, clean=False):
         if not repo.is_local:
-            log("Pulling remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
-            popen([hg_cmd, 'pull'] + (['-v'] if verbose else ['-q']))
-        log("Updating \"%s\" to %s" % (repo.name, repo.hashtype(hash, True)))
-        popen([hg_cmd, 'update'] + (['-r', hash] if hash else []) + (['-C'] if clean else []) + (['-v'] if verbose else ['-q']))
+            Hg.fetch(repo)
+        Hg.checkout(repo, hash, clean)
 
     def status():
         return pquery([hg_cmd, 'status'] + (['-v'] if verbose else ['-q']))
@@ -434,7 +441,7 @@ class Git(object):
     def commit():
         popen([git_cmd, 'commit', '-a'] + (['-v'] if verbose else ['-q']))
 
-    def push(repo, all=None):
+    def publish(repo, all=None):
         if all:
             popen([git_cmd, 'push', '--all'] + (['-v'] if verbose else ['-q']))
         else:
@@ -443,32 +450,45 @@ class Git(object):
             if remote and branch:
                 popen([git_cmd, 'push', remote, branch] + (['-v'] if verbose else ['-q']))
             else:
-                err = "Unable to push outgoing changes for \"%s\" in \"%s\".\n" % (repo.name, repo.path)
+                err = "Unable to publish outgoing changes for \"%s\" in \"%s\".\n" % (repo.name, repo.path)
                 if not remote:
-                    error(err+"The local repository is not associated with a remote one.\n", 1)
+                    error(err+"The local repository is not associated with a remote one.", 1)
                 if not branch:
-                    error(err+"Working set is not on a branch.\n", 1)
+                    error(err+"Working set is not on a branch.", 1)
 
-
-    def pull(repo):
+    def fetch(repo):
+        log("Fetching remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
         popen([git_cmd, 'fetch', '--all'] + (['-v'] if verbose else ['-q']))
+
+    def discard(repo):
+        log("Discarding local changes in \"%s\"" % repo.name)
+        popen([git_cmd, 'reset', 'HEAD'] + ([] if verbose else ['-q'])) # unmarks files for commit
+        popen([git_cmd, 'checkout', '.'] + ([] if verbose else ['-q'])) # undo  modified files
+        popen([git_cmd, 'clean', '-fdq'] + ([] if verbose else ['-q'])) # cleans up untracked files and folders
+
+    def checkout(repo, hash=None, clean=False):
+        log("Checkout \"%s\" to %s" % (repo.name, repo.hashtype(hash, True)))
+        popen([git_cmd, 'checkout', hash] + ([] if verbose else ['-q']))
 
     def update(repo, hash=None, clean=False):
         if clean:
-            log("Discarding local changes in \"%s\"" % repo.name)
-            popen([git_cmd, 'reset', 'HEAD'] + ([] if verbose else ['-q'])) # unmarks files for commit
-            popen([git_cmd, 'checkout', '.'] + ([] if verbose else ['-q'])) # undo  modified files
-            popen([git_cmd, 'clean', '-fdq'] + ([] if verbose else ['-q'])) # cleans up untracked files and folders
+            Git.discard(repo)
+        if not repo.is_local:
+            Git.fetch(repo) 
         if hash:
-            if not repo.is_local:
-                log("Fetching remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
-                popen([git_cmd, 'fetch', '-v', '--all'] + (['-v'] if verbose else ['-q']))
-            log("Updating \"%s\" to %s" % (repo.name, repo.hashtype(hash, True)))
-            popen([git_cmd, 'checkout'] + [hash] + ([] if verbose else ['-q']))
+            Git.checkout(repo, hash, clean)
         else:
-            if not repo.is_local:
-                log("Fetching remote repository \"%s\" to local \"%s\" and updating to latest revision in the current branch" % (repo.url, repo.name))
-                popen([git_cmd, 'pull', '--all'] + (['-v'] if verbose else ['-q']))
+            remote = Git.getremote()
+            branch = Git.getbranch()
+            if remote and branch:
+                log("Merging \"%s\" with remote branch %s/%s from \"%s\"" % (repo.name, remote, branch, repo.url))
+                popen([git_cmd, 'merge', "%s/%s" % (remote, branch)] + (['-v'] if verbose else ['-q']))
+            else:
+                err = "Unable to update \"%s\" in \"%s\".\n" % (repo.name, repo.path)
+                if not remote:
+                    log(err+"The local repository is not associated with a remote one.")
+                if not branch:
+                    log(err+"Working set is not on a branch.")
 
     def status():
         return pquery([git_cmd, 'status', '-s'] + (['-v'] if verbose else []))
@@ -495,7 +515,7 @@ class Git(object):
             # Check if remote branch exists
             if not pquery([git_cmd, 'rev-parse', '%s/%s' % (remote, branch)]):
                 return 1
-        except ProcessException as e:
+        except ProcessException:
             return 1
 
         # Check for outgoing commits for the same remote branch
@@ -991,6 +1011,7 @@ def subcommand(name, *args, **kwargs):
                 subparser.add_argument(*opt, **arg)
 
         subparser.add_argument("-v", "--verbose", action="store_true", dest="verbose", help="Verbose diagnostic output")
+        subparser.add_argument("-vv", "--very_verbose", action="store_true", dest="very_verbose", help="Very verbose diagnostic output")
 
         def thunk(parsed_args):
             argv = [arg['dest'] if 'dest' in arg else arg['name'] for arg in args]
@@ -1182,14 +1203,14 @@ def publish(all=None, top=True):
 
     if repo.scm.dirty():
         action("Uncommitted changes in %s \"%s\" in \"%s\"" % (repo.pathtype(repo.path), repo.name, repo.path))
-        raw_input('Press enter to commit and push: ')
+        raw_input('Press enter to commit and publish: ')
         repo.scm.commit()
 
     try:
         outgoing = repo.scm.outgoing()
         if outgoing > 0:
             action("Pushing local repository \"%s\" to remote \"%s\"" % (repo.name, repo.url))
-            repo.scm.push(repo, all)
+            repo.scm.publish(repo, all)
     except ProcessException as e:
         if e[0] != 1:
             raise e
@@ -1552,7 +1573,8 @@ args, remainder = parser.parse_known_args()
 status = 1
 
 try:
-    verbose = args.verbose
+    very_verbose = args.very_verbose
+    verbose = very_verbose or args.verbose
     log('Working path \"%s\" (%s)' % (os.getcwd(), cwd_type))
     status = args.command(args)
 except ProcessException as e:
