@@ -1323,6 +1323,11 @@ def sync(recursive=True, keep_refs=False, top=True):
                 with cd(lib.path):
                     sync(keep_refs=keep_refs, top=False)
 
+    # Update the .lib reference in the parent repository
+    if top and cwd_type == "library":
+        repo = Repo.fromrepo()
+        repo.write()
+
 
 # List command
 @subcommand('ls',
