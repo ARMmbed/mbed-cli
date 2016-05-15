@@ -133,7 +133,7 @@ class ProcessException(Exception):
 
 def popen(command, stdin=None, **kwargs):
     # print for debugging
-    log('Exec "'+' '.join(command)+'"" in '+os.getcwd())
+    log('Exec "'+' '.join(command)+'" in '+os.getcwd())
     try:
         proc = subprocess.Popen(command, **kwargs)
     except OSError as e:
@@ -148,7 +148,8 @@ def popen(command, stdin=None, **kwargs):
         raise ProcessException(proc.returncode, command[0], ' '.join(command), os.getcwd())
 
 def pquery(command, stdin=None, **kwargs):
-    log('Query "'+' '.join(command)+'" in '+os.getcwd())
+    if very_verbose:
+        log('Query "'+' '.join(command)+'" in '+os.getcwd())
     try:
         proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
     except OSError as e:
@@ -228,7 +229,7 @@ class Hg(object):
         if hash:
             with cd(name):
                 try:
-                    popen([hg_cmd, 'checkout', hash] + (['-v'] if verbose else ['-q']))
+                    Hg.checkout(None, hash)
                 except ProcessException:
                     error("Unable to update to revision \"%s\"" % hash, 1)
 
@@ -260,8 +261,9 @@ class Hg(object):
         log("Pulling remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
         popen([hg_cmd, 'pull'] + (['-v'] if verbose else ['-q']))
 
-    def checkout(repo, hash=None, clean=False):
-        log("Checkout \"%s\" to %s" % (repo.name, repo.hashtype(hash, True)))
+    def checkout(repo, hash, clean=False):
+        if repo:
+            log("Checkout \"%s\" to %s" % (repo.name, repo.hashtype(hash, True)))
         popen([hg_cmd, 'update'] + (['-r', hash] if hash else []) + (['-C'] if clean else []) + (['-v'] if verbose else ['-q']))
 
     def update(repo, hash=None, clean=False):
@@ -416,7 +418,7 @@ class Git(object):
         if hash:
             with cd(name):
                 try:
-                    popen([git_cmd, 'checkout', '-q', hash] + ([] if verbose else ['-q']))
+                    Git.checkout(None, hash)
                 except ProcessException:
                     error("Unable to update to revision \"%s\"" % hash, 1)
 
@@ -466,9 +468,16 @@ class Git(object):
         popen([git_cmd, 'checkout', '.'] + ([] if verbose else ['-q'])) # undo  modified files
         popen([git_cmd, 'clean', '-fdq'] + ([] if verbose else ['-q'])) # cleans up untracked files and folders
 
-    def checkout(repo, hash=None, clean=False):
-        log("Checkout \"%s\" to %s" % (repo.name, repo.hashtype(hash, True)))
+    def checkout(repo, hash, clean=False):
+        if repo:
+            log("Checkout \"%s\" to %s" % (repo.name, repo.hashtype(hash, True)))
         popen([git_cmd, 'checkout', hash] + ([] if verbose else ['-q']))
+        if Git.isdetached(): # try to find associated refs to avoid detached state
+            refs = Git.getrefs(hash)
+            for ref in refs: # re-associate with a local or remote branch (hash is the same)
+                log("Hash \"%s\" match a branch reference. Re-associating with branch (it's the same hash)" % hash)
+                popen([git_cmd, 'checkout', re.sub(r'^(.*?)\/(.*?)$', r'\2', ref)] + ([] if verbose else ['-q']))
+                break
 
     def update(repo, hash=None, clean=False):
         if clean:
@@ -523,7 +532,7 @@ class Git(object):
 
     # Checks whether current working tree is detached
     def isdetached():
-        return Git.getbranch() == "HEAD"
+        return True if Git.getbranch() == "" else False
 
     # Finds default remote
     def getremote():
@@ -559,10 +568,32 @@ class Git(object):
     def gethash(repo):
         return pquery([git_cmd, 'rev-parse', 'HEAD']).strip()
 
-    # Finds current branch or returns empty string if detached
+    # Gets current branch or returns empty string if detached
     def getbranch():
         branch = pquery([git_cmd, 'rev-parse', '--symbolic-full-name', '--abbrev-ref', 'HEAD']).strip()
         return branch if branch != "HEAD" else ""
+
+    # Finds refs (local or remote branches). Will match hash if specified
+    def getrefs(hash=None, ret_hash=False):
+        result = []
+        lines = pquery([git_cmd, 'show-ref']).strip().splitlines()
+        for line in lines:
+            m = re.match(r'^(.+)\s+(.+)$', line)
+            if m and (not hash or m.group(1).startswith(hash)):
+                if re.match(r'refs\/(heads|remotes)\/', m.group(2)): # exclude tags
+                    result.append(m.group(1) if ret_hash else re.sub(r'refs\/(heads|remotes)\/', '', m.group(2)))
+        return result
+
+    # Finds branches a hash belongs to
+    def hashbranches(hash):
+        branches = []
+        lines = pquery([git_cmd, 'branch', '-a', '--contains'] + ([hash] if hash else [])).strip().splitlines()
+        for line in lines:
+            if re.match(r'^\*?\s+\((.+)\)$', line):
+                continue
+            line = re.sub(r'\s+', '', line)
+            branches.append(line)
+        return branches
 
     def ignores(repo):
         with open(os.path.join(repo.path, '.git/info/exclude'), 'w') as f:
