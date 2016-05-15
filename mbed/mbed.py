@@ -17,7 +17,7 @@ from itertools import chain, izip, repeat
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
 git_cmd = 'git'
-ver = '0.1.6'
+ver = '0.1.7'
 
 ignores = [
     # Version control folders
