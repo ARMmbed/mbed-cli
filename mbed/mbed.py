@@ -813,7 +813,6 @@ class Repo(object):
                              or (lib_repo.hash and self.hash
                                  and lib_repo.hash == self.hash[0:len(lib_repo.hash)]))):  # match long and short hash formats
                     #print self.name, 'unmodified'
-                    progress()
                     return
 
         action("Updating reference \"%s\" -> \"%s\"" % (relpath(cwd_root, self.path) if cwd_root != self.path else self.name, self.fullurl))
@@ -1344,6 +1343,7 @@ def sync(recursive=True, keep_refs=False, top=True):
             lib.sync()
             lib.write()
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
+            progress()
         else:
             if not keep_refs:
                 action("Removing reference \"%s\" -> \"%s\"" % (lib.name, lib.fullurl))
@@ -1367,6 +1367,7 @@ def sync(recursive=True, keep_refs=False, top=True):
             lib.write()
             repo.scm.ignore(repo, relpath(repo.path, lib.path))
             repo.scm.add(lib.lib)
+            progress()
 
     repo.sync()
 
