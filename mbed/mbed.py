@@ -1277,7 +1277,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
     if compile_tests:
         # Compile tests
         if not build:
-            build = os.path.join(os.path.relpath(root_path, orig_path), '.build', target, tchain)
+            build = os.path.join(os.path.relpath(root_path, orig_path), '.build/tests', target, tchain)
         
         popen(['python', os.path.join(tools_dir, 'test.py')]
             + ['-t', tchain, '-m', target]
