@@ -1233,7 +1233,7 @@ def status(ignore=False):
     dict(name='--build', help="Build directory. Default: .build/"),
     dict(name='--library', dest="compile_library", action="store_true", help="Compile the current %s as a static library." % cwd_type),
     dict(name='--tests', dest="compile_tests", action="store_true", help="Compile tests in TESTS directory."),
-    dict(name='--test_spec', dest="test_spec", help="Destination path for a test spec file that can be used by the Greentea automated test tool"),
+    dict(name='--test_spec', dest="test_spec", help="Destination path for a test spec file that can be used by the Greentea automated test tool. (Default is 'test_spec.json')"),
     help='Compile program using the native mbed OS build system.')
 def compile(toolchain=None, mcu=None, source=False, build=False, compile_library=False, compile_tests=False, test_spec="test_spec.json"):
     args = remainder
