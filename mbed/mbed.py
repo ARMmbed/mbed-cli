@@ -848,7 +848,7 @@ class Program(object):
             err = (
                 "Could not find mbed program in current path. Assuming current dir.\n"
                 "You can fix this by calling \"mbed new .\" in the root dir of your program")
-            return warning(err) if print_warning else error(err)
+            return warning(err) if print_warning else error(err, 1)
 
     # Sets config value
     def set_cfg(self, var, val):
@@ -934,7 +934,7 @@ class Program(object):
                 "mbed OS and tools in this program require Python modules that are not installed.\n"
                 "This might prevent you from compiling your code or exporting to IDEs and other toolchains.\n"
                 "The missing Python modules are: %s\n"
-                "You can install all missing modules by opening a command prompt in \"%s\" and running \"pip install %s\"" % (', '.join(missing), mbed_os_path, fname))
+                "You can install all missing modules by opening a command prompt in \"%s\" and running \"pip install -r %s\"" % (', '.join(missing), mbed_os_path, fname))
 
 
 def formaturl(url, format="default"):
