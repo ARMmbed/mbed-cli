@@ -506,7 +506,7 @@ class Git(object):
         return Git.getbranch() == "HEAD"
 
     # Finds default remote
-    def getremote(rtype='fetch'):
+    def getremote():
         remote = None
         remotes = Git.getremotes('push')
         for r in remotes:
@@ -825,7 +825,7 @@ class Program(object):
     is_cwd = False
     is_repo = False
 
-    def __init__(self, path=None, warnings=False):
+    def __init__(self, path=None, print_warning=False):
         path = os.path.abspath(path or os.getcwd())
 
         self.path = os.getcwd()
@@ -843,11 +843,12 @@ class Program(object):
 
         self.name = os.path.basename(self.path)
 
-        if warnings:
-            if self.is_cwd:
-                warning(
-                    "Could not mbed program in current path. Assuming current dir.\n"
-                    "You can fix this by calling \"mbed new .\" in the root dir of your program")
+        # is_cwd flag indicates that current dir is assumed to be root, not root repo
+        if self.is_cwd:
+            err = (
+                "Could not find mbed program in current path. Assuming current dir.\n"
+                "You can fix this by calling \"mbed new .\" in the root dir of your program")
+            return warning(err) if print_warning else error(err)
 
     # Sets config value
     def set_cfg(self, var, val):
@@ -1381,7 +1382,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
-    program = Program(os.getcwd(), True)
+    program = Program(os.getcwd(), False)
     # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
     orig_path = os.getcwd()
 
@@ -1410,6 +1411,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
 
     if not source or len(source) == 0:
         source = [os.path.relpath(root_path, orig_path)]
+
     if compile_tests:
         # Compile tests
         if not build:
@@ -1459,7 +1461,7 @@ def test(tlist=False):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
-    program = Program(os.getcwd(), True)
+    program = Program(os.getcwd(), False)
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
         if not program.get_tools_dir():
@@ -1485,7 +1487,7 @@ def export(ide=None, mcu=None):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
-    program = Program(os.getcwd(), True)
+    program = Program(os.getcwd(), False)
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
         if not program.get_tools_dir():
@@ -1515,7 +1517,7 @@ def export(ide=None, mcu=None):
     help='Set default target for the current program.')
 def target_(name=None):
     # Find the root of the program
-    program = Program(os.getcwd(), True)
+    program = Program(os.getcwd(), False)
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
         if name is None:
@@ -1530,7 +1532,7 @@ def target_(name=None):
     help='Sets default toolchain for the current program.')
 def toolchain_(name=None):
     # Find the root of the program
-    program = Program(os.getcwd(), True)
+    program = Program(os.getcwd(), False)
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
         if name is None:
