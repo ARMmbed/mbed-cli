@@ -1410,12 +1410,12 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
         env['PYTHONPATH'] = os.path.abspath(program.path)
 
     if not source or len(source) == 0:
-        source = [os.path.relpath(root_path, orig_path)]
+        source = [os.path.relpath(program.path, orig_path)]
 
     if compile_tests:
         # Compile tests
         if not build:
-            build = os.path.join(os.path.relpath(root_path, orig_path), '.build/tests', target, tchain)
+            build = os.path.join(os.path.relpath(program.path, orig_path), '.build/tests', target, tchain)
         
         popen(['python', os.path.join(tools_dir, 'test.py')]
             + ['-t', tchain, '-m', target]
