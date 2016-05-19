@@ -443,6 +443,10 @@ class Git(object):
     def commit():
         popen([git_cmd, 'commit', '-a'] + (['-v'] if verbose else ['-q']))
 
+    def merge(repo, dest):
+        log("Merging \"%s\" with \"%s\" from \"%s\"" % (repo.name, dest, repo.url))
+        popen([git_cmd, 'merge', dest] + (['-v'] if verbose else ['-q']))
+
     def publish(repo, all=None):
         if all:
             popen([git_cmd, 'push', '--all'] + (['-v'] if verbose else ['-q']))
@@ -475,8 +479,9 @@ class Git(object):
         if Git.isdetached(): # try to find associated refs to avoid detached state
             refs = Git.getrefs(hash)
             for ref in refs: # re-associate with a local or remote branch (hash is the same)
-                log("Hash \"%s\" match a branch reference. Re-associating with branch (it's the same hash)" % hash)
-                popen([git_cmd, 'checkout', re.sub(r'^(.*?)\/(.*?)$', r'\2', ref)] + ([] if verbose else ['-q']))
+                branch = re.sub(r'^(.*?)\/(.*?)$', r'\2', ref)
+                log("Hash \"%s\" matches a branch \"%s\"reference. Re-associating with branch" % (hash, branch))
+                popen([git_cmd, 'checkout', branch] + ([] if verbose else ['-q']))
                 break
 
     def update(repo, hash=None, clean=False):
@@ -490,8 +495,7 @@ class Git(object):
             remote = Git.getremote()
             branch = Git.getbranch()
             if remote and branch:
-                log("Merging \"%s\" with remote branch %s/%s from \"%s\"" % (repo.name, remote, branch, repo.url))
-                popen([git_cmd, 'merge', "%s/%s" % (remote, branch)] + (['-v'] if verbose else ['-q']))
+                Git.merge(repo, '%s/%s' % (remote, branch))
             else:
                 err = "Unable to update \"%s\" in \"%s\".\n" % (repo.name, repo.path)
                 if not remote:
