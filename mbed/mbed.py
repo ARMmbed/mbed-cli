@@ -1118,8 +1118,8 @@ class Program(object):
         mbed_os_path = self.get_os_dir()
         if mbed_os_path and os.path.isdir(os.path.join(mbed_os_path, 'tools')):
             return os.path.join(mbed_os_path, 'tools')
-        elif os.path.isdir(os.path.join(self.path, 'mbed', 'tools')):
-            return os.path.join(self.path, 'mbed', 'tools')
+        elif os.path.isdir(os.path.join(self.path, '.temp', 'tools')):
+            return os.path.join(self.path, '.temp', 'tools')
         else:
             return None
 
@@ -1128,10 +1128,10 @@ class Program(object):
         mbed_tools_path = self.get_tools_dir()
 
         if not mbed_tools_path:
-            if os.path.isdir(os.path.join(self.path, 'mbed')) and Repo.isrepo(os.path.join(self.path, 'mbed')):
-                print 'ole'
-                self.get_tools(os.path.join(self.path, 'mbed'))
-                mbed_tools_path = self.get_tools_dir()
+            if not os.path.exists(os.path.join(self.path, '.temp')):
+                os.mkdir(os.path.join(self.path, '.temp'))
+            self.get_tools(os.path.join(self.path, '.temp'))
+            mbed_tools_path = self.get_tools_dir()
 
         if not mbed_tools_path:
             warning("Cannot find the mbed tools directory in \"%s\"" % self.path)
@@ -1168,7 +1168,7 @@ class Program(object):
             tools_dir = 'tools'
             if not os.path.exists(tools_dir):
                 try:
-                    action("Adding mbed SDK tools in \"%s\"" % os.path.join(path, tools_dir))
+                    action("Couldn't find build tools in your program. Downloading the mbed SDK tools...")
                     Hg.clone(mbed_sdk_tools_url, tools_dir)
                 except:
                     if os.path.exists(tools_dir):
