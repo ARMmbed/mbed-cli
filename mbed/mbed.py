@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# pylint: disable=too-many-arguments, too-many-locals, too-many-branches, too-many-lines, line-too-long, too-many-nested-blocks, too-many-public-methods
+# pylint: disable=too-many-arguments, too-many-locals, too-many-branches, too-many-lines, line-too-long, too-many-nested-blocks, too-many-public-methods, too-many-instance-attributes
 # pylint: disable=invalid-name, missing-docstring
 
 import argparse
@@ -12,6 +12,8 @@ import shutil
 import stat
 import errno
 from itertools import chain, izip, repeat
+import urllib
+import zipfile
 
 
 # Default paths to Mercurial and Git
@@ -83,9 +85,13 @@ regex_hg_url = r'^(file|ssh|https?)://([^/:]+)/([^/]+)/?([^/]+?)?$'
 
 # mbed url is subset of hg. mbed doesn't support ssh transport
 regex_mbed_url = r'^(https?)://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+)/?$'
+regex_build_url = r'^(https?://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+))/builds/?([\w\-]{1,32})?/?$'
 
 # default mbed OS url
 mbed_os_url = 'https://github.com/ARMmbed/mbed-os'
+
+# mbed SDK tools needed for programs based on mbed SDK library
+mbed_sdk_tools_url = 'https://mbed.org/users/mbed_official/code/mbed-sdk-tools'
 
 # verbose logging
 verbose = False
@@ -209,6 +215,150 @@ def scm(name):
     return scm
 
 # pylint: disable=no-self-argument, no-method-argument, no-member, no-self-use
+@scm('bld')
+@staticclass
+class Bld(object):
+    name = 'bld'
+
+    def isurl(url):
+        m_url = re.match(regex_url_ref, url.strip().replace('\\', '/'))
+        if m_url:
+            return re.match(regex_build_url, m_url.group(1))
+        else:
+            return False
+
+    def init(path, url):
+        if not os.path.exists(path):
+            os.mkdir(path)
+        with cd(path):
+            if not os.path.exists('.'+Bld.name):
+                os.mkdir('.'+Bld.name)
+
+            fl = os.path.join('.'+Bld.name, 'bldrc')
+            try:
+                with open(fl, 'w') as f:
+                    f.write(url)
+            except IOError:
+                error("Unable to write bldrc file in \"%s\"" % fl, 1)
+
+    def clone(url, path=None, hash=None, depth=None, protocol=None):
+        # Deploys mbed SDK library build into program
+        m = Bld.isurl(url)
+        if not m:
+            return False
+
+        arch_url = m.group(1) + '/archive/' + hash + '.zip'
+        arch_dir = m.group(7) + '-' + hash
+
+        try:
+            Bld.init(path, url+'/'+hash)
+
+            with cd(path):
+                if not os.path.exists(arch_dir):
+                    action("Downloading mbed library build \"%s\" (might take a minute)" % hash)
+                    Bld.dlunzip(arch_url, hash)
+
+        except Exception as e:
+            #with cd(path):
+            #    if os.path.exists(arch_dir):
+            #        rmtree_readonly(arch_dir)
+            print e[0]
+            error(e[1], e[0])
+
+    def dlunzip(url, hash):
+        tmp_file = '.temp-' + hash + '.zip'
+        arch_dir = 'mbed-' + hash
+        try:
+            if not os.path.exists(tmp_file):
+                urllib.urlretrieve(url, tmp_file)
+        except Exception as e:
+            if os.path.isfile(tmp_file):
+                os.remove(tmp_file)
+            raise Exception(128, "Download failed!\nPlease try again later.")
+
+        with zipfile.ZipFile(tmp_file) as zf:
+            try:
+                action("Unpacking mbed library build \"%s\" in \"%s\"" % (hash, os.getcwd()))
+                zf.extractall()
+            except:
+                raise Exception("An error occurred while unpacking mbed library ZIP \"%s\" in \"%s\"" % (tmp_file, os.getcwd()))
+
+
+    def add(file):
+        return True
+
+    def remove(file):
+        if os.path.isfile(file):
+            os.remove(file)
+        return True
+
+    def commit(file):
+        error("mbed library builds do not support committing")
+
+    def push(repo, all=None):
+        error("mbed library builds do not support pushing")
+
+    def pull(repo):
+        error("mbed library builds do not support pushing")
+
+    def update(repo, hash=None, clean=False):
+        if not hash:
+            m = Bld.isurl(repo.url)
+            hash = Hg.remoteid(m.group(1))
+
+        if not hash:
+            error("Unable to fetch late mbed library revision")
+
+        if hash != repo.hash:
+            log("Cleaning up build folder")
+            for fl in os.listdir(repo.path):
+                if not fl.startswith('.'):
+                    if os.path.isfile(os.path.join(repo.path, fl)):
+                        os.remove(os.path.join(repo.path, fl))
+                    else:
+                        shutil.rmtree(os.path.join(repo.path, fl))
+            return Bld.clone(repo.url, repo.path, hash)
+
+    def status():
+        return False
+
+    def dirty():
+        return False
+
+    def untracked():
+        return ""
+
+    def outgoing():
+        return False
+
+    def isdetached():
+        return False
+
+    def geturl(repo):
+        with open(os.path.join(repo.path, '.'+Bld.name, 'bldrc')) as f:
+            url = f.read().strip()
+        m = Bld.isurl(url)
+        return m.group(1)+'/builds'
+
+    def gethash(repo):
+        with open(os.path.join(repo.path, '.'+Bld.name, 'bldrc')) as f:
+            url = f.read().strip()
+        m = Bld.isurl(url)
+        return m.group(8)
+
+    def getbranch():
+        return "default"
+
+    def ignores(repo):
+        return True
+
+    def ignore(repo, file):
+        return True
+
+    def unignore(repo, file):
+        return True
+
+# pylint: disable=no-self-argument, no-method-argument, no-member, no-self-use
 @scm('hg')
 @staticclass
 class Hg(object):
@@ -217,7 +367,8 @@ class Hg(object):
     def isurl(url):
         m_url = re.match(regex_url_ref, url.strip().replace('\\', '/'))
         if m_url:
-            return re.match(regex_hg_url, m_url.group(1)) or re.match(regex_mbed_url, m_url.group(1))
+            return ((re.match(regex_hg_url, m_url.group(1)) or re.match(regex_mbed_url, m_url.group(1)))
+                and not re.match(regex_build_url, m_url.group(1)))
         else:
             return False
 
@@ -323,6 +474,9 @@ class Hg(object):
     def getbranch():
         return pquery([hg_cmd, 'branch']).strip() or ""
 
+    def remoteid(url):
+        return pquery([hg_cmd, 'id', '--id', url]).strip() or ""
+
     def ignores(repo):
         hook = 'ignore.local = .hg/hgignore'
         hgrc = os.path.join(repo.path, '.hg', 'hgrc')
@@ -406,7 +560,9 @@ class Git(object):
     def isurl(url):
         m_url = re.match(regex_url_ref, url.strip().replace('\\', '/'))
         if m_url:
-            return re.match(regex_git_url, m_url.group(1)) and not re.match(regex_mbed_url, m_url.group(1))
+            return (re.match(regex_git_url, m_url.group(1))
+                and not re.match(regex_mbed_url, m_url.group(1))
+                and not re.match(regex_build_url, m_url.group(1)))
         else:
             return False
 
@@ -551,7 +707,7 @@ class Git(object):
 
     # Finds all associated remotes for the specified remote type
     def getremotes(rtype='fetch'):
-        result = [] 
+        result = []
         remotes = pquery([git_cmd, 'remote', '-v']).strip().splitlines()
         for remote in remotes:
             remote = re.split(r'\s', remote)
@@ -635,6 +791,7 @@ class Git(object):
 # Repository object
 class Repo(object):
     is_local = False
+    is_build = False
     name = None
     path = None
     url = None
@@ -646,25 +803,31 @@ class Repo(object):
     def fromurl(cls, url, path=None):
         repo = cls()
         m_local = re.match(regex_local_ref, url.strip().replace('\\', '/'))
-        m_url = re.match(regex_url_ref, url.strip().replace('\\', '/'))
+        m_repo_url = re.match(regex_url_ref, url.strip().replace('\\', '/'))
+        m_bld_url = re.match(regex_build_url, url.strip().replace('\\', '/'))
         if m_local:
             repo.name = os.path.basename(path or m_local.group(1))
             repo.path = os.path.abspath(path or os.path.join(os.getcwd(), m_local.group(1)))
             repo.url = m_local.group(1)
             repo.hash = m_local.group(2)
             repo.is_local = True
-        elif m_url:
-            repo.name = os.path.basename(path or m_url.group(2))
+        elif m_bld_url:
+            repo.name = os.path.basename(path or m_bld_url.group(7))
             repo.path = os.path.abspath(path or os.path.join(os.getcwd(), repo.name))
-            repo.url = formaturl(m_url.group(1))
-            repo.hash = m_url.group(3)
+            repo.url = m_bld_url.group(1)+'/builds'
+            repo.hash = m_bld_url.group(8)
+            repo.is_build = True
+        elif m_repo_url:
+            repo.name = os.path.basename(path or m_repo_url.group(2))
+            repo.path = os.path.abspath(path or os.path.join(os.getcwd(), repo.name))
+            repo.url = formaturl(m_repo_url.group(1))
+            repo.hash = m_repo_url.group(3)
         else:
             error('Invalid repository (%s)' % url.strip(), -1)
         return repo
 
     @classmethod
     def fromlib(cls, lib=None):
-        assert lib.endswith('.lib')
         with open(lib) as f:
             ref = f.read(200)
             if ref.startswith('!<arch>'):
@@ -746,13 +909,14 @@ class Repo(object):
 
     @property
     def lib(self):
-        return self.path + '.lib'
+        return self.path + '.' + ('bld' if self.is_build else 'lib')
 
     @property
     def fullurl(self):
         if self.url:
             return (self.url.rstrip('/') + '/' +
-                    ('#'+self.hash if self.hash else ''))
+                    (('' if self.is_build else '#') +
+                        self.hash if self.hash else ''))
 
     def sync(self):
         self.url = None
@@ -760,6 +924,8 @@ class Repo(object):
         if os.path.isdir(self.path):
             try:
                 self.scm = self.getscm()
+                if self.scm.name == 'bld':
+                    self.is_build = True
             except ProcessException:
                 pass
 
@@ -803,7 +969,7 @@ class Repo(object):
             files[:] = [f for f in files if not f.startswith('.')]
 
             for file in files:
-                if file.endswith('.lib'):
+                if file.endswith('.lib') or file.endswith('.bld'):
                     yield Repo.fromlib(os.path.join(root, file))
                     if file[:-4] in dirs:
                         dirs.remove(file[:-4])
@@ -947,30 +1113,37 @@ class Program(object):
         else:
             return None
 
-    # Gets mbed OS tools dir (unified)
+    # Gets mbed tools dir (unified)
     def get_tools_dir(self):
         mbed_os_path = self.get_os_dir()
         if mbed_os_path and os.path.isdir(os.path.join(mbed_os_path, 'tools')):
             return os.path.join(mbed_os_path, 'tools')
+        elif os.path.isdir(os.path.join(self.path, 'mbed', 'tools')):
+            return os.path.join(self.path, 'mbed', 'tools')
         else:
             return None
 
     # Routines after cloning mbed-os
-    def post_clone(self):
-        mbed_os_path = self.get_os_dir()
-        if not mbed_os_path:
-            warning("Cannot find the mbed OS directory in \"%s\"" % self.path)
-            return False
-
+    def post_action(self):
         mbed_tools_path = self.get_tools_dir()
+
         if not mbed_tools_path:
-            warning("Cannot find the mbed OS tools directory in \"%s\"" % mbed_os_path)
+            if os.path.isdir(os.path.join(self.path, 'mbed')) and Repo.isrepo(os.path.join(self.path, 'mbed')):
+                print 'ole'
+                self.get_tools(os.path.join(self.path, 'mbed'))
+                mbed_tools_path = self.get_tools_dir()
+
+        if not mbed_tools_path:
+            warning("Cannot find the mbed tools directory in \"%s\"" % self.path)
             return False
 
         if (not os.path.isfile(os.path.join(self.path, 'mbed_settings.py')) and
                 os.path.isfile(os.path.join(mbed_tools_path, 'default_settings.py'))):
             shutil.copy(os.path.join(mbed_tools_path, 'default_settings.py'), os.path.join(self.path, 'mbed_settings.py'))
 
+        mbed_os_path = self.get_os_dir()
+        if not mbed_os_path:
+            return False
 
         missing = []
         fname = 'requirements.txt'
@@ -989,6 +1162,18 @@ class Program(object):
                 "This might prevent you from compiling your code or exporting to IDEs and other toolchains.\n"
                 "The missing Python modules are: %s\n"
                 "You can install all missing modules by opening a command prompt in \"%s\" and running \"pip install -r %s\"" % (', '.join(missing), mbed_os_path, fname))
+
+    def get_tools(self, path):
+        with cd(path):
+            tools_dir = 'tools'
+            if not os.path.exists(tools_dir):
+                try:
+                    action("Adding mbed SDK tools in \"%s\"" % os.path.join(path, tools_dir))
+                    Hg.clone(mbed_sdk_tools_url, tools_dir)
+                except:
+                    if os.path.exists(tools_dir):
+                        rmtree_readonly(tools_dir)
+                    raise Exception(128, "An error occurred while cloning the mbed SDK tools from \"%s\"" % mbed_sdk_tools_url)
 
 
 def formaturl(url, format="default"):
@@ -1109,7 +1294,7 @@ def new(name, scm='git', depth=None, protocol=None):
             os.chdir(d_path)
 
     program = Program(d_path)
-    program.post_clone()
+    program.post_action()
 
 
 # Import command
@@ -1156,7 +1341,7 @@ def import_(url, path=None, depth=None, protocol=None, top=True):
 
     if top:
         program = Program(repo.path)
-        program.post_clone()
+        program.post_action()
 
 
 # Deploy command
@@ -1303,7 +1488,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
     # Reinitialize repo.libs() to reflect the library files after update
     repo.sync()
 
-    # Recheck libraries as their URLs might have changed
+    # Recheck libraries as their urls might have changed
     for lib in repo.libs:
         if os.path.isdir(lib.path) and Repo.isrepo(lib.path):
             lib_repo = Repo.fromrepo(lib.path)
@@ -1329,6 +1514,10 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
         else:
             with cd(lib.path):
                 update(lib.hash, clean, force, ignore, top=False)
+
+    if top:
+        program = Program(repo.path)
+        program.post_action()
 
 
 # Synch command
@@ -1444,10 +1633,9 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
     orig_path = os.getcwd()
 
     with cd(program.path):
-        mbed_os_path = program.get_os_dir()
         mbed_tools_path = program.get_tools_dir()
-        if not mbed_os_path or not mbed_tools_path:
-            error('The mbed OS codebase or tools were not found in "%s".' % program.path, -1)
+        if not mbed_tools_path:
+            error('The mbed tools were not found in "%s".' % program.path, -1)
         tools_dir = os.path.abspath(mbed_tools_path)
 
         target = mcu if mcu else program.get_cfg('TARGET')
@@ -1473,7 +1661,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
         # Compile tests
         if not build:
             build = os.path.join(os.path.relpath(program.path, orig_path), '.build/tests', target, tchain)
-        
+
         popen(['python', os.path.join(tools_dir, 'test.py')]
             + ['-t', tchain, '-m', target]
             + list(chain.from_iterable(izip(repeat('--source'), source)))
