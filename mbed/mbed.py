@@ -255,31 +255,31 @@ class Bld(object):
                 if not os.path.exists(arch_dir):
                     action("Downloading mbed library build \"%s\" (might take a minute)" % hash)
                     Bld.dlunzip(arch_url, hash)
-
         except Exception as e:
-            #with cd(path):
-            #    if os.path.exists(arch_dir):
-            #        rmtree_readonly(arch_dir)
-            print e[0]
+            with cd(path):
+                if os.path.exists(arch_dir):
+                    rmtree_readonly(arch_dir)
             error(e[1], e[0])
 
     def dlunzip(url, hash):
-        tmp_file = '.temp-' + hash + '.zip'
+        tmp_file = '.rev-' + hash + '.zip'
         arch_dir = 'mbed-' + hash
         try:
             if not os.path.exists(tmp_file):
                 urllib.urlretrieve(url, tmp_file)
-        except Exception as e:
+        except:
             if os.path.isfile(tmp_file):
                 os.remove(tmp_file)
             raise Exception(128, "Download failed!\nPlease try again later.")
 
-        with zipfile.ZipFile(tmp_file) as zf:
-            try:
+        try:
+            with zipfile.ZipFile(tmp_file) as zf:
                 action("Unpacking mbed library build \"%s\" in \"%s\"" % (hash, os.getcwd()))
                 zf.extractall()
-            except:
-                raise Exception("An error occurred while unpacking mbed library ZIP \"%s\" in \"%s\"" % (tmp_file, os.getcwd()))
+        except:
+            if os.path.isfile(tmp_file):
+                os.remove(tmp_file)
+            raise Exception(128, "An error occurred while unpacking mbed library archive \"%s\" in \"%s\"" % (tmp_file, os.getcwd()))
 
 
     def add(file):
