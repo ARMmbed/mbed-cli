@@ -85,7 +85,7 @@ regex_hg_url = r'^(file|ssh|https?)://([^/:]+)/([^/]+)/?([^/]+?)?$'
 
 # mbed url is subset of hg. mbed doesn't support ssh transport
 regex_mbed_url = r'^(https?)://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+)/?$'
-regex_build_url = r'^(https?://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+))/builds/?([\w\-]{1,32})?/?$'
+regex_build_url = r'^(https?://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+))/builds/?([\w\-]{12,40})?/?$'
 
 # default mbed OS url
 mbed_os_url = 'https://github.com/ARMmbed/mbed-os'
@@ -242,7 +242,6 @@ class Bld(object):
                 error("Unable to write bldrc file in \"%s\"" % fl, 1)
 
     def clone(url, path=None, hash=None, depth=None, protocol=None):
-        # Deploys mbed SDK library build into program
         m = Bld.isurl(url)
         if not m:
             return False
@@ -252,7 +251,6 @@ class Bld(object):
 
         try:
             Bld.init(path, url+'/'+hash)
-
             with cd(path):
                 if not os.path.exists(arch_dir):
                     action("Downloading mbed library build \"%s\" (might take a minute)" % hash)
@@ -302,9 +300,8 @@ class Bld(object):
         error("mbed library builds do not support pushing")
 
     def update(repo, hash=None, clean=False):
-        if not hash:
-            m = Bld.isurl(repo.url)
-            hash = Hg.remoteid(m.group(1))
+        m = Bld.isurl(repo.url)
+        hash = Hg.remoteid(m.group(1), hash)
 
         if not hash:
             error("Unable to fetch late mbed library revision")
@@ -474,8 +471,8 @@ class Hg(object):
     def getbranch():
         return pquery([hg_cmd, 'branch']).strip() or ""
 
-    def remoteid(url):
-        return pquery([hg_cmd, 'id', '--id', url]).strip() or ""
+    def remoteid(url, hash=None):
+        return pquery([hg_cmd, 'id', '--id', url] + (['-r', hash] if hash else [])).strip() or ""
 
     def ignores(repo):
         hook = 'ignore.local = .hg/hgignore'
@@ -902,7 +899,7 @@ class Repo(object):
     def hashtype(cls, hash, ret_hash=False):
         if hash is None or len(hash) == 0:
             return 'latest' + (' revision in the current branch' if ret_hash else '')
-        if re.match(r'^([a-zA-Z0-9]{12,40})$', hash):
+        elif re.match(r'^([a-zA-Z0-9]{12,40})$', hash) or re.match(r'^([0-9]+)$', hash):
             return 'rev' + (' #'+hash if ret_hash else '')
         else:
             return 'branch' + (' '+hash if ret_hash else '')
@@ -1158,7 +1155,7 @@ class Program(object):
 
         if len(missing):
             warning(
-                "mbed OS and tools in this program require Python modules that are not installed.\n"
+                "The mbed build tools in this program require Python modules that are not installed.\n"
                 "This might prevent you from compiling your code or exporting to IDEs and other toolchains.\n"
                 "The missing Python modules are: %s\n"
                 "You can install all missing modules by opening a command prompt in \"%s\" and running \"pip install -r %s\"" % (', '.join(missing), mbed_os_path, fname))
