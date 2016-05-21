@@ -253,7 +253,6 @@ class Bld(object):
             Bld.init(path, url+'/'+hash)
             with cd(path):
                 if not os.path.exists(arch_dir):
-                    action("Downloading mbed library build \"%s\" (might take a minute)" % hash)
                     Bld.dlunzip(arch_url, hash)
         except Exception as e:
             with cd(path):
@@ -266,6 +265,7 @@ class Bld(object):
         arch_dir = 'mbed-' + hash
         try:
             if not os.path.exists(tmp_file):
+                action("Downloading mbed library build \"%s\" (might take a minute)" % hash)
                 urllib.urlretrieve(url, tmp_file)
         except:
             if os.path.isfile(tmp_file):
@@ -1464,6 +1464,9 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
             repo.hashtype(rev, True)))
         repo.scm.update(repo, rev, clean)
         repo.rm_untracked()
+        if top and cwd_type == 'library':
+            repo.sync()
+            repo.write()
 
     # Compare library references (.lib) before and after update, and remove libraries that do not have references in the current revision
     for lib in repo.libs:
