@@ -362,6 +362,7 @@ class Bld(object):
 @staticclass
 class Hg(object):
     name = 'hg'
+    ignore_file = os.path.join('.hg', 'hgignore')
 
     def isurl(url):
         m_url = re.match(regex_url_ref, url.strip().replace('\\', '/'))
@@ -476,7 +477,7 @@ class Hg(object):
     def remoteid(url, rev=None):
         return pquery([hg_cmd, 'id', '--id', url] + (['-r', rev] if rev else [])).strip() or ""
 
-    def ignores():
+    def hgrc():
         hook = 'ignore.local = .hg/hgignore'
         hgrc = os.path.join('.hg', 'hgrc')
         try:
@@ -493,68 +494,51 @@ class Hg(object):
             except IOError:
                 error("Unable to write hgrc file in \"%s\"" % hgrc, 1)
 
-        exclude = os.path.join('.hg', 'hgignore')
+    def ignores():
+        Hg.hgrc()
         try:
-            with open(exclude, 'w') as f:
+            with open(Hg.ignore_file, 'w') as f:
                 f.write("syntax: glob\n"+'\n'.join(ignores)+'\n')
         except IOError:
-            error("Unable to write ignore file in \"%s\"" % exclude, 1)
+            error("Unable to write ignore file in \"%s\"" % os.path.join(os.getcwd, Hg.ignore_file), 1)
 
     def ignore(dest):
-        hook = 'ignore.local = .hg/hgignore'
-        hgrc = os.path.join('.hg', 'hgrc')
+        Hg.hgrc()
         try:
-            with open(hgrc) as f:
-                exists = hook in f.read().splitlines()
-        except IOError:
-            exists = False
-
-        if not exists:
-            try:
-                with open(hgrc, 'a') as f:
-                    f.write('[ui]\n')
-                    f.write(hook + '\n')
-            except IOError:
-                error("Unable to write hgrc file in \"%s\"" % hgrc, 1)
-
-        exclude = os.path.join('.hg', 'hgignore')
-        try:
-            with open(exclude) as f:
+            with open(Hg.ignore_file) as f:
                 exists = dest in f.read().splitlines()
         except IOError:
             exists = False
 
         if not exists:
             try:
-                with open(exclude, 'a') as f:
+                with open(Hg.ignore_file, 'a') as f:
                     f.write(dest + '\n')
             except IOError:
-                error("Unable to write ignore file in \"%s\"" % exclude, 1)
+                error("Unable to write ignore file in \"%s\"" % os.path.join(os.getcwd, Hg.ignore_file), 1)
 
     def unignore(dest):
-        exclude = os.path.join('.hg', 'hgignore')
+        Hg.ignore_file = os.path.join('.hg', 'hgignore')
         try:
-            with open(exclude) as f:
+            with open(Hg.ignore_file) as f:
                 lines = f.read().splitlines()
-        except:
+        except IOError:
             lines = []
 
-        if dest not in lines:
-            return
-
-        lines.remove(dest)
-
-        try:
-            with open(exclude, 'w') as f:
-                f.write('\n'.join(lines) + '\n')
-        except IOError:
-            error("Unable to write ignore file in \"%s\"" % exclude, 1)
+        if dest in lines:
+            lines.remove(dest)
+            try:
+                with open(Hg.ignore_file, 'w') as f:
+                    f.write('\n'.join(lines) + '\n')
+            except IOError:
+                error("Unable to write ignore file in \"%s\"" % os.path.join(os.getcwd, Hg.ignore_file), 1)
 
 # pylint: disable=no-self-argument, no-method-argument, no-member, no-self-use, unused-argument
 @scm('git')
 @staticclass
 class Git(object):
     name = 'git'
+    ignore_file = os.path.join('.git', 'info', 'exclude')
 
     def isurl(url):
         m_url = re.match(regex_url_ref, url.strip().replace('\\', '/'))
@@ -643,7 +627,7 @@ class Git(object):
         if clean:
             Git.discard(repo)
         if not repo.is_local:
-            Git.fetch(repo) 
+            Git.fetch(repo)
         if rev:
             Git.checkout(repo, rev, clean)
         else:
@@ -755,36 +739,39 @@ class Git(object):
         return branches
 
     def ignores():
-        with open(os.path.join('.git', 'info', 'exclude'), 'w') as f:
-            f.write('\n'.join(ignores)+'\n')
+        try:
+            with open(Git.ignore_file, 'w') as f:
+                f.write('\n'.join(ignores)+'\n')
+        except IOError:
+            error("Unable to write ignore file in \"%s\"" % os.path.join(os.getcwd, Git.ignore_file), 1)
 
     def ignore(dest):
-        exclude = os.path.join('.git', 'info', 'exclude')
         try:
-            with open(exclude) as f:
+            with open(Git.ignore_file) as f:
                 exists = dest in f.read().splitlines()
         except IOError:
             exists = False
 
         if not exists:
-            with open(exclude, 'a') as f:
-                f.write(dest.replace("\\", "/") + '\n')
-
+            try:
+                with open(Git.ignore_file, 'a') as f:
+                    f.write(dest.replace("\\", "/") + '\n')
+            except IOError:
+                error("Unable to write ignore file in \"%s\"" % os.path.join(os.getcwd, Git.ignore_file), 1)
     def unignore(dest):
-        exclude = os.path.join('.git', 'info', 'exclude')
         try:
-            with open(exclude) as f:
+            with open(Git.ignore_file) as f:
                 lines = f.read().splitlines()
-        except:
+        except IOError:
             lines = []
 
-        if dest not in lines:
-            return
-        lines.remove(dest)
-
-        with open(exclude, 'w') as f:
-            f.write('\n'.join(lines) + '\n')
-
+        if dest in lines:
+            lines.remove(dest)
+            try:
+                with open(Git.ignore_file, 'w') as f:
+                    f.write('\n'.join(lines) + '\n')
+            except IOError:
+                error("Unable to write ignore file in \"%s\"" % os.path.join(os.getcwd, Git.ignore_file), 1)
 
 # Repository object
 class Repo(object):
