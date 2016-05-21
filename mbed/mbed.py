@@ -214,7 +214,7 @@ def scm(name):
         return cls
     return scm
 
-# pylint: disable=no-self-argument, no-method-argument, no-member, no-self-use
+# pylint: disable=no-self-argument, no-method-argument, no-member, no-self-use, unused-argument
 @scm('bld')
 @staticclass
 class Bld(object):
@@ -241,31 +241,31 @@ class Bld(object):
             except IOError:
                 error("Unable to write bldrc file in \"%s\"" % fl, 1)
 
-    def clone(url, path=None, hash=None, depth=None, protocol=None):
+    def clone(url, path=None, rev=None, depth=None, protocol=None):
         m = Bld.isurl(url)
         if not m:
             return False
 
-        arch_url = m.group(1) + '/archive/' + hash + '.zip'
-        arch_dir = m.group(7) + '-' + hash
+        arch_url = m.group(1) + '/archive/' + rev + '.zip'
+        arch_dir = m.group(7) + '-' + rev
 
         try:
-            Bld.init(path, url+'/'+hash)
+            Bld.init(path, url+'/'+rev)
             with cd(path):
                 if not os.path.exists(arch_dir):
-                    Bld.dlunzip(arch_url, hash)
+                    Bld.dlunzip(arch_url, rev)
         except Exception as e:
             with cd(path):
                 if os.path.exists(arch_dir):
                     rmtree_readonly(arch_dir)
             error(e[1], e[0])
 
-    def dlunzip(url, hash):
-        tmp_file = '.rev-' + hash + '.zip'
-        arch_dir = 'mbed-' + hash
+    def dlunzip(url, rev):
+        tmp_file = '.rev-' + rev + '.zip'
+        arch_dir = 'mbed-' + rev
         try:
             if not os.path.exists(tmp_file):
-                action("Downloading mbed library build \"%s\" (might take a minute)" % hash)
+                action("Downloading mbed library build \"%s\" (might take a minute)" % rev)
                 urllib.urlretrieve(url, tmp_file)
         except:
             if os.path.isfile(tmp_file):
@@ -274,39 +274,41 @@ class Bld(object):
 
         try:
             with zipfile.ZipFile(tmp_file) as zf:
-                action("Unpacking mbed library build \"%s\" in \"%s\"" % (hash, os.getcwd()))
+                action("Unpacking mbed library build \"%s\" in \"%s\"" % (rev, os.getcwd()))
                 zf.extractall()
         except:
             if os.path.isfile(tmp_file):
                 os.remove(tmp_file)
+            if os.path.isfile(arch_dir):
+                rmtree_readonly(arch_dir)
             raise Exception(128, "An error occurred while unpacking mbed library archive \"%s\" in \"%s\"" % (tmp_file, os.getcwd()))
 
 
-    def add(file):
+    def add(dest):
         return True
 
-    def remove(file):
-        if os.path.isfile(file):
-            os.remove(file)
+    def remove(dest):
+        if os.path.isfile(dest):
+            os.remove(dest)
         return True
 
-    def commit(file):
+    def commit():
         error("mbed library builds do not support committing")
 
-    def push(repo, all=None):
+    def publish(repo, all=None):
         error("mbed library builds do not support pushing")
 
-    def pull(repo):
+    def fetch(repo):
         error("mbed library builds do not support pushing")
 
-    def update(repo, hash=None, clean=False):
+    def update(repo, rev=None, clean=False):
         m = Bld.isurl(repo.url)
-        hash = Hg.remoteid(m.group(1), hash)
+        rev = Hg.remoteid(m.group(1), rev)
 
-        if not hash:
+        if not rev:
             error("Unable to fetch late mbed library revision")
 
-        if hash != repo.hash:
+        if rev != repo.rev:
             log("Cleaning up build folder")
             for fl in os.listdir(repo.path):
                 if not fl.startswith('.'):
@@ -314,7 +316,7 @@ class Bld(object):
                         os.remove(os.path.join(repo.path, fl))
                     else:
                         shutil.rmtree(os.path.join(repo.path, fl))
-            return Bld.clone(repo.url, repo.path, hash)
+            return Bld.clone(repo.url, repo.path, rev)
 
     def status():
         return False
@@ -331,14 +333,14 @@ class Bld(object):
     def isdetached():
         return False
 
-    def geturl(repo):
-        with open(os.path.join(repo.path, '.'+Bld.name, 'bldrc')) as f:
+    def geturl():
+        with open(os.path.join('.bld', 'bldrc')) as f:
             url = f.read().strip()
         m = Bld.isurl(url)
         return m.group(1)+'/builds'
 
-    def gethash(repo):
-        with open(os.path.join(repo.path, '.'+Bld.name, 'bldrc')) as f:
+    def getrev():
+        with open(os.path.join('.bld', 'bldrc')) as f:
             url = f.read().strip()
         m = Bld.isurl(url)
         return m.group(8)
@@ -346,16 +348,16 @@ class Bld(object):
     def getbranch():
         return "default"
 
-    def ignores(repo):
+    def ignores():
         return True
 
-    def ignore(repo, file):
+    def ignore(dest):
         return True
 
-    def unignore(repo, file):
+    def unignore(dest):
         return True
 
-# pylint: disable=no-self-argument, no-method-argument, no-member, no-self-use
+# pylint: disable=no-self-argument, no-method-argument, no-member, no-self-use, unused-argument
 @scm('hg')
 @staticclass
 class Hg(object):
@@ -372,30 +374,30 @@ class Hg(object):
     def init(path=None):
         popen([hg_cmd, 'init'] + ([path] if path else []) + (['-v'] if verbose else ['-q']))
 
-    def clone(url, name=None, hash=None, depth=None, protocol=None):
+    def clone(url, name=None, rev=None, depth=None, protocol=None):
         popen([hg_cmd, 'clone', formaturl(url, protocol), name] + (['-v'] if verbose else ['-q']))
-        if hash:
+        if rev:
             with cd(name):
                 try:
-                    Hg.checkout(None, hash)
+                    Hg.checkout(None, rev)
                 except ProcessException:
-                    error("Unable to update to revision \"%s\"" % hash, 1)
+                    error("Unable to update to revision \"%s\"" % rev, 1)
 
-    def add(file):
-        log("Adding reference \"%s\"" % file)
+    def add(dest):
+        log("Adding reference \"%s\"" % dest)
         try:
-            popen([hg_cmd, 'add', file] + (['-v'] if verbose else ['-q']))
+            popen([hg_cmd, 'add', dest] + (['-v'] if verbose else ['-q']))
         except ProcessException:
             pass
 
-    def remove(file):
-        log("Removing reference \"%s\" " % file)
+    def remove(dest):
+        log("Removing reference \"%s\" " % dest)
         try:
-            popen([hg_cmd, 'rm', '-f', file] + (['-v'] if verbose else ['-q']))
+            popen([hg_cmd, 'rm', '-f', dest] + (['-v'] if verbose else ['-q']))
         except ProcessException:
             pass
         try:
-            os.remove(file)
+            os.remove(dest)
         except OSError:
             pass
 
@@ -409,15 +411,15 @@ class Hg(object):
         log("Pulling remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
         popen([hg_cmd, 'pull'] + (['-v'] if verbose else ['-q']))
 
-    def checkout(repo, hash, clean=False):
+    def checkout(repo, rev, clean=False):
         if repo:
-            log("Checkout \"%s\" to %s" % (repo.name, repo.hashtype(hash, True)))
-        popen([hg_cmd, 'update'] + (['-r', hash] if hash else []) + (['-C'] if clean else []) + (['-v'] if verbose else ['-q']))
+            log("Checkout \"%s\" to %s" % (repo.name, repo.revtype(rev, True)))
+        popen([hg_cmd, 'update'] + (['-r', rev] if rev else []) + (['-C'] if clean else []) + (['-v'] if verbose else ['-q']))
 
-    def update(repo, hash=None, clean=False):
+    def update(repo, rev=None, clean=False):
         if not repo.is_local:
             Hg.fetch(repo)
-        Hg.checkout(repo, hash, clean)
+        Hg.checkout(repo, rev, clean)
 
     def status():
         return pquery([hg_cmd, 'status'] + (['-v'] if verbose else ['-q']))
@@ -441,12 +443,12 @@ class Hg(object):
     def isdetached():
         return False
 
-    def geturl(repo):
+    def geturl():
         tagpaths = '[paths]'
         default_url = ''
         url = ''
-        if os.path.isfile(os.path.join(repo.path, '.hg/hgrc')):
-            with open(os.path.join(repo.path, '.hg/hgrc')) as f:
+        if os.path.isfile(os.path.join('.hg', 'hgrc')):
+            with open(os.path.join('.hg', 'hgrc')) as f:
                 lines = f.read().splitlines()
                 if tagpaths in lines:
                     idx = lines.index(tagpaths)
@@ -461,9 +463,9 @@ class Hg(object):
 
         return formaturl(url or pquery([hg_cmd, 'paths', 'default']).strip())
 
-    def gethash(repo):
-        if os.path.isfile(os.path.join(repo.path, '.hg', 'dirstate')):
-            with open(os.path.join(repo.path, '.hg', 'dirstate'), 'rb') as f:
+    def getrev():
+        if os.path.isfile(os.path.join('.hg', 'dirstate')):
+            with open(os.path.join('.hg', 'dirstate'), 'rb') as f:
                 return ''.join('%02x'%ord(i) for i in f.read(6))
         else:
             return ""
@@ -471,12 +473,12 @@ class Hg(object):
     def getbranch():
         return pquery([hg_cmd, 'branch']).strip() or ""
 
-    def remoteid(url, hash=None):
-        return pquery([hg_cmd, 'id', '--id', url] + (['-r', hash] if hash else [])).strip() or ""
+    def remoteid(url, rev=None):
+        return pquery([hg_cmd, 'id', '--id', url] + (['-r', rev] if rev else [])).strip() or ""
 
-    def ignores(repo):
+    def ignores():
         hook = 'ignore.local = .hg/hgignore'
-        hgrc = os.path.join(repo.path, '.hg', 'hgrc')
+        hgrc = os.path.join('.hg', 'hgrc')
         try:
             with open(hgrc) as f:
                 exists = hook in f.read().splitlines()
@@ -491,16 +493,16 @@ class Hg(object):
             except IOError:
                 error("Unable to write hgrc file in \"%s\"" % hgrc, 1)
 
-        exclude = os.path.join(repo.path, '.hg', 'hgignore')
+        exclude = os.path.join('.hg', 'hgignore')
         try:
             with open(exclude, 'w') as f:
                 f.write("syntax: glob\n"+'\n'.join(ignores)+'\n')
         except IOError:
             error("Unable to write ignore file in \"%s\"" % exclude, 1)
 
-    def ignore(repo, file):
+    def ignore(dest):
         hook = 'ignore.local = .hg/hgignore'
-        hgrc = os.path.join(repo.path, '.hg', 'hgrc')
+        hgrc = os.path.join('.hg', 'hgrc')
         try:
             with open(hgrc) as f:
                 exists = hook in f.read().splitlines()
@@ -515,32 +517,32 @@ class Hg(object):
             except IOError:
                 error("Unable to write hgrc file in \"%s\"" % hgrc, 1)
 
-        exclude = os.path.join(repo.path, '.hg/hgignore')
+        exclude = os.path.join('.hg', 'hgignore')
         try:
             with open(exclude) as f:
-                exists = file in f.read().splitlines()
+                exists = dest in f.read().splitlines()
         except IOError:
             exists = False
 
         if not exists:
             try:
                 with open(exclude, 'a') as f:
-                    f.write(file + '\n')
+                    f.write(dest + '\n')
             except IOError:
                 error("Unable to write ignore file in \"%s\"" % exclude, 1)
 
-    def unignore(repo, file):
-        exclude = os.path.join(repo.path, '.hg', 'hgignore')
+    def unignore(dest):
+        exclude = os.path.join('.hg', 'hgignore')
         try:
             with open(exclude) as f:
                 lines = f.read().splitlines()
         except:
             lines = []
 
-        if file not in lines:
+        if dest not in lines:
             return
 
-        lines.remove(file)
+        lines.remove(dest)
 
         try:
             with open(exclude, 'w') as f:
@@ -548,7 +550,7 @@ class Hg(object):
         except IOError:
             error("Unable to write ignore file in \"%s\"" % exclude, 1)
 
-# pylint: disable=no-self-argument, no-method-argument, no-member, no-self-use
+# pylint: disable=no-self-argument, no-method-argument, no-member, no-self-use, unused-argument
 @scm('git')
 @staticclass
 class Git(object):
@@ -566,30 +568,30 @@ class Git(object):
     def init(path=None):
         popen([git_cmd, 'init'] + ([path] if path else []) + ([] if verbose else ['-q']))
 
-    def clone(url, name=None, hash=None, depth=None, protocol=None):
+    def clone(url, name=None, rev=None, depth=None, protocol=None):
         popen([git_cmd, 'clone', formaturl(url, protocol), name] + (['--depth', depth] if depth else []) + (['-v'] if verbose else ['-q']))
-        if hash:
+        if rev:
             with cd(name):
                 try:
-                    Git.checkout(None, hash)
+                    Git.checkout(None, rev)
                 except ProcessException:
-                    error("Unable to update to revision \"%s\"" % hash, 1)
+                    error("Unable to update to revision \"%s\"" % rev, 1)
 
-    def add(file):
-        log("Adding reference "+file)
+    def add(dest):
+        log("Adding reference "+dest)
         try:
-            popen([git_cmd, 'add', file] + (['-v'] if verbose else []))
+            popen([git_cmd, 'add', dest] + (['-v'] if verbose else []))
         except ProcessException:
             pass
 
-    def remove(file):
-        log("Removing reference "+file)
+    def remove(dest):
+        log("Removing reference "+dest)
         try:
-            popen([git_cmd, 'rm', '-f', file] + ([] if verbose else ['-q']))
+            popen([git_cmd, 'rm', '-f', dest] + ([] if verbose else ['-q']))
         except ProcessException:
             pass
         try:
-            os.remove(file)
+            os.remove(dest)
         except OSError:
             pass
 
@@ -597,7 +599,7 @@ class Git(object):
         popen([git_cmd, 'commit', '-a'] + (['-v'] if verbose else ['-q']))
 
     def merge(repo, dest):
-        log("Merging \"%s\" with \"%s\" from \"%s\"" % (repo.name, dest, repo.url))
+        log("Merging \"%s\" with \"%s\"" % (repo.name, dest))
         popen([git_cmd, 'merge', dest] + (['-v'] if verbose else ['-q']))
 
     def publish(repo, all=None):
@@ -625,25 +627,25 @@ class Git(object):
         popen([git_cmd, 'checkout', '.'] + ([] if verbose else ['-q'])) # undo  modified files
         popen([git_cmd, 'clean', '-fdq'] + ([] if verbose else ['-q'])) # cleans up untracked files and folders
 
-    def checkout(repo, hash, clean=False):
+    def checkout(repo, rev, clean=False):
         if repo:
-            log("Checkout \"%s\" to %s" % (repo.name, repo.hashtype(hash, True)))
-        popen([git_cmd, 'checkout', hash] + ([] if verbose else ['-q']))
+            log("Checkout \"%s\" to %s" % (repo.name, repo.revtype(rev, True)))
+        popen([git_cmd, 'checkout', rev] + ([] if verbose else ['-q']))
         if Git.isdetached(): # try to find associated refs to avoid detached state
-            refs = Git.getrefs(hash)
-            for ref in refs: # re-associate with a local or remote branch (hash is the same)
+            refs = Git.getrefs(rev)
+            for ref in refs: # re-associate with a local or remote branch (rev is the same)
                 branch = re.sub(r'^(.*?)\/(.*?)$', r'\2', ref)
-                log("Hash \"%s\" matches a branch \"%s\"reference. Re-associating with branch" % (hash, branch))
+                log("Revision \"%s\" matches a branch \"%s\"reference. Re-associating with branch" % (rev, branch))
                 popen([git_cmd, 'checkout', branch] + ([] if verbose else ['-q']))
                 break
 
-    def update(repo, hash=None, clean=False):
+    def update(repo, rev=None, clean=False):
         if clean:
             Git.discard(repo)
         if not repo.is_local:
             Git.fetch(repo) 
-        if hash:
-            Git.checkout(repo, hash, clean)
+        if rev:
+            Git.checkout(repo, rev, clean)
         else:
             remote = Git.getremote()
             branch = Git.getbranch()
@@ -713,7 +715,7 @@ class Git(object):
                 result.append([remote[0], remote[1], t])
         return result
 
-    def geturl(repo):
+    def geturl():
         url = ""
         remotes = Git.getremotes()
         for remote in remotes:
@@ -722,7 +724,7 @@ class Git(object):
                 break
         return formaturl(url)
 
-    def gethash(repo):
+    def getrev():
         return pquery([git_cmd, 'rev-parse', 'HEAD']).strip()
 
     # Gets current branch or returns empty string if detached
@@ -730,21 +732,21 @@ class Git(object):
         branch = pquery([git_cmd, 'rev-parse', '--symbolic-full-name', '--abbrev-ref', 'HEAD']).strip()
         return branch if branch != "HEAD" else ""
 
-    # Finds refs (local or remote branches). Will match hash if specified
-    def getrefs(hash=None, ret_hash=False):
+    # Finds refs (local or remote branches). Will match rev if specified
+    def getrefs(rev=None, ret_rev=False):
         result = []
         lines = pquery([git_cmd, 'show-ref']).strip().splitlines()
         for line in lines:
             m = re.match(r'^(.+)\s+(.+)$', line)
-            if m and (not hash or m.group(1).startswith(hash)):
+            if m and (not rev or m.group(1).startswith(rev)):
                 if re.match(r'refs\/(heads|remotes)\/', m.group(2)): # exclude tags
-                    result.append(m.group(1) if ret_hash else re.sub(r'refs\/(heads|remotes)\/', '', m.group(2)))
+                    result.append(m.group(1) if ret_rev else re.sub(r'refs\/(heads|remotes)\/', '', m.group(2)))
         return result
 
-    # Finds branches a hash belongs to
-    def hashbranches(hash):
+    # Finds branches a rev belongs to
+    def revbranches(rev):
         branches = []
-        lines = pquery([git_cmd, 'branch', '-a', '--contains'] + ([hash] if hash else [])).strip().splitlines()
+        lines = pquery([git_cmd, 'branch', '-a', '--contains'] + ([rev] if rev else [])).strip().splitlines()
         for line in lines:
             if re.match(r'^\*?\s+\((.+)\)$', line):
                 continue
@@ -752,34 +754,33 @@ class Git(object):
             branches.append(line)
         return branches
 
-    def ignores(repo):
-        with open(os.path.join(repo.path, '.git/info/exclude'), 'w') as f:
+    def ignores():
+        with open(os.path.join('.git', 'info', 'exclude'), 'w') as f:
             f.write('\n'.join(ignores)+'\n')
 
-    def ignore(repo, file):
-        exclude = os.path.join(repo.path, '.git/info/exclude')
+    def ignore(dest):
+        exclude = os.path.join('.git', 'info', 'exclude')
         try:
             with open(exclude) as f:
-                exists = file in f.read().splitlines()
+                exists = dest in f.read().splitlines()
         except IOError:
             exists = False
 
         if not exists:
             with open(exclude, 'a') as f:
-                f.write(file.replace("\\", "/") + '\n')
+                f.write(dest.replace("\\", "/") + '\n')
 
-    def unignore(repo, file):
-        exclude = os.path.join(repo.path, '.git/info/exclude')
+    def unignore(dest):
+        exclude = os.path.join('.git', 'info', 'exclude')
         try:
             with open(exclude) as f:
                 lines = f.read().splitlines()
         except:
             lines = []
 
-        if file not in lines:
+        if dest not in lines:
             return
-
-        lines.remove(file)
+        lines.remove(dest)
 
         with open(exclude, 'w') as f:
             f.write('\n'.join(lines) + '\n')
@@ -792,7 +793,7 @@ class Repo(object):
     name = None
     path = None
     url = None
-    hash = None
+    rev = None
     scm = None
     libs = []
 
@@ -806,19 +807,19 @@ class Repo(object):
             repo.name = os.path.basename(path or m_local.group(1))
             repo.path = os.path.abspath(path or os.path.join(os.getcwd(), m_local.group(1)))
             repo.url = m_local.group(1)
-            repo.hash = m_local.group(2)
+            repo.rev = m_local.group(2)
             repo.is_local = True
         elif m_bld_url:
             repo.name = os.path.basename(path or m_bld_url.group(7))
             repo.path = os.path.abspath(path or os.path.join(os.getcwd(), repo.name))
             repo.url = m_bld_url.group(1)+'/builds'
-            repo.hash = m_bld_url.group(8)
+            repo.rev = m_bld_url.group(8)
             repo.is_build = True
         elif m_repo_url:
             repo.name = os.path.basename(path or m_repo_url.group(2))
             repo.path = os.path.abspath(path or os.path.join(os.getcwd(), repo.name))
             repo.url = formaturl(m_repo_url.group(1))
-            repo.hash = m_repo_url.group(3)
+            repo.rev = m_repo_url.group(3)
         else:
             error('Invalid repository (%s)' % url.strip(), -1)
         return repo
@@ -896,13 +897,13 @@ class Repo(object):
         return "directory" if depth == 0 else ("program" if depth == 1 else "library")
 
     @classmethod
-    def hashtype(cls, hash, ret_hash=False):
-        if hash is None or len(hash) == 0:
-            return 'latest' + (' revision in the current branch' if ret_hash else '')
-        elif re.match(r'^([a-zA-Z0-9]{12,40})$', hash) or re.match(r'^([0-9]+)$', hash):
-            return 'rev' + (' #'+hash if ret_hash else '')
+    def revtype(cls, rev, ret_rev=False):
+        if rev is None or len(rev) == 0:
+            return 'latest' + (' revision in the current branch' if ret_rev else '')
+        elif re.match(r'^([a-zA-Z0-9]{12,40})$', rev) or re.match(r'^([0-9]+)$', rev):
+            return 'rev' + (' #'+rev if ret_rev else '')
         else:
-            return 'branch' + (' '+hash if ret_hash else '')
+            return 'branch' + (' '+rev if ret_rev else '')
 
     @property
     def lib(self):
@@ -913,11 +914,11 @@ class Repo(object):
         if self.url:
             return (self.url.rstrip('/') + '/' +
                     (('' if self.is_build else '#') +
-                        self.hash if self.hash else ''))
+                        self.rev if self.rev else ''))
 
     def sync(self):
         self.url = None
-        self.hash = None
+        self.rev = None
         if os.path.isdir(self.path):
             try:
                 self.scm = self.getscm()
@@ -936,7 +937,7 @@ class Repo(object):
                 pass
 
             try:
-                self.hash = self.gethash()
+                self.rev = self.getrev()
             except ProcessException:
                 pass
 
@@ -950,35 +951,50 @@ class Repo(object):
             if os.path.isdir(os.path.join(self.path, '.'+name)):
                 return scm
 
-    def gethash(self):
+    def getrev(self):
         if self.scm:
             with cd(self.path):
-                return self.scm.gethash(self)
+                return self.scm.getrev()
 
     def geturl(self):
         if self.scm:
             with cd(self.path):
-                return self.scm.geturl(self).strip().replace('\\', '/')
+                return self.scm.geturl().strip().replace('\\', '/')
+
+    def ignores(self):
+        if self.scm:
+            with cd(self.path):
+                return self.scm.ignores()
+
+    def ignore(self, dest):
+        if self.scm:
+            with cd(self.path):
+                return self.scm.ignore(dest)
+
+    def unignore(self, dest):
+        if self.scm:
+            with cd(self.path):
+                return self.scm.unignore(dest)
 
     def getlibs(self):
         for root, dirs, files in os.walk(self.path):
             dirs[:] = [d for d in dirs  if not d.startswith('.')]
             files[:] = [f for f in files if not f.startswith('.')]
 
-            for file in files:
-                if file.endswith('.lib') or file.endswith('.bld'):
-                    yield Repo.fromlib(os.path.join(root, file))
-                    if file[:-4] in dirs:
-                        dirs.remove(file[:-4])
+            for f in files:
+                if f.endswith('.lib') or f.endswith('.bld'):
+                    yield Repo.fromlib(os.path.join(root, f))
+                    if f[:-4] in dirs:
+                        dirs.remove(f[:-4])
 
     def write(self):
         if os.path.isfile(self.lib):
             with open(self.lib) as f:
                 lib_repo = Repo.fromurl(f.read().strip())
                 if (formaturl(lib_repo.url, 'https') == formaturl(self.url, 'https') # match URLs in common format (https)
-                        and (lib_repo.hash == self.hash                              # match hashes, even if hash is None (valid for repos with no revisions)
-                             or (lib_repo.hash and self.hash
-                                 and lib_repo.hash == self.hash[0:len(lib_repo.hash)]))):  # match long and short hash formats
+                        and (lib_repo.rev == self.rev                              # match revs, even if rev is None (valid for repos with no revisions)
+                             or (lib_repo.rev and self.rev
+                                 and lib_repo.rev == self.rev[0:len(lib_repo.rev)]))):  # match long and short rev formats
                     #print self.name, 'unmodified'
                     return
 
@@ -989,10 +1005,10 @@ class Repo(object):
 
     def rm_untracked(self):
         untracked = self.scm.untracked()
-        for file in untracked:
-            if re.match(r'(.+)\.lib$', file) and os.path.isfile(file):
-                action("Remove untracked library reference \"%s\"" % file)
-                os.remove(file)
+        for f in untracked:
+            if re.match(r'(.+)\.(lib|bld)$', f) and os.path.isfile(f):
+                action("Remove untracked library reference \"%s\"" % f)
+                os.remove(f)
 
     def can_update(self, clean, force):
         err = None
@@ -1065,7 +1081,10 @@ class Program(object):
             err = (
                 "Could not find mbed program in current path. Assuming current dir.\n"
                 "You can fix this by calling \"mbed new .\" in the root dir of your program")
-            return warning(err) if print_warning else error(err, 1)
+            if print_warning:
+                warning(err)
+            else:
+                error(err, 1)
 
     # Sets config value
     def set_cfg(self, var, val):
@@ -1317,10 +1336,10 @@ def import_(url, path=None, depth=None, protocol=None, top=True):
     sorted_scms = sorted(sorted_scms, key=lambda (m, _): not m)
 
     text = "Importing program" if top else "Adding library"
-    action("%s \"%s\" from \"%s/\"%s" % (text, relpath(cwd_root, repo.path), repo.url, ' at '+(repo.hashtype(repo.hash, True))))
+    action("%s \"%s\" from \"%s/\"%s" % (text, relpath(cwd_root, repo.path), repo.url, ' at '+(repo.revtype(repo.rev, True))))
     for _, scm in sorted_scms:
         try:
-            scm.clone(repo.url, repo.path, repo.hash, depth=depth, protocol=protocol)
+            scm.clone(repo.url, repo.path, repo.rev, depth=depth, protocol=protocol)
             break
         except ProcessException:
             if os.path.isdir(repo.path):
@@ -1348,16 +1367,16 @@ def import_(url, path=None, depth=None, protocol=None, top=True):
     help='Import missing dependencies in the current program or library.')
 def deploy(depth=None, protocol=None):
     repo = Repo.fromrepo()
-    repo.scm.ignores(repo)
+    repo.ignores()
 
     for lib in repo.libs:
         if os.path.isdir(lib.path):
             if lib.check_repo():
                 with cd(lib.path):
-                    update(lib.hash, depth=depth, protocol=protocol, top=False)
+                    update(lib.rev, depth=depth, protocol=protocol, top=False)
         else:
             import_(lib.fullurl, lib.path, depth=depth, protocol=protocol, top=False)
-            repo.scm.ignore(repo, relpath(repo.path, lib.path))
+            repo.ignore(relpath(repo.path, lib.path))
 
 
 # Add library command
@@ -1372,7 +1391,7 @@ def add(url, path=None, depth=None, protocol=None):
 
     lib = Repo.fromurl(url, path)
     import_(lib.fullurl, lib.path, depth=depth, protocol=protocol, top=False)
-    repo.scm.ignore(repo, relpath(repo.path, lib.path))
+    repo.ignore(relpath(repo.path, lib.path))
     lib.sync()
 
     lib.write()
@@ -1392,7 +1411,7 @@ def remove(path):
 
     repo.scm.remove(lib.lib)
     rmtree_readonly(lib.path)
-    repo.scm.unignore(repo, relpath(repo.path, lib.path))
+    repo.unignore(relpath(repo.path, lib.path))
 
 
 # Publish command
@@ -1434,7 +1453,7 @@ def publish(all=None, top=True):
 
 # Update command
 @subcommand('update',
-    dict(name='rev', nargs='?', help='Revision hash, tag or branch'),
+    dict(name='rev', nargs='?', help='Revision, tag or branch'),
     dict(name=['-C', '--clean'], action='store_true', help='Perform a clean update and discard all local changes. WARNING: This action cannot be undone. Use with caution.'),
     dict(name=['-F', '--force'], action='store_true', help='Enforce the original layout and will remove any local libraries and also libraries containing uncommitted or unpublished changes. WARNING: This action cannot be undone. Use with caution.'),
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors regarding unpublished libraries, unpublished or uncommitted changes, and attempt to update from associated remote repository URLs.'),
@@ -1452,7 +1471,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
             "This %s is in detached HEAD state, and you won't be able to receive updates from the remote repository until you either checkout a branch or create a new one.\n"
             "You can checkout a branch using \"%s checkout <branch_name>\" command before running \"mbed update\"." % (cwd_type, repo.scm.name), 1)
 
-    if repo.is_local and not repo.hash:
+    if repo.is_local and not repo.rev:
         action("Skipping unpublished empty %s \"%s\"" % (
             cwd_type if top else cwd_dest,
             os.path.basename(repo.path) if top else relpath(cwd_root, repo.path)))
@@ -1461,7 +1480,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
         action("Updating %s \"%s\" to %s" % (
             cwd_type if top else cwd_dest,
             os.path.basename(repo.path) if top else relpath(cwd_root, repo.path),
-            repo.hashtype(rev, True)))
+            repo.revtype(rev, True)))
         repo.scm.update(repo, rev, clean)
         repo.rm_untracked()
         if top and cwd_type == 'library':
@@ -1478,7 +1497,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
             if gc:
                 action("Removing library \"%s\" (obsolete)" % (relpath(cwd_root, lib.path)))
                 rmtree_readonly(lib.path)
-                repo.scm.unignore(repo, relpath(repo.path, lib.path))
+                repo.unignore(relpath(repo.path, lib.path))
             else:
                 if ignore:
                     warning(msg)
@@ -1499,21 +1518,21 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
                 if gc:
                     action("Removing library \"%s\" (changed URL). Will add from new URL." % (relpath(cwd_root, lib.path)))
                     rmtree_readonly(lib.path)
-                    repo.scm.unignore(repo, relpath(repo.path, lib.path))
+                    repo.unignore(relpath(repo.path, lib.path))
                 else:
                     if ignore:
                         warning(msg)
                     else:
                         error(msg, 1)
 
-    # Import missing repos and update to hashes
+    # Import missing repos and update to revs
     for lib in repo.libs:
         if not os.path.isdir(lib.path):
             import_(lib.fullurl, lib.path, depth=depth, protocol=protocol, top=False)
-            repo.scm.ignore(repo, relpath(repo.path, lib.path))
+            repo.ignore(relpath(repo.path, lib.path))
         else:
             with cd(lib.path):
-                update(lib.hash, clean, force, ignore, top=False)
+                update(lib.rev, clean, force, ignore, top=False)
 
     if top:
         program = Program(repo.path)
@@ -1528,37 +1547,37 @@ def sync(recursive=True, keep_refs=False, top=True):
         action("Synchronizing dependency references...")
 
     repo = Repo.fromrepo()
-    repo.scm.ignores(repo)
+    repo.ignores()
 
     for lib in repo.libs:
         if os.path.isdir(lib.path):
             lib.check_repo()
             lib.sync()
             lib.write()
-            repo.scm.ignore(repo, relpath(repo.path, lib.path))
+            repo.ignore(relpath(repo.path, lib.path))
             progress()
         else:
             if not keep_refs:
                 action("Removing reference \"%s\" -> \"%s\"" % (lib.name, lib.fullurl))
                 repo.scm.remove(lib.lib)
-                repo.scm.unignore(repo, relpath(repo.path, lib.path))
+                repo.unignore(relpath(repo.path, lib.path))
 
     for root, dirs, files in os.walk(repo.path):
         dirs[:] = [d for d in dirs  if not d.startswith('.')]
         files[:] = [f for f in files if not f.startswith('.')]
 
-        for dir in list(dirs):
-            if not Repo.isrepo(os.path.join(root, dir)):
+        for d in list(dirs):
+            if not Repo.isrepo(os.path.join(root, d)):
                 continue
 
-            lib = Repo.fromrepo(os.path.join(root, dir))
+            lib = Repo.fromrepo(os.path.join(root, d))
             if os.path.isfile(lib.lib):
-                dirs.remove(dir)
+                dirs.remove(d)
                 continue
 
-            dirs.remove(dir)
+            dirs.remove(d)
             lib.write()
-            repo.scm.ignore(repo, relpath(repo.path, lib.path))
+            repo.ignore(relpath(repo.path, lib.path))
             repo.scm.add(lib.lib)
             progress()
 
@@ -1578,12 +1597,12 @@ def sync(recursive=True, keep_refs=False, top=True):
 
 # List command
 @subcommand('ls',
-    dict(name=['-a', '--all'], action='store_true', help='List repository URL and hash pairs'),
+    dict(name=['-a', '--all'], action='store_true', help='List repository URL and revision pairs'),
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors regarding missing libraries.'),
     help='View the current %s dependency tree.' % cwd_type)
 def list_(all=False, prefix='', p_path=None, ignore=False):
     repo = Repo.fromrepo()
-    print prefix + (relpath(p_path, repo.path) if p_path else repo.name), '(%s)' % ((repo.fullurl if all else repo.hash) or 'no revision')
+    print prefix + (relpath(p_path, repo.path) if p_path else repo.name), '(%s)' % ((repo.fullurl if all else repo.rev) or 'no revision')
 
     for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.path)):
         if prefix:
@@ -1663,13 +1682,13 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
             build = os.path.join(os.path.relpath(program.path, orig_path), '.build/tests', target, tchain)
 
         popen(['python', os.path.join(tools_dir, 'test.py')]
-            + ['-t', tchain, '-m', target]
-            + list(chain.from_iterable(izip(repeat('--source'), source)))
-            + ['--build', build]
-            + ['--test-spec', test_spec]
-            + (['-v'] if verbose else [])
-            + args,
-            env=env)
+              + ['-t', tchain, '-m', target]
+              + list(chain.from_iterable(izip(repeat('--source'), source)))
+              + ['--build', build]
+              + ['--test-spec', test_spec]
+              + (['-v'] if verbose else [])
+              + args,
+              env=env)
     elif compile_library:
         # Compile as a library (current dir is default)
         if not build:
