@@ -244,6 +244,7 @@ class Bld(object):
     def clone(url, path=None, rev=None, depth=None, protocol=None):
         m = Bld.isurl(url)
         if not m:
+            raise ProcessException(1, "Not an mbed library build URL")
             return False
 
         arch_url = m.group(1) + '/archive/' + rev + '.zip'
