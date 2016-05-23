@@ -1670,6 +1670,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
             build = os.path.join(os.path.relpath(program.path, orig_path), '.build/tests', target, tchain)
 
         popen(['python', os.path.join(tools_dir, 'test.py')]
+              + list(chain.from_iterable(izip(repeat('-D'), macros)))
               + ['-t', tchain, '-m', target]
               + list(chain.from_iterable(izip(repeat('--source'), source)))
               + ['--build', build]
