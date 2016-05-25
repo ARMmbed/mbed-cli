@@ -815,9 +815,10 @@ class Repo(object):
         with open(lib) as f:
             ref = f.read(200)
             if ref.startswith('!<arch>'):
-                error(
-                    "A Keil uVision static library \"%s\" in \"%s\" uses a non-standard .lib file extension (should be .ar), which is not compatible with the mbed build tools.\n"
-                    "Please rename the static library to \"%s\" and try again.\n" % (os.path.basename(lib), os.path.split(lib)[0], os.path.basename(lib).replace('.lib', '.ar')))
+                warning(
+                    "A static library \"%s\" in \"%s\" uses a non-standard .lib file extension, which is not compatible with the mbed build tools.\n"
+                    "Please change the extension of \"%s\" (for example to \"%s\").\n" % (os.path.basename(lib), os.path.split(lib)[0], os.path.basename(lib), os.path.basename(lib).replace('.lib', '.ar')))
+                return False
             else:
                 return cls.fromurl(ref, lib[:-4])
 
@@ -969,7 +970,9 @@ class Repo(object):
 
             for f in files:
                 if f.endswith('.lib') or f.endswith('.bld'):
-                    yield Repo.fromlib(os.path.join(root, f))
+                    repo = Repo.fromlib(os.path.join(root, f))
+                    if repo:
+                        yield repo
                     if f[:-4] in dirs:
                         dirs.remove(f[:-4])
 
