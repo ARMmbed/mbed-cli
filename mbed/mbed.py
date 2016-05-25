@@ -19,7 +19,7 @@ import zipfile
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
 git_cmd = 'git'
-ver = '0.3.1'
+ver = '0.3.2'
 
 ignores = [
     # Version control folders
@@ -1305,10 +1305,11 @@ def new(name, scm='git', depth=None, protocol=None):
 @subcommand('import',
     dict(name='url', help='URL of the %s' % cwd_dest),
     dict(name='path', nargs='?', help='Destination name or path. Default: current %s.' % cwd_type),
+    dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to cloning and updating.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help='Import a program and its dependencies into the current directory or specified destination path.')
-def import_(url, path=None, depth=None, protocol=None, top=True):
+def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
     global cwd_root
 
     repo = Repo.fromurl(url, path)
@@ -1345,7 +1346,7 @@ def import_(url, path=None, depth=None, protocol=None, top=True):
         cwd_root = repo.path
 
     with cd(repo.path):
-        deploy(depth=depth, protocol=protocol, top=False)
+        deploy(ignore, depth=depth, protocol=protocol, top=False)
 
     if top:
         program = Program(repo.path)
@@ -1354,10 +1355,11 @@ def import_(url, path=None, depth=None, protocol=None, top=True):
 
 # Deploy command
 @subcommand('deploy',
+    dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to cloning and updating.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help='Import missing dependencies in the current program or library.')
-def deploy(depth=None, protocol=None, top=True):
+def deploy(ignore=False, depth=None, protocol=None, top=True):
     repo = Repo.fromrepo()
     repo.ignores()
 
@@ -1365,9 +1367,9 @@ def deploy(depth=None, protocol=None, top=True):
         if os.path.isdir(lib.path):
             if lib.check_repo():
                 with cd(lib.path):
-                    update(lib.rev, depth=depth, protocol=protocol, top=False)
+                    update(lib.rev, ignore=ignore, depth=depth, protocol=protocol, top=False)
         else:
-            import_(lib.fullurl, lib.path, depth=depth, protocol=protocol, top=False)
+            import_(lib.fullurl, lib.path, ignore=ignore, depth=depth, protocol=protocol, top=False)
             repo.ignore(relpath(repo.path, lib.path))
 
     if top:
@@ -1379,6 +1381,7 @@ def deploy(depth=None, protocol=None, top=True):
 @subcommand('add',
     dict(name='url', help='URL of the library'),
     dict(name='path', nargs='?', help='Destination name or path. Default: current folder.'),
+    dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to cloning and updating.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help='Add a library and its dependencies into the current %s or specified destination path.' % cwd_type)
@@ -1386,7 +1389,7 @@ def add(url, path=None, depth=None, protocol=None):
     repo = Repo.fromrepo()
 
     lib = Repo.fromurl(url, path)
-    import_(lib.fullurl, lib.path, depth=depth, protocol=protocol, top=False)
+    import_(lib.fullurl, lib.path, ignore=ignore, depth=depth, protocol=protocol, top=False)
     repo.ignore(relpath(repo.path, lib.path))
     lib.sync()
 
@@ -1452,7 +1455,7 @@ def publish(all=None, top=True):
     dict(name='rev', nargs='?', help='Revision, tag or branch'),
     dict(name=['-C', '--clean'], action='store_true', help='Perform a clean update and discard all local changes. WARNING: This action cannot be undone. Use with caution.'),
     dict(name=['-F', '--force'], action='store_true', help='Enforce the original layout and will remove any local libraries and also libraries containing uncommitted or unpublished changes. WARNING: This action cannot be undone. Use with caution.'),
-    dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors regarding unpublished libraries, unpublished or uncommitted changes, and attempt to update from associated remote repository URLs.'),
+    dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to unpublished libraries, unpublished or uncommitted changes, and attempt to update from associated remote repository URLs.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help='Update current %s and its dependencies from associated remote repository URLs.' % cwd_type)
@@ -1524,11 +1527,11 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
     # Import missing repos and update to revs
     for lib in repo.libs:
         if not os.path.isdir(lib.path):
-            import_(lib.fullurl, lib.path, depth=depth, protocol=protocol, top=False)
+            import_(lib.fullurl, lib.path, ignore=ignore, depth=depth, protocol=protocol, top=False)
             repo.ignore(relpath(repo.path, lib.path))
         else:
             with cd(lib.path):
-                update(lib.rev, clean, force, ignore, top=False)
+                update(lib.rev, clean, force, ignore=ignore, top=False)
 
     if top:
         program = Program(repo.path)
@@ -1594,7 +1597,7 @@ def sync(recursive=True, keep_refs=False, top=True):
 # List command
 @subcommand('ls',
     dict(name=['-a', '--all'], action='store_true', help='List repository URL and revision pairs'),
-    dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors regarding missing libraries.'),
+    dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to missing libraries.'),
     help='View the current %s dependency tree.' % cwd_type)
 def list_(all=False, prefix='', p_path=None, ignore=False):
     repo = Repo.fromrepo()
@@ -1614,7 +1617,7 @@ def list_(all=False, prefix='', p_path=None, ignore=False):
 
 # Command status for cross-SCM status of repositories
 @subcommand('status',
-    dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors regarding missing libraries.'),
+    dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to missing libraries.'),
     help='Show status of the current %s and its dependencies.' % cwd_type)
 def status_(ignore=False):
     repo = Repo.fromrepo()
