@@ -1312,9 +1312,13 @@ def import_(url, path=None, depth=None, protocol=None, top=True):
     global cwd_root
 
     repo = Repo.fromurl(url, path)
-    if top and cwd_type != "directory":
-        error("Cannot import program in the specified location \"%s\" because it's already part of a program.\n"
-              "Please change your working directory to a different location or use \"mbed add\" to import the URL as a library." % os.path.abspath(repo.path), 1)
+    if top:
+        if cwd_type != "directory":
+            error("Cannot import program in the specified location \"%s\" because it's already part of a program.\n"
+                  "Please change your working directory to a different location or use \"mbed add\" to import the URL as a library." % os.path.abspath(repo.path), 1)
+    else:
+        program = Program()
+        protocol = program.get_cfg('PROTOCOL', protocol)
 
     if os.path.isdir(repo.path) and len(os.listdir(repo.path)) > 1:
         error("Directory \"%s\" is not empty. Please ensure that the destination folder is empty." % repo.path, 1)
