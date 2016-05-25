@@ -1341,7 +1341,7 @@ def import_(url, path=None, depth=None, protocol=None, top=True):
         cwd_root = repo.path
 
     with cd(repo.path):
-        deploy(depth=depth, protocol=protocol)
+        deploy(depth=depth, protocol=protocol, top=False)
 
     if top:
         program = Program(repo.path)
@@ -1353,7 +1353,7 @@ def import_(url, path=None, depth=None, protocol=None, top=True):
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help='Import missing dependencies in the current program or library.')
-def deploy(depth=None, protocol=None):
+def deploy(depth=None, protocol=None, top=True):
     repo = Repo.fromrepo()
     repo.ignores()
 
@@ -1365,6 +1365,10 @@ def deploy(depth=None, protocol=None):
         else:
             import_(lib.fullurl, lib.path, depth=depth, protocol=protocol, top=False)
             repo.ignore(relpath(repo.path, lib.path))
+
+    if top:
+        program = Program(repo.path)
+        program.post_action()
 
 
 # Add library command
