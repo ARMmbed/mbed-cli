@@ -233,7 +233,7 @@ class Bld(object):
         with cd(path):
             Bld.seturl(url)
 
-    def clone(url, path=None, rev=None, depth=None, protocol=None):
+    def clone(url, path=None, depth=None, protocol=None):
         m = Bld.isurl(url)
         if not m:
             raise ProcessException(1, "Not an mbed library build URL")
@@ -244,7 +244,21 @@ class Bld(object):
         except Exception as e:
             error(e[1], e[0])
 
-    def dlunzip(url, rev):
+    def add(dest):
+        return True
+
+    def remove(dest):
+        if os.path.isfile(dest):
+            os.remove(dest)
+        return True
+
+    def commit():
+        error("mbed library builds do not support committing")
+
+    def publish(all=None):
+        return False
+
+    def fetch(url, rev):
         tmp_file = '.rev-' + rev + '.zip'
         arch_dir = 'mbed-' + rev
         try:
@@ -267,54 +281,38 @@ class Bld(object):
                 rmtree_readonly(arch_dir)
             raise Exception(128, "An error occurred while unpacking mbed library archive \"%s\" in \"%s\"" % (tmp_file, os.getcwd()))
 
-    def add(dest):
-        return True
-
-    def remove(dest):
-        if os.path.isfile(dest):
-            os.remove(dest)
-        return True
-
-    def commit():
-        error("mbed library builds do not support committing")
-
-    def publish(repo, all=None):
-        error("mbed library builds do not support pushing")
-
-    def fetch(repo):
-        error("mbed library builds do not support pushing")
-
-    def checkout(repo, rev, clean=False):
+    def checkout(rev):
         url = Bld.geturl()
         m = Bld.isurl(url)
         if not m:
             raise ProcessException(1, "Not an mbed library build URL")
             return False
 
+        log("Checkout \"%s\" in %s" % (rev, os.path.basename(os.getcwd())))
         arch_url = m.group(1) + '/archive/' + rev + '.zip'
         arch_dir = m.group(7) + '-' + rev
-
         try:
             if not os.path.exists(arch_dir):
-                Bld.dlunzip(arch_url, rev)
+                Bld.fetch(arch_url, rev)
         except Exception as e:
             if os.path.exists(arch_dir):
                 rmtree_readonly(arch_dir)
             error(e[1], e[0])
         Bld.seturl(url+'/'+rev)
 
-    def update(repo, rev=None, clean=False):
-        m = Bld.isurl(repo.url)
+    def update(rev=None, clean=False, is_local=False):
+        url = Bld.geturl()
+        m = Bld.isurl(url)
         rev = Hg.remoteid(m.group(1), rev)
         if not rev:
             error("Unable to fetch late mbed library revision")
 
-        if rev != repo.rev:
+        if rev != Bld.getrev():
             log("Cleaning up library build folder")
             for fl in os.listdir('.'):
                 if not fl.startswith('.'):
                     os.remove(fl) if os.path.isfile(fl) else shutil.rmtree(fl)
-            return Bld.checkout(repo, rev)
+            return Bld.checkout(rev)
 
     def status():
         return False
@@ -384,14 +382,8 @@ class Hg(object):
     def init(path=None):
         popen([hg_cmd, 'init'] + ([path] if path else []) + (['-v'] if verbose else ['-q']))
 
-    def clone(url, name=None, rev=None, depth=None, protocol=None):
+    def clone(url, name=None, depth=None, protocol=None):
         popen([hg_cmd, 'clone', formaturl(url, protocol), name] + (['-v'] if verbose else ['-q']))
-        if rev:
-            with cd(name):
-                try:
-                    Hg.checkout(None, rev)
-                except ProcessException:
-                    error("Unable to update to revision \"%s\"" % rev, 1)
 
     def add(dest):
         log("Adding reference \"%s\"" % dest)
@@ -414,24 +406,27 @@ class Hg(object):
     def commit():
         popen([hg_cmd, 'commit'] + (['-v'] if verbose else ['-q']))
 
-    def publish(repo, all=None):
+    def publish(all=None):
         popen([hg_cmd, 'push'] + (['--new-branch'] if all else []) + (['-v'] if verbose else ['-q']))
 
-    def fetch(repo):
-        log("Pulling remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
+    def fetch():
+        log("Fetching revisions from remote repository to \"%s\"" % os.path.basename(os.getcwd()))
         popen([hg_cmd, 'pull'] + (['-v'] if verbose else ['-q']))
 
-    def checkout(repo, rev, clean=False):
-        if not rev:
-            return False
-        if repo:
-            log("Checkout \"%s\" to %s" % (repo.name, repo.revtype(rev, True)))
-        popen([hg_cmd, 'update'] + (['-r', rev] if rev else []) + (['-C'] if clean else []) + (['-v'] if verbose else ['-q']))
+    def discard():
+        log("Discarding local changes in \"%s\"" % os.path.basename(os.getcwd()))
+        popen([hg_cmd, 'update', '-C'] + (['-v'] if verbose else ['-q']))
 
-    def update(repo, rev=None, clean=False):
-        if not repo.is_local:
-            Hg.fetch(repo)
-        Hg.checkout(repo, rev, clean)
+    def checkout(rev):
+        log("Checkout \"%s\" in %s" % (rev, os.path.basename(os.getcwd())))
+        popen([hg_cmd, 'update'] + (['-r', rev] if rev else []) + (['-v'] if verbose else ['-q']))
+
+    def update(rev=None, clean=False, is_local=False):
+        if clean:
+            Hg.discard()
+        if not is_local:
+            Hg.fetch()
+        Hg.checkout(rev)
 
     def status():
         return pquery([hg_cmd, 'status'] + (['-v'] if verbose else ['-q']))
@@ -563,14 +558,8 @@ class Git(object):
     def init(path=None):
         popen([git_cmd, 'init'] + ([path] if path else []) + ([] if verbose else ['-q']))
 
-    def clone(url, name=None, rev=None, depth=None, protocol=None):
+    def clone(url, name=None, depth=None, protocol=None):
         popen([git_cmd, 'clone', formaturl(url, protocol), name] + (['--depth', depth] if depth else []) + (['-v'] if verbose else ['-q']))
-        if rev:
-            with cd(name):
-                try:
-                    Git.checkout(None, rev)
-                except ProcessException:
-                    error("Unable to update to revision \"%s\"" % rev, 1)
 
     def add(dest):
         log("Adding reference "+dest)
@@ -593,11 +582,7 @@ class Git(object):
     def commit():
         popen([git_cmd, 'commit', '-a'] + (['-v'] if verbose else ['-q']))
 
-    def merge(repo, dest):
-        log("Merging \"%s\" with \"%s\"" % (repo.name, dest))
-        popen([git_cmd, 'merge', dest] + (['-v'] if verbose else ['-q']))
-
-    def publish(repo, all=None):
+    def publish(all=None):
         if all:
             popen([git_cmd, 'push', '--all'] + (['-v'] if verbose else ['-q']))
         else:
@@ -606,27 +591,28 @@ class Git(object):
             if remote and branch:
                 popen([git_cmd, 'push', remote, branch] + (['-v'] if verbose else ['-q']))
             else:
-                err = "Unable to publish outgoing changes for \"%s\" in \"%s\".\n" % (repo.name, repo.path)
+                err = "Unable to publish outgoing changes for \"%s\" in \"%s\".\n" % (os.path.basename(os.getcwd()), os.getcwd())
                 if not remote:
                     error(err+"The local repository is not associated with a remote one.", 1)
                 if not branch:
                     error(err+"Working set is not on a branch.", 1)
 
-    def fetch(repo):
-        log("Fetching remote repository \"%s\" to local \"%s\"" % (repo.url, repo.name))
+    def fetch():
+        log("Fetching revisions from remote repository to \"%s\"" % os.path.basename(os.getcwd()))
         popen([git_cmd, 'fetch', '--all'] + (['-v'] if verbose else ['-q']))
 
-    def discard(repo):
-        log("Discarding local changes in \"%s\"" % repo.name)
+    def discard():
+        log("Discarding local changes in \"%s\"" % os.path.basename(os.getcwd()))
         popen([git_cmd, 'reset', 'HEAD'] + ([] if verbose else ['-q'])) # unmarks files for commit
         popen([git_cmd, 'checkout', '.'] + ([] if verbose else ['-q'])) # undo  modified files
         popen([git_cmd, 'clean', '-fdq'] + ([] if verbose else ['-q'])) # cleans up untracked files and folders
 
-    def checkout(repo, rev, clean=False):
-        if not rev:
-            return False
-        if repo:
-            log("Checkout \"%s\" to %s" % (repo.name, repo.revtype(rev, True)))
+    def merge(dest):
+        log("Merging \"%s\" with \"%s\"" % (os.path.basename(os.getcwd()), dest))
+        popen([git_cmd, 'merge', dest] + (['-v'] if verbose else ['-q']))
+
+    def checkout(rev):
+        log("Checkout \"%s\" in %s" % (rev, os.path.basename(os.getcwd())))
         popen([git_cmd, 'checkout', rev] + ([] if verbose else ['-q']))
         if Git.isdetached(): # try to find associated refs to avoid detached state
             refs = Git.getrefs(rev)
@@ -636,20 +622,20 @@ class Git(object):
                 popen([git_cmd, 'checkout', branch] + ([] if verbose else ['-q']))
                 break
 
-    def update(repo, rev=None, clean=False):
+    def update(rev=None, clean=False, is_local=False):
         if clean:
-            Git.discard(repo)
-        if not repo.is_local:
-            Git.fetch(repo)
+            Git.discard()
+        if not is_local:
+            Git.fetch()
         if rev:
-            Git.checkout(repo, rev, clean)
+            Git.checkout(rev)
         else:
             remote = Git.getremote()
             branch = Git.getbranch()
             if remote and branch:
-                Git.merge(repo, '%s/%s' % (remote, branch))
+                Git.merge('%s/%s' % (remote, branch))
             else:
-                err = "Unable to update \"%s\" in \"%s\".\n" % (repo.name, repo.path)
+                err = "Unable to update \"%s\" in \"%s\".\n" % (os.path.basename(os.getcwd()), os.getcwd())
                 if not remote:
                     log(err+"The local repository is not associated with a remote one.")
                 if not branch:
@@ -1347,9 +1333,9 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
             scm.clone(repo.url, repo.path, depth=depth, protocol=protocol)
             with cd(repo.path):
                 try:
-                    scm.checkout(repo, repo.rev, True)
+                    scm.update(repo.rev, True)
                 except ProcessException as e:
-                    err = "Unable to checkout \"%s\" to %s" % (repo.name, repo.revtype(repo.rev, True))
+                    err = "Unable to update \"%s\" to %s" % (repo.name, repo.revtype(repo.rev, True))
                     if depth:
                         err = err + ("\nThe --depth option might prevent fetching the whole revision tree and checking out %s." % (repo.revtype(repo.rev, True)))
                     warning(err) if ignore else error(err, e[0])
@@ -1358,7 +1344,8 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
             if os.path.isdir(repo.path):
                 rmtree_readonly(repo.path)
     else:
-        error("Unable to clone repository (%s)" % url, 1)
+        err = "Unable to clone repository (%s)" % url
+        warning(err) if ignore else error(err, e[0])
 
     repo.sync()
 
@@ -1464,7 +1451,7 @@ def publish(all=None, top=True):
         outgoing = repo.scm.outgoing()
         if outgoing > 0:
             action("Pushing local repository \"%s\" to remote \"%s\"" % (repo.name, repo.url))
-            repo.scm.publish(repo, all)
+            repo.scm.publish(all)
     except ProcessException as e:
         if e[0] != 1:
             raise e
@@ -1502,7 +1489,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
             repo.revtype(rev, True)))
 
         try:
-            repo.scm.update(repo, rev, clean)
+            repo.scm.update(rev, clean, repo.is_local)
         except ProcessException as e:
             err = "Unable to update \"%s\" to %s" % (repo.name, repo.revtype(rev, True))
             if depth:
