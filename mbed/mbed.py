@@ -1070,10 +1070,7 @@ class Program(object):
             err = (
                 "Could not find mbed program in current path. Assuming current dir.\n"
                 "You can fix this by calling \"mbed new .\" in the root dir of your program")
-            if print_warning:
-                warning(err)
-            else:
-                error(err, 1)
+            warning(err) if print_warning else error(err, 1)
 
     # Sets config value
     def set_cfg(self, var, val):
@@ -1664,7 +1661,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
-    program = Program(os.getcwd(), False)
+    program = Program(os.getcwd(), True)
     # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
     orig_path = os.getcwd()
 
@@ -1743,11 +1740,11 @@ def test(tlist=False):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
-    program = Program(os.getcwd(), False)
+    program = Program(os.getcwd(), True)
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
         if not program.get_tools_dir():
-            error('The mbed OS codebase or tools were not found in "%s".' % program.path, -1)
+            error('The mbed tools were not found in "%s".' % program.path, -1)
 
         # Prepare environment variables
         env = os.environ.copy()
@@ -1769,11 +1766,11 @@ def export(ide=None, mcu=None):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
-    program = Program(os.getcwd(), False)
+    program = Program(os.getcwd(), True)
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
         if not program.get_tools_dir():
-            error('The mbed OS codebase or tools were not found in "%s".' % program.path, -1)
+            error('The mbed tools were not found in "%s".' % program.path, -1)
 
         target = mcu if mcu else program.get_cfg('TARGET')
         if target is None:
@@ -1813,7 +1810,7 @@ def toolchain_(name=None):
     help='Sets or get program default options.')
 def default_(name, value=None):
     # Find the root of the program
-    program = Program(os.getcwd(), False)
+    program = Program(os.getcwd())
     # Change current dir to program root
     with cd(program.path):
         var = str(name).upper()
