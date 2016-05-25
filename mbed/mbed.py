@@ -85,7 +85,7 @@ regex_hg_url = r'^(file|ssh|https?)://([^/:]+)/([^/]+)/?([^/]+?)?$'
 
 # mbed url is subset of hg. mbed doesn't support ssh transport
 regex_mbed_url = r'^(https?)://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+)/?$'
-regex_build_url = r'^(https?://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+))/builds/?([\w\-]{12,40})?/?$'
+regex_build_url = r'^(https?://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+))/builds/?([\w\-]{12,40}|tip)?/?$'
 
 # default mbed OS url
 mbed_os_url = 'https://github.com/ARMmbed/mbed-os'
@@ -231,15 +231,7 @@ class Bld(object):
         if not os.path.exists(path):
             os.mkdir(path)
         with cd(path):
-            if not os.path.exists('.'+Bld.name):
-                os.mkdir('.'+Bld.name)
-
-            fl = os.path.join('.'+Bld.name, 'bldrc')
-            try:
-                with open(fl, 'w') as f:
-                    f.write(url)
-            except IOError:
-                error("Unable to write bldrc file in \"%s\"" % fl, 1)
+            Bld.seturl(url)
 
     def clone(url, path=None, rev=None, depth=None, protocol=None):
         m = Bld.isurl(url)
@@ -247,18 +239,9 @@ class Bld(object):
             raise ProcessException(1, "Not an mbed library build URL")
             return False
 
-        arch_url = m.group(1) + '/archive/' + rev + '.zip'
-        arch_dir = m.group(7) + '-' + rev
-
         try:
-            Bld.init(path, url+'/'+rev)
-            with cd(path):
-                if not os.path.exists(arch_dir):
-                    Bld.dlunzip(arch_url, rev)
+            Bld.init(path, url+'/tip')
         except Exception as e:
-            with cd(path):
-                if os.path.exists(arch_dir):
-                    rmtree_readonly(arch_dir)
             error(e[1], e[0])
 
     def dlunzip(url, rev):
@@ -284,7 +267,6 @@ class Bld(object):
                 rmtree_readonly(arch_dir)
             raise Exception(128, "An error occurred while unpacking mbed library archive \"%s\" in \"%s\"" % (tmp_file, os.getcwd()))
 
-
     def add(dest):
         return True
 
@@ -302,22 +284,37 @@ class Bld(object):
     def fetch(repo):
         error("mbed library builds do not support pushing")
 
+    def checkout(repo, rev, clean=False):
+        url = Bld.geturl()
+        m = Bld.isurl(url)
+        if not m:
+            raise ProcessException(1, "Not an mbed library build URL")
+            return False
+
+        arch_url = m.group(1) + '/archive/' + rev + '.zip'
+        arch_dir = m.group(7) + '-' + rev
+
+        try:
+            if not os.path.exists(arch_dir):
+                Bld.dlunzip(arch_url, rev)
+        except Exception as e:
+            if os.path.exists(arch_dir):
+                rmtree_readonly(arch_dir)
+            error(e[1], e[0])
+        Bld.seturl(url+'/'+rev)
+
     def update(repo, rev=None, clean=False):
         m = Bld.isurl(repo.url)
         rev = Hg.remoteid(m.group(1), rev)
-
         if not rev:
             error("Unable to fetch late mbed library revision")
 
         if rev != repo.rev:
-            log("Cleaning up build folder")
-            for fl in os.listdir(repo.path):
+            log("Cleaning up library build folder")
+            for fl in os.listdir('.'):
                 if not fl.startswith('.'):
-                    if os.path.isfile(os.path.join(repo.path, fl)):
-                        os.remove(os.path.join(repo.path, fl))
-                    else:
-                        shutil.rmtree(os.path.join(repo.path, fl))
-            return Bld.clone(repo.url, repo.path, rev)
+                    os.remove(fl) if os.path.isfile(fl) else shutil.rmtree(fl)
+            return Bld.checkout(repo, rev)
 
     def status():
         return False
@@ -334,17 +331,28 @@ class Bld(object):
     def isdetached():
         return False
 
+    def seturl(url):
+        if not os.path.exists('.'+Bld.name):
+            os.mkdir('.'+Bld.name)
+
+        fl = os.path.join('.'+Bld.name, 'bldrc')
+        try:
+            with open(fl, 'w') as f:
+                f.write(url)
+        except IOError:
+            error("Unable to write bldrc file in \"%s\"" % fl, 1)
+        
     def geturl():
         with open(os.path.join('.bld', 'bldrc')) as f:
             url = f.read().strip()
         m = Bld.isurl(url)
-        return m.group(1)+'/builds'
+        return m.group(1)+'/builds' if m else ''
 
     def getrev():
         with open(os.path.join('.bld', 'bldrc')) as f:
             url = f.read().strip()
         m = Bld.isurl(url)
-        return m.group(8)
+        return m.group(8) if m else ''
 
     def getbranch():
         return "default"
@@ -414,6 +422,8 @@ class Hg(object):
         popen([hg_cmd, 'pull'] + (['-v'] if verbose else ['-q']))
 
     def checkout(repo, rev, clean=False):
+        if not rev:
+            return False
         if repo:
             log("Checkout \"%s\" to %s" % (repo.name, repo.revtype(rev, True)))
         popen([hg_cmd, 'update'] + (['-r', rev] if rev else []) + (['-C'] if clean else []) + (['-v'] if verbose else ['-q']))
@@ -613,6 +623,8 @@ class Git(object):
         popen([git_cmd, 'clean', '-fdq'] + ([] if verbose else ['-q'])) # cleans up untracked files and folders
 
     def checkout(repo, rev, clean=False):
+        if not rev:
+            return False
         if repo:
             log("Checkout \"%s\" to %s" % (repo.name, repo.revtype(rev, True)))
         popen([git_cmd, 'checkout', rev] + ([] if verbose else ['-q']))
@@ -1332,7 +1344,15 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
     action("%s \"%s\" from \"%s/\"%s" % (text, relpath(cwd_root, repo.path), repo.url, ' at '+(repo.revtype(repo.rev, True))))
     for _, scm in sorted_scms:
         try:
-            scm.clone(repo.url, repo.path, repo.rev, depth=depth, protocol=protocol)
+            scm.clone(repo.url, repo.path, depth=depth, protocol=protocol)
+            with cd(repo.path):
+                try:
+                    scm.checkout(repo, repo.rev, True)
+                except ProcessException as e:
+                    err = "Unable to checkout \"%s\" to %s" % (repo.name, repo.revtype(repo.rev, True))
+                    if depth:
+                        err = err + ("\nThe --depth option might prevent fetching the whole revision tree and checking out %s." % (repo.revtype(repo.rev, True)))
+                    warning(err) if ignore else error(err, e[0])
             break
         except ProcessException:
             if os.path.isdir(repo.path):
@@ -1346,7 +1366,7 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
         cwd_root = repo.path
 
     with cd(repo.path):
-        deploy(ignore, depth=depth, protocol=protocol, top=False)
+        deploy(ignore=ignore, depth=depth, protocol=protocol, top=False)
 
     if top:
         program = Program(repo.path)
@@ -1385,7 +1405,7 @@ def deploy(ignore=False, depth=None, protocol=None, top=True):
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help='Add a library and its dependencies into the current %s or specified destination path.' % cwd_type)
-def add(url, path=None, depth=None, protocol=None):
+def add(url, path=None, ignore=False, depth=None, protocol=None):
     repo = Repo.fromrepo()
 
     lib = Repo.fromurl(url, path)
@@ -1480,7 +1500,15 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
             cwd_type if top else cwd_dest,
             os.path.basename(repo.path) if top else relpath(cwd_root, repo.path),
             repo.revtype(rev, True)))
-        repo.scm.update(repo, rev, clean)
+
+        try:
+            repo.scm.update(repo, rev, clean)
+        except ProcessException as e:
+            err = "Unable to update \"%s\" to %s" % (repo.name, repo.revtype(rev, True))
+            if depth:
+                err = err + ("\nThe --depth option might prevent fetching the whole revision tree and checking out %s." % (repo.revtype(repo.rev, True)))
+            warning(err) if ignore else error(err, e[0])
+
         repo.rm_untracked()
         if top and cwd_type == 'library':
             repo.sync()
