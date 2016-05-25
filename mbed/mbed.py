@@ -1773,32 +1773,31 @@ def export(ide=None, mcu=None):
     dict(name='name', nargs='?', help='Default target name. Example: K64F, NUCLEO_F401RE, NRF51822...'),
     help='Set default target for the current program.')
 def target_(name=None):
-    # Find the root of the program
-    program = Program(os.getcwd(), False)
-    # Change directories to the program root to use mbed OS tools
-    with cd(program.path):
-        if name is None:
-            name = program.get_cfg('TARGET')
-            action(('The default target for program "%s" is "%s"' % (program.name, name)) if name else 'No default target is specified for program "%s"' % program.name)
-        else:
-            program.set_cfg('TARGET', name)
-            action('"%s" now set as default target for program "%s"' % (name, program.name))
+    return default_('target', name)
 
 @subcommand('toolchain',
     dict(name='name', nargs='?', help='Default toolchain name. Example: ARM, uARM, GCC_ARM, IAR'),
     help='Sets default toolchain for the current program.')
 def toolchain_(name=None):
+    return default_('toolchain', name)
+
+# Generic config command
+@subcommand('default',
+    dict(name='name', help='Variable name. E.g. "target", "toolchain", "protocol"'),
+    dict(name='value', nargs='?', help='Value. Will show the currently set default value for a variable if not specified.'),
+    help='Sets or get program default options.')
+def default_(name, value=None):
     # Find the root of the program
     program = Program(os.getcwd(), False)
-    # Change directories to the program root to use mbed OS tools
+    # Change current dir to program root
     with cd(program.path):
-        if name is None:
-            name = program.get_cfg('TOOLCHAIN')
-            action(('The default toolchain for program "%s" is "%s"' % (program.name, name)) if name else 'No default toolchain is specified for program "%s"' % program.name)
+        var = str(name).upper()
+        if value is None:
+            value = program.get_cfg(var)
+            action(('%s' % value) if value else 'No default %s set in program "%s"' % (name, program.name))
         else:
-            program.set_cfg('TOOLCHAIN', name)
-            action('"%s" now set as default toolchain for program "%s"' % (name, program.name))
-
+            program.set_cfg(var, value)
+            action('%s now set as default %s in program "%s"' % (value, name, program.name))
 
 # Parse/run command
 if len(sys.argv) <= 1:
