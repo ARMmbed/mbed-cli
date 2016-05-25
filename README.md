@@ -37,7 +37,7 @@ This document covers the installation and usage of *mbed CLI*.
 
 * *mbed-cli* is a Python script, so you'll need Python installed in order to use it. *mbed-cli* was tested with [version 2.7 of Python](https://www.python.org/download/releases/2.7/).
 
-* *mbed-cli* supports both Git and Mercurial repositories, so you'll also need to install one or both:
+* *mbed-cli* supports both Git and Mercurial repositories, you'll need to install both:
     * [Mercurial](https://www.mercurial-scm.org/).
     * [Git](https://git-scm.com/).
 	
