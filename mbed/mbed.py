@@ -1642,7 +1642,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
     with cd(program.path):
         mbed_tools_path = program.get_tools_dir()
         if not mbed_tools_path:
-            error('The mbed tools were not found in "%s".' % program.path, -1)
+            error('The mbed tools were not found in "%s". \n Run `mbed deploy` to install dependencies and tools. ' % program.path, -1)
         tools_dir = os.path.abspath(mbed_tools_path)
 
         target = mcu if mcu else program.get_cfg('TARGET')
