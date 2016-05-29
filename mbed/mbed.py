@@ -1157,9 +1157,12 @@ class Program(object):
             import pkgutil
             with open(os.path.join(mbed_os_path, fname), 'r') as f:
                 for line in f.read().splitlines():
-                    if pkgutil.find_loader(line) is None:
-                        missing.append(line)
+                    pkg = re.sub(r'^([\w-]+).*$', r'\1', line)
+                    if pkgutil.find_loader(pkg) is None:
+                        missing.append(pkg)
         except IOError:
+            pass
+        except ImportError:
             pass
 
         if len(missing):
@@ -1355,7 +1358,7 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
         if ignore:
             warning(err)
         else:
-            error(err, e[0])
+            error(err, 1)
 
     repo.sync()
 
