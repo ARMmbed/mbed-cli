@@ -237,7 +237,6 @@ class Bld(object):
         m = Bld.isurl(url)
         if not m:
             raise ProcessException(1, "Not an mbed library build URL")
-            return False
 
         try:
             Bld.init(path, url+'/tip')
@@ -286,7 +285,6 @@ class Bld(object):
         m = Bld.isurl(url)
         if not m:
             raise ProcessException(1, "Not an mbed library build URL")
-            return False
 
         log("Checkout \"%s\" in %s" % (rev, os.path.basename(os.getcwd())))
         arch_url = m.group(1) + '/archive/' + rev + '.zip'
@@ -311,7 +309,10 @@ class Bld(object):
             log("Cleaning up library build folder")
             for fl in os.listdir('.'):
                 if not fl.startswith('.'):
-                    os.remove(fl) if os.path.isfile(fl) else shutil.rmtree(fl)
+                    if os.path.isfile(fl):
+                        os.remove(fl)
+                    else:
+                        shutil.rmtree(fl)
             return Bld.checkout(rev)
 
     def status():
@@ -339,7 +340,7 @@ class Bld(object):
                 f.write(url)
         except IOError:
             error("Unable to write bldrc file in \"%s\"" % fl, 1)
-        
+
     def geturl():
         with open(os.path.join('.bld', 'bldrc')) as f:
             url = f.read().strip()
@@ -1070,7 +1071,10 @@ class Program(object):
             err = (
                 "Could not find mbed program in current path. Assuming current dir.\n"
                 "You can fix this by calling \"mbed new .\" in the root dir of your program")
-            warning(err) if print_warning else error(err, 1)
+            if print_warning:
+                warning(err)
+            else:
+                error(err, 1)
 
     # Sets config value
     def set_cfg(self, var, val):
@@ -1078,7 +1082,7 @@ class Program(object):
         try:
             with open(fl) as f:
                 lines = f.read().splitlines()
-        except:
+        except IOError:
             lines = []
 
         for line in lines:
@@ -1097,7 +1101,7 @@ class Program(object):
         try:
             with open(fl) as f:
                 lines = f.read().splitlines()
-        except:
+        except IOError:
             lines = []
 
         for line in lines:
@@ -1155,7 +1159,7 @@ class Program(object):
                 for line in f.read().splitlines():
                     if pkgutil.find_loader(line) is None:
                         missing.append(line)
-        except:
+        except IOError:
             pass
 
         if len(missing):
@@ -1338,14 +1342,20 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
                     err = "Unable to update \"%s\" to %s" % (repo.name, repo.revtype(repo.rev, True))
                     if depth:
                         err = err + ("\nThe --depth option might prevent fetching the whole revision tree and checking out %s." % (repo.revtype(repo.rev, True)))
-                    warning(err) if ignore else error(err, e[0])
+                    if ignore:
+                        warning(err)
+                    else:
+                        error(err, e[0])
             break
         except ProcessException:
             if os.path.isdir(repo.path):
                 rmtree_readonly(repo.path)
     else:
         err = "Unable to clone repository (%s)" % url
-        warning(err) if ignore else error(err, e[0])
+        if ignore:
+            warning(err)
+        else:
+            error(err, e[0])
 
     repo.sync()
 
@@ -1494,7 +1504,10 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
             err = "Unable to update \"%s\" to %s" % (repo.name, repo.revtype(rev, True))
             if depth:
                 err = err + ("\nThe --depth option might prevent fetching the whole revision tree and checking out %s." % (repo.revtype(repo.rev, True)))
-            warning(err) if ignore else error(err, e[0])
+            if ignore:
+                warning(err)
+            else:
+                error(err, e[0])
 
         repo.rm_untracked()
         if top and cwd_type == 'library':
