@@ -1122,8 +1122,13 @@ class Program(object):
     # Gets mbed tools dir (unified)
     def get_tools_dir(self):
         mbed_os_path = self.get_os_dir()
+        # mbed-os dir identified and tools is a sub dir
         if mbed_os_path and os.path.isdir(os.path.join(mbed_os_path, 'tools')):
             return os.path.join(mbed_os_path, 'tools')
+        # mbed-os not identified but tools found under cwd/tools
+        elif os.path.isdir(os.path.join(self.path, 'tools')):
+            return os.path.join(self.path, 'tools')
+        # mbed Classic deployed tools
         elif os.path.isdir(os.path.join(self.path, '.temp', 'tools')):
             return os.path.join(self.path, '.temp', 'tools')
         else:
