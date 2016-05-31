@@ -501,7 +501,7 @@ class Hg(object):
             with open(Hg.ignore_file, 'w') as f:
                 f.write("syntax: glob\n"+'\n'.join(ignores)+'\n')
         except IOError:
-            error("Unable to write ignore file in \"%s\"" % os.path.join(os.getcwd, Hg.ignore_file), 1)
+            error("Unable to write ignore file in \"%s\"" % os.path.join(os.getcwd(), Hg.ignore_file), 1)
 
     def ignore(dest):
         Hg.hgrc()
@@ -516,7 +516,7 @@ class Hg(object):
                 with open(Hg.ignore_file, 'a') as f:
                     f.write(dest + '\n')
             except IOError:
-                error("Unable to write ignore file in \"%s\"" % os.path.join(os.getcwd, Hg.ignore_file), 1)
+                error("Unable to write ignore file in \"%s\"" % os.path.join(os.getcwd(), Hg.ignore_file), 1)
 
     def unignore(dest):
         Hg.ignore_file = os.path.join('.hg', 'hgignore')
@@ -532,7 +532,7 @@ class Hg(object):
                 with open(Hg.ignore_file, 'w') as f:
                     f.write('\n'.join(lines) + '\n')
             except IOError:
-                error("Unable to write ignore file in \"%s\"" % os.path.join(os.getcwd, Hg.ignore_file), 1)
+                error("Unable to write ignore file in \"%s\"" % os.path.join(os.getcwd(), Hg.ignore_file), 1)
 
 # pylint: disable=no-self-argument, no-method-argument, no-member, no-self-use, unused-argument
 @scm('git')
@@ -744,7 +744,7 @@ class Git(object):
             with open(Git.ignore_file, 'w') as f:
                 f.write('\n'.join(ignores)+'\n')
         except IOError:
-            error("Unable to write ignore file in \"%s\"" % os.path.join(os.getcwd, Git.ignore_file), 1)
+            error("Unable to write ignore file in \"%s\"" % os.path.join(os.getcwd(), Git.ignore_file), 1)
 
     def ignore(dest):
         try:
@@ -758,7 +758,7 @@ class Git(object):
                 with open(Git.ignore_file, 'a') as f:
                     f.write(dest.replace("\\", "/") + '\n')
             except IOError:
-                error("Unable to write ignore file in \"%s\"" % os.path.join(os.getcwd, Git.ignore_file), 1)
+                error("Unable to write ignore file in \"%s\"" % os.path.join(os.getcwd(), Git.ignore_file), 1)
     def unignore(dest):
         try:
             with open(Git.ignore_file) as f:
@@ -772,7 +772,7 @@ class Git(object):
                 with open(Git.ignore_file, 'w') as f:
                     f.write('\n'.join(lines) + '\n')
             except IOError:
-                error("Unable to write ignore file in \"%s\"" % os.path.join(os.getcwd, Git.ignore_file), 1)
+                error("Unable to write ignore file in \"%s\"" % os.path.join(os.getcwd(), Git.ignore_file), 1)
 
 # Repository object
 class Repo(object):
