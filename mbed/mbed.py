@@ -243,20 +243,6 @@ class Bld(object):
         except Exception as e:
             error(e[1], e[0])
 
-    def add(dest):
-        return True
-
-    def remove(dest):
-        if os.path.isfile(dest):
-            os.remove(dest)
-        return True
-
-    def commit():
-        error("mbed library builds do not support committing")
-
-    def publish(all=None):
-        return False
-
     def fetch(url, rev):
         tmp_file = '.rev-' + rev + '.zip'
         arch_dir = 'mbed-' + rev
@@ -378,10 +364,6 @@ class Hg(object):
         try:
             popen([hg_cmd, 'rm', '-f', dest] + (['-v'] if verbose else ['-q']))
         except ProcessException:
-            pass
-        try:
-            os.remove(dest)
-        except OSError:
             pass
 
     def commit():
@@ -551,10 +533,6 @@ class Git(object):
         try:
             popen([git_cmd, 'rm', '-f', dest] + ([] if verbose else ['-q']))
         except ProcessException:
-            pass
-        try:
-            os.remove(dest)
-        except OSError:
             pass
 
     def commit():
@@ -803,20 +781,26 @@ class Repo(object):
     @classmethod
     def fromrepo(cls, path=None):
         repo = cls()
+        repo.is_cwd = True
         if path is None:
             path = Repo.findrepo(os.getcwd())
-            if path is None:
-                error(
-                    "Cannot find the program or library in the current path \"%s\".\n"
-                    "Please change your working directory to a different location or use \"mbed new\" to create a new program." % os.getcwd(), 1)
+            if path:
+                repo.is_cwd = False
+            else:
+                path = os.getcwd()
+                warning(
+                    "Could not find mbed program in current path. Assuming current dir.\n"
+                    "You can fix this by calling \"mbed new .\" in the root of your program")
 
         repo.path = os.path.abspath(path)
         repo.name = os.path.basename(repo.path)
 
         repo.sync()
 
-        if repo.scm is None:
-            error("Current folder is not a supported repository", -1)
+        if not repo.is_cwd and repo.scm is None:
+            warning(
+                "Program \"%s\" in \"%s\" does not use source control management.\n"
+                "To fix this you should use \"mbed new .\" in the root of your program." % (repo.name, repo.path))
 
         return repo
 
@@ -833,7 +817,7 @@ class Repo(object):
         path = os.path.abspath(path or os.getcwd())
 
         while cd(path):
-            if Repo.isrepo(path):
+            if os.path.isfile(os.path.join(path, Program.config_file)) or Repo.isrepo(path):
                 return path
 
             tpath = path
@@ -887,7 +871,7 @@ class Repo(object):
         if os.path.isdir(self.path):
             try:
                 self.scm = self.getscm()
-                if self.scm.name == 'bld':
+                if self.scm and self.scm.name == 'bld':
                     self.is_build = True
             except ProcessException:
                 pass
@@ -931,8 +915,13 @@ class Repo(object):
     def add(self, *args, **kwargs):
         return self.__scm_call('add', *args, **kwargs)
 
-    def remove(self, *args, **kwargs):
-        return self.__scm_call('remove', *args, **kwargs)
+    def remove(self, dest, *args, **kwargs):
+        if os.path.isfile(dest):
+            try:
+                os.remove(dest)
+            except OSError:
+                pass
+        return self.__scm_call('remove', dest, *args, **kwargs)
 
     def ignores(self, *args, **kwargs):
         return self.__scm_call('ignores', *args, **kwargs)
@@ -1050,16 +1039,16 @@ class Program(object):
 
     def __init__(self, path=None, print_warning=False):
         path = os.path.abspath(path or os.getcwd())
-
-        self.path = os.getcwd()
+        self.path = path
         self.is_cwd = True
 
         while cd(path):
             tpath = path
-            if Repo.isrepo(path):
+            if os.path.isfile(os.path.join(path, Program.config_file)):
                 self.path = path
                 self.is_cwd = False
-                self.is_repo = True
+                break
+
             path = os.path.split(path)[0]
             if tpath == path:       # Reached root.
                 break
@@ -1067,14 +1056,10 @@ class Program(object):
         self.name = os.path.basename(self.path)
 
         # is_cwd flag indicates that current dir is assumed to be root, not root repo
-        if self.is_cwd:
-            err = (
+        if self.is_cwd and print_warning:
+            warning(
                 "Could not find mbed program in current path. Assuming current dir.\n"
-                "You can fix this by calling \"mbed new .\" in the root dir of your program")
-            if print_warning:
-                warning(err)
-            else:
-                error(err, 1)
+                "You can fix this by calling \"mbed new .\" in the root of your program")
 
     # Sets config value
     def set_cfg(self, var, val):
@@ -1109,6 +1094,9 @@ class Program(object):
             if m and m.group(1) == var:
                 return m.group(2)
         return default_val
+
+    def set_root(self):
+        return self.set_cfg('ROOT', '.')
 
     # Gets mbed OS dir (unified)
     def get_os_dir(self):
@@ -1296,10 +1284,11 @@ def new(name, scm='git', depth=None, protocol=None):
         cwd_root = os.path.abspath(d_path)
 
         program = Program(d_path)
+        program.set_root()
         if not program.get_os_dir():
             try:
                 with cd(d_path):
-                    add(mbed_os_url, depth=depth, protocol=protocol)
+                    add(mbed_os_url, depth=depth, protocol=protocol, top=False)
             except Exception as e:
                 if os.path.isdir(os.path.join(d_path, 'mbed-os')):
                     rmtree_readonly(os.path.join(d_path, 'mbed-os'))
@@ -1307,8 +1296,7 @@ def new(name, scm='git', depth=None, protocol=None):
         if d_path:
             os.chdir(d_path)
 
-    program = Program(d_path)
-    program.post_action()
+    Program(d_path).post_action()
 
 
 # Import command
@@ -1343,9 +1331,13 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
     for _, scm in sorted_scms:
         try:
             scm.clone(repo.url, repo.path, depth=depth, protocol=protocol)
+            repo.scm = scm
+            repo.ignores()
+
             with cd(repo.path):
+                Program(repo.path).set_root()
                 try:
-                    scm.update(repo.rev, True)
+                    repo.update(repo.rev, True)
                 except ProcessException as e:
                     err = "Unable to update \"%s\" to %s" % (repo.name, repo.revtype(repo.rev, True))
                     if depth:
@@ -1374,8 +1366,7 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
         deploy(ignore=ignore, depth=depth, protocol=protocol, top=False)
 
     if top:
-        program = Program(repo.path)
-        program.post_action()
+        Program(repo.path).post_action()
 
 
 # Deploy command
@@ -1398,8 +1389,7 @@ def deploy(ignore=False, depth=None, protocol=None, top=True):
             repo.ignore(relpath(repo.path, lib.path))
 
     if top:
-        program = Program(repo.path)
-        program.post_action()
+        Program(repo.path).post_action()
 
 
 # Add library command
@@ -1410,7 +1400,7 @@ def deploy(ignore=False, depth=None, protocol=None, top=True):
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help='Add a library and its dependencies into the current %s or specified destination path.' % cwd_type)
-def add(url, path=None, ignore=False, depth=None, protocol=None):
+def add(url, path=None, ignore=False, depth=None, protocol=None, top=True):
     repo = Repo.fromrepo()
 
     lib = Repo.fromurl(url, path)
@@ -1420,6 +1410,9 @@ def add(url, path=None, ignore=False, depth=None, protocol=None):
 
     lib.write()
     repo.add(lib.lib)
+
+    if top:
+        Program(repo.path).post_action()
 
 
 # Remove library
@@ -1432,6 +1425,7 @@ def remove(path):
         error("Could not find library in path (%s)" % path, 1)
 
     lib = Repo.fromrepo(path)
+    action("Removing library \"%s\" in \"%s\"" % (lib.name, lib.path))
     rmtree_readonly(lib.path)
     repo.remove(lib.lib)
     repo.unignore(relpath(repo.path, lib.path))
@@ -1569,8 +1563,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
                 update(lib.rev, clean, force, ignore=ignore, top=False)
 
     if top:
-        program = Program(repo.path)
-        program.post_action()
+        Program(repo.path).post_action()
 
 
 # Synch command
