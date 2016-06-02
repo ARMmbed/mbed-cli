@@ -315,20 +315,8 @@ class Bld(object):
                         shutil.rmtree(fl)
             return Bld.checkout(rev)
 
-    def status():
-        return False
-
-    def dirty():
-        return False
-
     def untracked():
         return ""
-
-    def outgoing():
-        return False
-
-    def isdetached():
-        return False
 
     def seturl(url):
         if not os.path.exists('.'+Bld.name):
@@ -356,14 +344,6 @@ class Bld(object):
     def getbranch():
         return "default"
 
-    def ignores():
-        return True
-
-    def ignore(dest):
-        return True
-
-    def unignore(dest):
-        return True
 
 # pylint: disable=no-self-argument, no-method-argument, no-member, no-self-use, unused-argument
 @scm('hg')
@@ -447,9 +427,6 @@ class Hg(object):
             if e[0] != 1:
                 raise e
             return 0
-
-    def isdetached():
-        return False
 
     def geturl():
         tagpaths = '[paths]'
@@ -939,30 +916,53 @@ class Repo(object):
             if os.path.isdir(os.path.join(self.path, '.'+name)):
                 return scm
 
-    def getrev(self):
-        if self.scm:
+    # Pass backend SCM commands and parameters if SCM exists
+    def __scm_call(self, method, *args, **kwargs):
+        if self.scm and hasattr(self.scm, method) and callable(getattr(self.scm, method)):
             with cd(self.path):
-                return self.scm.getrev()
+                return getattr(self.scm, method)(*args, **kwargs)
 
-    def geturl(self):
-        if self.scm:
-            with cd(self.path):
-                return self.scm.geturl().strip().replace('\\', '/')
+    def geturl(self, *args, **kwargs):
+        return self.__scm_call('geturl', *args, **kwargs)
 
-    def ignores(self):
-        if self.scm:
-            with cd(self.path):
-                return self.scm.ignores()
+    def getrev(self, *args, **kwargs):
+        return self.__scm_call('getrev', *args, **kwargs)
 
-    def ignore(self, dest):
-        if self.scm:
-            with cd(self.path):
-                return self.scm.ignore(dest)
+    def add(self, *args, **kwargs):
+        return self.__scm_call('add', *args, **kwargs)
 
-    def unignore(self, dest):
-        if self.scm:
-            with cd(self.path):
-                return self.scm.unignore(dest)
+    def remove(self, *args, **kwargs):
+        return self.__scm_call('remove', *args, **kwargs)
+
+    def ignores(self, *args, **kwargs):
+        return self.__scm_call('ignores', *args, **kwargs)
+
+    def ignore(self, *args, **kwargs):
+        return self.__scm_call('ignore', *args, **kwargs)
+
+    def unignore(self, *args, **kwargs):
+        return self.__scm_call('unignore', *args, **kwargs)
+
+    def status(self, *args, **kwargs):
+        return self.__scm_call('status', *args, **kwargs)
+
+    def dirty(self, *args, **kwargs):
+        return self.__scm_call('dirty', *args, **kwargs)
+
+    def commit(self, *args, **kwargs):
+        return self.__scm_call('commit', *args, **kwargs)
+
+    def outgoing(self, *args, **kwargs):
+        return self.__scm_call('outgoing', *args, **kwargs)
+
+    def publish(self, *args, **kwargs):
+        return self.__scm_call('publish', *args, **kwargs)
+
+    def update(self, *args, **kwargs):
+        return self.__scm_call('update', *args, **kwargs)
+
+    def isdetached(self, *args, **kwargs):
+        return self.__scm_call('isdetached', *args, **kwargs)
 
     def getlibs(self):
         for root, dirs, files in os.walk(self.path):
@@ -1007,11 +1007,11 @@ class Repo(object):
                 "Preserving local library \"%s\" in \"%s\".\nPlease publish this library to a remote URL to be able to restore it at any time."
                 "You can use --ignore switch to ignore all local libraries and update only the published ones.\n"
                 "You can also use --force switch to remove all local libraries. WARNING: This action cannot be undone." % (self.name, self.path))
-        elif not clean and self.scm.dirty():
+        elif not clean and self.dirty():
             err = (
                 "Uncommitted changes in \"%s\" in \"%s\".\nPlease discard or stash them first and then retry update.\n"
                 "You can also use --clean switch to discard all uncommitted changes. WARNING: This action cannot be undone." % (self.name, self.path))
-        elif not force and self.scm.outgoing():
+        elif not force and self.outgoing():
             err = (
                 "Unpublished changes in \"%s\" in \"%s\".\nPlease publish them first using the \"publish\" command.\n"
                 "You can also use --force to discard all local commits and replace the library with the one included in this revision. WARNING: This action cannot be undone." % (self.name, self.path))
@@ -1419,7 +1419,7 @@ def add(url, path=None, ignore=False, depth=None, protocol=None):
     lib.sync()
 
     lib.write()
-    repo.scm.add(lib.lib)
+    repo.add(lib.lib)
 
 
 # Remove library
@@ -1432,9 +1432,8 @@ def remove(path):
         error("Could not find library in path (%s)" % path, 1)
 
     lib = Repo.fromrepo(path)
-
-    repo.scm.remove(lib.lib)
     rmtree_readonly(lib.path)
+    repo.remove(lib.lib)
     repo.unignore(relpath(repo.path, lib.path))
 
 
@@ -1460,16 +1459,16 @@ def publish(all=None, top=True):
 
     sync(recursive=False)
 
-    if repo.scm.dirty():
+    if repo.dirty():
         action("Uncommitted changes in %s \"%s\" in \"%s\"" % (repo.pathtype(repo.path), repo.name, repo.path))
         raw_input('Press enter to commit and publish: ')
-        repo.scm.commit()
+        repo.commit()
 
     try:
-        outgoing = repo.scm.outgoing()
+        outgoing = repo.outgoing()
         if outgoing > 0:
             action("Pushing local repository \"%s\" to remote \"%s\"" % (repo.name, repo.url))
-            repo.scm.publish(all)
+            repo.publish(all)
     except ProcessException as e:
         if e[0] != 1:
             raise e
@@ -1490,7 +1489,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
 
     repo = Repo.fromrepo()
 
-    if top and not rev and repo.scm.isdetached():
+    if top and not rev and repo.isdetached():
         error(
             "This %s is in detached HEAD state, and you won't be able to receive updates from the remote repository until you either checkout a branch or create a new one.\n"
             "You can checkout a branch using \"%s checkout <branch_name>\" command before running \"mbed update\"." % (cwd_type, repo.scm.name), 1)
@@ -1507,7 +1506,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
             repo.revtype(rev, True)))
 
         try:
-            repo.scm.update(rev, clean, repo.is_local)
+            repo.update(rev, clean, repo.is_local)
         except ProcessException as e:
             err = "Unable to update \"%s\" to %s" % (repo.name, repo.revtype(rev, True))
             if depth:
@@ -1594,7 +1593,7 @@ def sync(recursive=True, keep_refs=False, top=True):
         else:
             if not keep_refs:
                 action("Removing reference \"%s\" -> \"%s\"" % (lib.name, lib.fullurl))
-                repo.scm.remove(lib.lib)
+                repo.remove(lib.lib)
                 repo.unignore(relpath(repo.path, lib.path))
 
     for root, dirs, files in os.walk(repo.path):
@@ -1613,7 +1612,7 @@ def sync(recursive=True, keep_refs=False, top=True):
             dirs.remove(d)
             lib.write()
             repo.ignore(relpath(repo.path, lib.path))
-            repo.scm.add(lib.lib)
+            repo.add(lib.lib)
             progress()
 
     repo.sync()
@@ -1657,9 +1656,9 @@ def list_(all=False, prefix='', p_path=None, ignore=False):
     help='Show status of the current %s and its dependencies.' % cwd_type)
 def status_(ignore=False):
     repo = Repo.fromrepo()
-    if repo.scm.dirty():
+    if repo.dirty():
         action("Status for \"%s\":" % repo.name)
-        print repo.scm.status()
+        print repo.status()
 
     for lib in repo.libs:
         if lib.check_repo(ignore):
@@ -1890,14 +1889,14 @@ if len(sys.argv) <= 1:
     parser.print_help()
     sys.exit(1)
 
-args, remainder = parser.parse_known_args()
+pargs, remainder = parser.parse_known_args()
 status = 1
 
 try:
-    very_verbose = args.very_verbose
-    verbose = very_verbose or args.verbose
+    very_verbose = pargs.very_verbose
+    verbose = very_verbose or pargs.verbose
     log('Working path \"%s\" (%s)' % (os.getcwd(), cwd_type))
-    status = args.command(args)
+    status = pargs.command(pargs)
 except ProcessException as e:
     error(
         "\"%s\" returned error code %d.\n"
