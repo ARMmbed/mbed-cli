@@ -381,7 +381,9 @@ class Hg(object):
         popen([hg_cmd, 'update', '-C'] + (['-v'] if verbose else ['-q']))
 
     def checkout(rev):
-        log("Checkout \"%s\" in %s" % (rev, os.path.basename(os.getcwd())))
+        if not rev:
+            return
+        log("Checkout \"%s\" in %s to %s" % (rev, os.path.basename(os.getcwd()), rev))
         popen([hg_cmd, 'update'] + (['-r', rev] if rev else []) + (['-v'] if verbose else ['-q']))
 
     def update(rev=None, clean=False, is_local=False):
@@ -568,7 +570,9 @@ class Git(object):
         popen([git_cmd, 'merge', dest] + (['-v'] if verbose else ['-q']))
 
     def checkout(rev):
-        log("Checkout \"%s\" in %s" % (rev, os.path.basename(os.getcwd())))
+        if not rev:
+            return
+        log("Checkout \"%s\" in %s to %s" % (rev, os.path.basename(os.getcwd()), rev))
         popen([git_cmd, 'checkout', rev] + ([] if verbose else ['-q']))
         if Git.isdetached(): # try to find associated refs to avoid detached state
             refs = Git.getrefs(rev)
@@ -946,6 +950,9 @@ class Repo(object):
 
     def publish(self, *args, **kwargs):
         return self.__scm_call('publish', *args, **kwargs)
+
+    def checkout(self, *args, **kwargs):
+        return self.__scm_call('checkout', *args, **kwargs)
 
     def update(self, *args, **kwargs):
         return self.__scm_call('update', *args, **kwargs)
@@ -1337,7 +1344,7 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
             with cd(repo.path):
                 Program(repo.path).set_root()
                 try:
-                    repo.update(repo.rev, True)
+                    repo.checkout(repo.rev)
                 except ProcessException as e:
                     err = "Unable to update \"%s\" to %s" % (repo.name, repo.revtype(repo.rev, True))
                     if depth:
