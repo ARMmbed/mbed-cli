@@ -26,6 +26,9 @@ This document covers the installation and usage of *mbed CLI*.
 	2. [Compiling your program](#compiling-your-program)
 	3. [Compiling static libraries](#compiling-static-libraries)
 	4. [Compiling tests](#compiling-tests)
+	5. [Automating toolchain and target selection](#automating-toolchain-and-target-selection)
+	6. [Customizing the build](#customizing-the-build)
+	7. [Inspecting configuration](#inspecting-configuration)
 1. [Exporting to desktop IDEs](#exporting-to-desktop-ides)
 1. [Known limitations](#known-limitations)
 
@@ -448,6 +451,37 @@ $ mbed compile -t GCC_ARM -m K64F -j 0 -o debug-info
 
 <span class="tips">**Tip:** If you have files that you want to compile only in release mode, put them in a directory called `TARGET_RELEASE` at any level of your tree. If you have files that you want to compile only in debug mode, put them in a directory called `TARGET_DEBUG` at any level of your tree (then use `-o debug-info` as explained above).
 </span>
+
+___The configuration system___
+
+The [mbed configuration system](https://github.com/ARMmbed/mbed-os/blob/master/docs/config_system.md) provides a flexible mechanism for configuring the mbed application, its libraries and the build target. Refer to the previous link for more details about the configuration system.
+
+#### Inspecting configuration
+
+If the [mbed configuration system](https://github.com/ARMmbed/mbed-os/blob/master/docs/config_system.md) is used by the program, the configuration can be displayed using `mbed config`:
+
+```
+$ mbed config -t GCC_ARM -m K64F
+```
+
+To display more verbose information about the configuration parameters, use `-v`:
+
+```
+$ mbed config -t GCC_ARM -m K64F -v
+```
+
+It's possible to filter the output of `mbed config` by specifying one or more prefixes for the configuration parameters that will be displayed. For example, to display only the configuration defined by the targets:
+
+```
+$ mbed config -t GCC_ARM -m K64F --prefix target
+```
+
+`--prefix` can be used more than once. To display only the configuration defined by the application and the targets, use two `--prefix` options:
+
+
+```
+$ mbed config -t GCC_ARM -m K64F --prefix target --prefix app
+```
 
 ### Exporting to desktop IDEs
 
