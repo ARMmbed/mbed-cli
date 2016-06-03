@@ -1757,7 +1757,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
         if not build:
             build = os.path.join(os.path.relpath(program.path, orig_path), '.build/tests', target, tchain)
 
-        popen(['python', os.path.join(tools_dir, 'test.py')]
+        popen(['python', '-u', os.path.join(tools_dir, 'test.py')]
               + list(chain.from_iterable(izip(repeat('-D'), macros)))
               + ['-t', tchain, '-m', target]
               + list(chain.from_iterable(izip(repeat('--source'), source)))
@@ -1771,7 +1771,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
         if not build:
             build = os.path.join(os.path.relpath(program.path, orig_path), '.build', 'libraries', os.path.basename(orig_path), target, tchain)
 
-        popen(['python', os.path.join(tools_dir, 'build.py')]
+        popen(['python', '-u', os.path.join(tools_dir, 'build.py')]
               + list(chain.from_iterable(izip(repeat('-D'), macros)))
               + ['-t', tchain, '-m', target]
               + list(chain.from_iterable(izip(repeat('--source'), source)))
@@ -1784,7 +1784,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
         if not build:
             build = os.path.join(os.path.relpath(program.path, orig_path), '.build', target, tchain)
 
-        popen(['python', os.path.join(tools_dir, 'make.py')]
+        popen(['python', '-u', os.path.join(tools_dir, 'make.py')]
               + list(chain.from_iterable(izip(repeat('-D'), macros)))
               + ['-t', tchain, '-m', target]
               + list(chain.from_iterable(izip(repeat('--source'), source)))
@@ -1813,7 +1813,7 @@ def test(tlist=False):
         if tlist:
             # List all available tests (by default in a human-readable format)
             try:
-                popen(['python', os.path.join(tools_dir, 'test.py'), '-l'] + args, env=env)
+                popen(['python', '-u', os.path.join(tools_dir, 'test.py'), '-l'] + args, env=env)
             except ProcessException:
                 error('Failed to run test script')
 
@@ -1836,7 +1836,7 @@ def export(ide=None, mcu=None):
 
         env = os.environ.copy()
         env['PYTHONPATH'] = '.'
-        popen(['python', os.path.join(tools_dir, 'project.py')]
+        popen(['python', '-u', os.path.join(tools_dir, 'project.py')]
               + list(chain.from_iterable(izip(repeat('-D'), macros)))
               + ['-i', ide, '-m', target, '--source=%s' % program.path]
               + args,
