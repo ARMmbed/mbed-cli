@@ -1851,7 +1851,7 @@ def target_(name=None):
 
 @subcommand('toolchain',
     dict(name='name', nargs='?', help='Default toolchain name. Example: ARM, uARM, GCC_ARM, IAR'),
-    help='Sets default toolchain for the current program.')
+    help='Set default toolchain for the current program.')
 def toolchain_(name=None):
     return default_('toolchain', name)
 
@@ -1859,7 +1859,7 @@ def toolchain_(name=None):
 @subcommand('default',
     dict(name='name', help='Variable name. E.g. "target", "toolchain", "protocol"'),
     dict(name='value', nargs='?', help='Value. Will show the currently set default value for a variable if not specified.'),
-    help='Sets or get program default options.')
+    help='Set or get program default options.')
 def default_(name, value=None):
     # Find the root of the program
     program = Program(os.getcwd())
