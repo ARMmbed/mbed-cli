@@ -1862,7 +1862,7 @@ def config(toolchain=None, mcu=None, source=False, prefix=None):
         tools_dir = os.path.abspath(mbed_tools_path)
 
         if not os.path.isfile(os.path.join(tools_dir, 'get_config.py')):
-            error("'get_config_py' not found in tools/. Please update your mbed-os clone.", -1)
+            error("'get_config_py' not found in tools/. Please update mbed-os to get the latest tools.", -1)
 
         target = mcu if mcu else program.get_cfg('TARGET')
         if target is None:
