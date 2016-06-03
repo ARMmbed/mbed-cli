@@ -19,7 +19,7 @@ import zipfile
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
 git_cmd = 'git'
-ver = '0.4.0'
+ver = '0.4.1'
 
 ignores = [
     # Version control folders
@@ -1146,7 +1146,7 @@ class Program(object):
         if not mbed_tools_path:
             if not os.path.exists(os.path.join(self.path, '.temp')):
                 os.mkdir(os.path.join(self.path, '.temp'))
-            self.get_tools(os.path.join(self.path, '.temp'))
+            self.add_tools(os.path.join(self.path, '.temp'))
             mbed_tools_path = self.get_tools_dir()
 
         if not mbed_tools_path:
@@ -1182,7 +1182,7 @@ class Program(object):
                 "The missing Python modules are: %s\n"
                 "You can install all missing modules by opening a command prompt in \"%s\" and running \"pip install -r %s\"" % (', '.join(missing), mbed_os_path, fname))
 
-    def get_tools(self, path):
+    def add_tools(self, path):
         with cd(path):
             tools_dir = 'tools'
             if not os.path.exists(tools_dir):
@@ -1193,6 +1193,31 @@ class Program(object):
                     if os.path.exists(tools_dir):
                         rmtree_readonly(tools_dir)
                     raise Exception(128, "An error occurred while cloning the mbed SDK tools from \"%s\"" % mbed_sdk_tools_url)
+
+    def get_tools(self):
+        mbed_tools_path = self.get_tools_dir()
+        if not mbed_tools_path:
+            error('The mbed_tools_pathd in "%s". \n Run `mbed deploy` to install dependencies and tools. ' % self.path, -1)
+        return mbed_tools_path
+
+    def get_mcu(self, mcu=None):
+        target = mcu if mcu else self.get_cfg('TARGET')
+        if target is None:
+            error('Please specify compile target using the -m switch or set default target using command "target"', 1)
+        return target
+
+    def get_toolchain(self, toolchain=None):
+        tchain = toolchain if toolchain else program.get_cfg('TOOLCHAIN')
+        if tchain is None:
+            error('Please specify compile toolchain using the -t switch or set default toolchain using command "toolchain"', 1)
+        return tchain
+
+    def get_macros(self):
+        macros = []
+        if os.path.isfile('MACROS.txt'):
+            with open('MACROS.txt') as f:
+                macros = f.read().splitlines()
+        return macros
 
 
 def formaturl(url, format="default"):
@@ -1716,23 +1741,10 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
     orig_path = os.getcwd()
 
     with cd(program.path):
-        mbed_tools_path = program.get_tools_dir()
-        if not mbed_tools_path:
-            error('The mbed tools were not found in "%s". \n Run `mbed deploy` to install dependencies and tools. ' % program.path, -1)
-        tools_dir = os.path.abspath(mbed_tools_path)
-
-        target = mcu if mcu else program.get_cfg('TARGET')
-        if target is None:
-            error('Please specify compile target using the -m switch or set default target using command "target"', 1)
-
-        tchain = toolchain if toolchain else program.get_cfg('TOOLCHAIN')
-        if tchain is None:
-            error('Please specify compile toolchain using the -t switch or set default toolchain using command "toolchain"', 1)
-
-        macros = []
-        if os.path.isfile('MACROS.txt'):
-            with open('MACROS.txt') as f:
-                macros = f.read().splitlines()
+        tools_dir = os.path.abspath(program.get_tools())
+        target = program.get_mcu(mcu)
+        tchain = program.get_toolchain(toolchain)
+        macros = program.get_macros()
 
         env = os.environ.copy()
         env['PYTHONPATH'] = os.path.abspath(program.path)
@@ -1793,8 +1805,7 @@ def test(tlist=False):
     program = Program(os.getcwd(), True)
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
-        if not program.get_tools_dir():
-            error('The mbed tools were not found in "%s".' % program.path, -1)
+        tools_dir = program.get_tools()
 
         # Prepare environment variables
         env = os.environ.copy()
@@ -1802,7 +1813,7 @@ def test(tlist=False):
         if tlist:
             # List all available tests (by default in a human-readable format)
             try:
-                popen(['python', os.path.join(program.get_tools_dir(), 'test.py'), '-l'] + args, env=env)
+                popen(['python', os.path.join(tools_dir, 'test.py'), '-l'] + args, env=env)
             except ProcessException:
                 error('Failed to run test script')
 
@@ -1819,21 +1830,13 @@ def export(ide=None, mcu=None):
     program = Program(os.getcwd(), True)
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
-        if not program.get_tools_dir():
-            error('The mbed tools were not found in "%s".' % program.path, -1)
-
-        target = mcu if mcu else program.get_cfg('TARGET')
-        if target is None:
-            error('Please specify export target using the -m switch or set default target using command "target"', 1)
-
-        macros = []
-        if os.path.isfile('MACROS.txt'):
-            with open('MACROS.txt') as f:
-                macros = f.read().splitlines()
+        tools_dir = program.get_tools()
+        target = program.get_mcu(mcu)
+        macros = program.get_macros()
 
         env = os.environ.copy()
         env['PYTHONPATH'] = '.'
-        popen(['python', os.path.join(program.get_tools_dir(), 'project.py')]
+        popen(['python', os.path.join(tools_dir, 'project.py')]
               + list(chain.from_iterable(izip(repeat('-D'), macros)))
               + ['-i', ide, '-m', target, '--source=%s' % program.path]
               + args,
