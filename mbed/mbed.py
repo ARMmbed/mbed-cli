@@ -90,6 +90,9 @@ regex_build_url = r'^(https?://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/(
 # default mbed OS url
 mbed_os_url = 'https://github.com/ARMmbed/mbed-os'
 
+# default mbed library url
+mbed_lib_url = 'https://mbed.org/users/mbed_official/code/mbed/builds/'
+
 # mbed SDK tools needed for programs based on mbed SDK library
 mbed_sdk_tools_url = 'https://mbed.org/users/mbed_official/code/mbed-sdk-tools'
 
@@ -243,7 +246,7 @@ class Bld(object):
         except Exception as e:
             error(e[1], e[0])
 
-    def fetch(url, rev):
+    def fetch_rev(url, rev):
         tmp_file = '.rev-' + rev + '.zip'
         arch_dir = 'mbed-' + rev
         try:
@@ -271,22 +274,6 @@ class Bld(object):
         m = Bld.isurl(url)
         if not m:
             raise ProcessException(1, "Not an mbed library build URL")
-
-        log("Checkout \"%s\" in %s" % (rev, os.path.basename(os.getcwd())))
-        arch_url = m.group(1) + '/archive/' + rev + '.zip'
-        arch_dir = m.group(7) + '-' + rev
-        try:
-            if not os.path.exists(arch_dir):
-                Bld.fetch(arch_url, rev)
-        except Exception as e:
-            if os.path.exists(arch_dir):
-                rmtree_readonly(arch_dir)
-            error(e[1], e[0])
-        Bld.seturl(url+'/'+rev)
-
-    def update(rev=None, clean=False, is_local=False):
-        url = Bld.geturl()
-        m = Bld.isurl(url)
         rev = Hg.remoteid(m.group(1), rev)
         if not rev:
             error("Unable to fetch late mbed library revision")
@@ -299,7 +286,21 @@ class Bld(object):
                         os.remove(fl)
                     else:
                         shutil.rmtree(fl)
-            return Bld.checkout(rev)
+
+            log("Checkout \"%s\" in %s" % (rev, os.path.basename(os.getcwd())))
+            arch_url = m.group(1) + '/archive/' + rev + '.zip'
+            arch_dir = m.group(7) + '-' + rev
+            try:
+                if not os.path.exists(arch_dir):
+                    Bld.fetch_rev(arch_url, rev)
+            except Exception as e:
+                if os.path.exists(arch_dir):
+                    rmtree_readonly(arch_dir)
+                error(e[1], e[0])
+            Bld.seturl(url+'/'+rev)
+
+    def update(rev=None, clean=False, is_local=False):
+        return Bld.checkout(rev)
 
     def untracked():
         return ""
@@ -794,7 +795,7 @@ class Repo(object):
                 path = os.getcwd()
                 warning(
                     "Could not find mbed program in current path. Assuming current dir.\n"
-                    "You can fix this by calling \"mbed new .\" in the root of your program")
+                    "You can fix this by calling \"mbed new .\" or \"mbed default root .\" in the root of your program.")
 
         repo.path = os.path.abspath(path)
         repo.name = os.path.basename(repo.path)
@@ -1066,7 +1067,7 @@ class Program(object):
         if self.is_cwd and print_warning:
             warning(
                 "Could not find mbed program in current path. Assuming current dir.\n"
-                "You can fix this by calling \"mbed new .\" in the root of your program")
+                "You can fix this by calling \"mbed new .\" or \"mbed default root .\" in the root of your program.")
 
     # Sets config value
     def set_cfg(self, var, val):
@@ -1111,6 +1112,12 @@ class Program(object):
             return os.path.join(self.path, 'mbed-os')
         elif self.name == 'mbed-os':
             return self.path
+        else:
+            return None
+
+    def get_mbedlib_dir(self):
+        if os.path.isdir(os.path.join(self.path, 'mbed')):
+            return os.path.join(self.path, 'mbed')
         else:
             return None
 
@@ -1259,10 +1266,11 @@ def subcommand(name, *args, **kwargs):
 @subcommand('new',
     dict(name='name', help='Destination name or path'),
     dict(name='scm', nargs='?', help='Source control management. Currently supported: %s. Default: git' % ', '.join([s.name for s in scms.values()])),
+    dict(name='--mbedlib', action='store_true', help='Add the mbed library to the program (instead of mbed-os).'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch the mbed OS repository when creating new program. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol when fetching the mbed OS repository when creating new program. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help='Create a new program based on the specified source control management. Will create a new library when called from inside a local program. Supported SCMs: %s.' % (', '.join([s.name for s in scms.values()])))
-def new(name, scm='git', depth=None, protocol=None):
+def new(name, scm='git', mbedlib=False, depth=None, protocol=None):
     global cwd_root
 
     d_path = name or os.getcwd()
@@ -1292,14 +1300,16 @@ def new(name, scm='git', depth=None, protocol=None):
 
         program = Program(d_path)
         program.set_root()
-        if not program.get_os_dir():
+        if not program.get_os_dir() and not program.get_mbedlib_dir():
+            url = mbed_lib_url if mbedlib else mbed_os_url
             try:
                 with cd(d_path):
-                    add(mbed_os_url, depth=depth, protocol=protocol, top=False)
+                    add(url, depth=depth, protocol=protocol, top=False)
             except Exception as e:
-                if os.path.isdir(os.path.join(d_path, 'mbed-os')):
-                    rmtree_readonly(os.path.join(d_path, 'mbed-os'))
-                raise e
+                d = 'mbed' if mbedlib else 'mbed-os'
+                if os.path.isdir(os.path.join(d_path, d)):
+                    rmtree_readonly(os.path.join(d_path, d))
+                raise
         if d_path:
             os.chdir(d_path)
 
