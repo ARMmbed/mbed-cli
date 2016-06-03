@@ -19,7 +19,7 @@ import zipfile
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
 git_cmd = 'git'
-ver = '0.3.2'
+ver = '0.4.0'
 
 ignores = [
     # Version control folders
@@ -1841,6 +1841,49 @@ def default_(name, value=None):
         else:
             program.set_cfg(var, value)
             action('%s now set as default %s in program "%s"' % (value, name, program.name))
+
+# 'config' command (calls into tools/get_config.py)
+@subcommand('config',
+    dict(name=['-t', '--toolchain'], help='Compile toolchain. Example: ARM, uARM, GCC_ARM, IAR'),
+    dict(name=['-m', '--mcu'], help='Compile target. Example: K64F, NUCLEO_F401RE, NRF51822...'),
+    dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
+    dict(name='--prefix', action='append', help='Restrict listing to parameters that have this prefix'),
+    help='Compile program using the native mbed OS build system.')
+def config(toolchain=None, mcu=None, source=False, prefix=None):
+    # Find the root of the program
+    program = Program(os.getcwd(), True)
+    # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
+    orig_path = os.getcwd()
+
+    with cd(program.path):
+        mbed_tools_path = program.get_tools_dir()
+        if not mbed_tools_path:
+            error('The mbed tools were not found in "%s". \n Run `mbed deploy` to install dependencies and tools. ' % program.path, -1)
+        tools_dir = os.path.abspath(mbed_tools_path)
+
+        if not os.path.isfile(os.path.join(tools_dir, 'get_config.py')):
+            error("'get_config_py' not found in tools/. Please update your mbed-os clone.", -1)
+
+        target = mcu if mcu else program.get_cfg('TARGET')
+        if target is None:
+            error('Please specify compile target using the -m switch or set default target using command "target"', 1)
+
+        tchain = toolchain if toolchain else program.get_cfg('TOOLCHAIN')
+        if tchain is None:
+            error('Please specify compile toolchain using the -t switch or set default toolchain using command "toolchain"', 1)
+
+        env = os.environ.copy()
+        env['PYTHONPATH'] = os.path.abspath(program.path)
+
+    if not source or len(source) == 0:
+        source = [os.path.relpath(program.path, orig_path)]
+
+    popen(['python', os.path.join(tools_dir, 'get_config.py')]
+          + ['-t', tchain, '-m', target]
+          + list(chain.from_iterable(izip(repeat('--source'), source)))
+          + (['-v'] if verbose else [])
+          + (list(chain.from_iterable(izip(repeat('--prefix'), prefix))) if prefix else []),
+          env=env)
 
 # Parse/run command
 if len(sys.argv) <= 1:
