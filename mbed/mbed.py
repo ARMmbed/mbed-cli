@@ -382,8 +382,6 @@ class Hg(object):
         popen([hg_cmd, 'update', '-C'] + (['-v'] if verbose else ['-q']))
 
     def checkout(rev):
-        if not rev:
-            return
         log("Checkout \"%s\" in %s to %s" % (rev, os.path.basename(os.getcwd()), rev))
         popen([hg_cmd, 'update'] + (['-r', rev] if rev else []) + (['-v'] if verbose else ['-q']))
 
