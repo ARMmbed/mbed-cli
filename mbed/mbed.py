@@ -1106,6 +1106,11 @@ class Program(object):
     def set_root(self):
         return self.set_cfg('ROOT', '.')
 
+    def unset_root(self, path=None):
+        fl = os.path.join(path or self.path, self.config_file)
+        if os.path.isfile(fl):
+            os.remove(fl)
+
     # Gets mbed OS dir (unified)
     def get_os_dir(self):
         if os.path.isdir(os.path.join(self.path, 'mbed-os')):
@@ -1250,7 +1255,7 @@ def subcommand(name, *args, **kwargs):
 
         def thunk(parsed_args):
             argv = [arg['dest'] if 'dest' in arg else arg['name'] for arg in args]
-            argv = [(arg if isinstance(arg, basestring) else arg[-1]).strip('-')
+            argv = [(arg if isinstance(arg, basestring) else arg[-1]).strip('-').replace('-', '_')
                     for arg in argv]
             argv = {arg: vars(parsed_args)[arg] for arg in argv
                     if vars(parsed_args)[arg] is not None}
@@ -1265,42 +1270,55 @@ def subcommand(name, *args, **kwargs):
 # New command
 @subcommand('new',
     dict(name='name', help='Destination name or path'),
-    dict(name='scm', nargs='?', help='Source control management. Currently supported: %s. Default: git' % ', '.join([s.name for s in scms.values()])),
-    dict(name='--mbedlib', action='store_true', help='Add the mbed library to the program (instead of mbed-os).'),
+    dict(name='--scm', nargs='?', help='Source control management. Currently supported: %s. Default: git' % ', '.join([s.name for s in scms.values()])),
+    dict(name='--program', action='store_true', help='Force creation of an mbed program. Default: auto.'),
+    dict(name='--library', action='store_true', help='Force creation of an mbed library. Default: auto.'),
+    dict(name='--mbedlib', action='store_true', help='Add the mbed library instead of mbed-os into the program.'),
+    dict(name='--create-only', action='store_true', help='Only create program, do not import mbed-os or mbed library.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch the mbed OS repository when creating new program. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol when fetching the mbed OS repository when creating new program. Supported: https, http, ssh, git. Default: inferred from URL.'),
-    help='Create a new program based on the specified source control management. Will create a new library when called from inside a local program. Supported SCMs: %s.' % (', '.join([s.name for s in scms.values()])))
-def new(name, scm='git', mbedlib=False, depth=None, protocol=None):
+    help='Create a new program based on the specified source control management. Will create a new library when called from inside a program. Supported SCMs: %s.' % (', '.join([s.name for s in scms.values()])))
+def new(name, scm='git', program=False, library=False, mbedlib=False, create_only=False, depth=None, protocol=None):
     global cwd_root
 
     d_path = name or os.getcwd()
-    if os.path.isdir(d_path):
-        if Repo.isrepo(d_path):
-            error("A %s already exists in \"%s\". Please select a different name or location." % (cwd_dest, d_path), 1)
-        if len(os.listdir(d_path)) > 1:
-            warning("Directory \"%s\" is not empty." % d_path)
+    p_path = Repo.findrepo(d_path) or d_path
+    if program and library:
+        error("Cannot use both --program and --library options.", 1)
+    elif not program and not library:
+        d_type = 'library' if os.path.abspath(p_path) != os.path.abspath(d_path) else 'program'
+    else:
+        d_type = 'library' if library else 'program'
 
-    # Find parent repository before the new one is created
-    p_path = Repo.findrepo(d_path)
+    if scm and scm != 'none':
+        if os.path.isdir(d_path) and Repo.isrepo(d_path):
+            repo = Repo.fromrepo(d_path)
+            if repo.scm.name != scm:
+                error("A repository already exists in \"%s\" based on %s. Please select a different name or location." % (d_path, scm), 1)
+        else:
+            repo_scm = [s for s in scms.values() if s.name == scm.lower()]
+            if not repo_scm:
+                error(
+                    "You have specified invalid source control management system\n"
+                    "Please specify one of the following SCMs: %s" % ', '.join([s.name for s in scms.values()]), 1)
+            repo_scm[0].init(d_path)
+    else:
+        scm = 'folder'
+        if not os.path.isdir(d_path):
+            os.mkdir(d_path)
 
-    repo_scm = [s for s in scms.values() if s.name == scm.lower()]
-    if not repo_scm:
-        error("Please specify one of the following source control management systems: %s" % ', '.join([s.name for s in scms.values()]), 1)
+    if len(os.listdir(d_path)) > 1:
+        warning("Directory \"%s\" is not empty." % d_path)
 
-    action("Creating new %s \"%s\" (%s)" % (cwd_dest, os.path.basename(d_path), repo_scm[0].name))
-    # Initialize repository
-    repo_scm[0].init(d_path)
+    action("Creating new %s \"%s\" (%s)" % (d_type, os.path.basename(d_path), scm))
+    p = Program(d_path)
 
-    if p_path:  # It's a library
-        with cd(p_path):
-            sync()
-    else:       # It's a program
+    if d_type == 'program':
         # This helps sub-commands to display relative paths to the created program
         cwd_root = os.path.abspath(d_path)
-
-        program = Program(d_path)
-        program.set_root()
-        if not program.get_os_dir() and not program.get_mbedlib_dir():
+        p.path = cwd_root
+        p.set_root()
+        if not create_only and not p.get_os_dir() and not p.get_mbedlib_dir():
             url = mbed_lib_url if mbedlib else mbed_os_url
             try:
                 with cd(d_path):
@@ -1309,9 +1327,13 @@ def new(name, scm='git', mbedlib=False, depth=None, protocol=None):
                 d = 'mbed' if mbedlib else 'mbed-os'
                 if os.path.isdir(os.path.join(d_path, d)):
                     rmtree_readonly(os.path.join(d_path, d))
-                raise
+                raise e
         if d_path:
             os.chdir(d_path)
+    else:
+        p.unset_root(d_path)
+        with cd(p_path):
+            sync()
 
     Program(d_path).post_action()
 
