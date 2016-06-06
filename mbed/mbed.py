@@ -1164,11 +1164,12 @@ class Program(object):
         missing = []
         fname = 'requirements.txt'
         try:
-            import pkgutil
+            import pip
+            installed_packages = [package.project_name for package in pip.get_installed_distributions()]
             with open(os.path.join(mbed_os_path, fname), 'r') as f:
                 for line in f.read().splitlines():
-                    pkg = re.sub(r'^([\w-]+).*$', r'\1', line)
-                    if pkgutil.find_loader(pkg) is None:
+                    pkg = re.sub(r'^([\w-]+).*$', r'\1', line).lower()
+                    if not pkg in installed_packages:
                         missing.append(pkg)
         except IOError:
             pass
