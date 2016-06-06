@@ -784,23 +784,19 @@ class Repo(object):
     @classmethod
     def fromrepo(cls, path=None):
         repo = cls()
-        repo.is_cwd = True
         if path is None:
-            path = Repo.findrepo(os.getcwd())
-            if path:
-                repo.is_cwd = False
-            else:
-                path = os.getcwd()
-                warning(
-                    "Could not find mbed program in current path. Assuming current dir.\n"
-                    "You can fix this by calling \"mbed new .\" or \"mbed default root .\" in the root of your program.")
+            path = Repo.findparent(os.getcwd())
+            if path is None:
+                error(
+                    "Could not find mbed program in current path \"%s\".\n"
+                    "You can fix this by calling \"mbed new .\" or \"mbed default root .\" in the root of your program." % os.getcwd())
 
         repo.path = os.path.abspath(path)
         repo.name = os.path.basename(repo.path)
 
         repo.sync()
 
-        if not repo.is_cwd and repo.scm is None:
+        if repo.scm is None:
             warning(
                 "Program \"%s\" in \"%s\" does not use source control management.\n"
                 "To fix this you should use \"mbed new .\" in the root of your program." % (repo.name, repo.path))
@@ -816,7 +812,7 @@ class Repo(object):
         return False
 
     @classmethod
-    def findrepo(cls, path=None):
+    def findparent(cls, path=None):
         path = os.path.abspath(path or os.getcwd())
 
         while cd(path):
@@ -837,7 +833,7 @@ class Repo(object):
         depth = 0
         while cd(path):
             tpath = path
-            path = Repo.findrepo(path)
+            path = Repo.findparent(path)
             if path:
                 depth += 1
                 path = os.path.split(path)[0]
@@ -883,7 +879,7 @@ class Repo(object):
                 self.url = self.geturl()
                 if not self.url:
                     self.is_local = True
-                    ppath = self.findrepo(os.path.split(self.path)[0])
+                    ppath = self.findparent(os.path.split(self.path)[0])
                     self.url = relpath(ppath, self.path).replace("\\", "/") if ppath else os.path.basename(self.path)
             except ProcessException:
                 pass
@@ -927,7 +923,7 @@ class Repo(object):
                 os.remove(dest)
             except OSError:
                 pass
-        return self.__scm_call('remove', dest, *args, **kwargs)
+        return self.scm.remove(dest, *args, **kwargs)
 
     def getlibs(self):
         for root, dirs, files in os.walk(self.path):
@@ -1034,9 +1030,9 @@ class Program(object):
         # is_cwd flag indicates that current dir is assumed to be root, not root repo
         if self.is_cwd and print_warning:
             warning(
-                "Could not find mbed program in current path. Assuming current dir.\n"
-                "You can fix this by calling \"mbed new .\" or \"mbed default root .\" in the root of your program.")
-
+                "Could not find mbed program in current path \"%s\".\n"
+                "You can fix this by calling \"mbed new .\" or \"mbed default root .\" in the root of your program." % self.path)
+ 
     # Sets config value
     def set_cfg(self, var, val):
         fl = os.path.join(self.path, self.config_file)
@@ -1276,7 +1272,7 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
     global cwd_root
 
     d_path = name or os.getcwd()
-    p_path = Repo.findrepo(d_path) or d_path
+    p_path = Repo.findparent(d_path) or d_path
     if program and library:
         error("Cannot use both --program and --library options.", 1)
     elif not program and not library:
@@ -1515,6 +1511,8 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
         sync()
 
     repo = Repo.fromrepo()
+    # A copy of repo containing the .lib layout before updating
+    repo_orig = Repo.fromrepo()
 
     if top and not rev and repo.isdetached():
         error(
@@ -1549,7 +1547,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
             repo.write()
 
     # Compare library references (.lib) before and after update, and remove libraries that do not have references in the current revision
-    for lib in repo.libs:
+    for lib in repo_orig.libs:
         if not os.path.isfile(lib.lib) and os.path.isdir(lib.path): # Library reference doesn't exist in the new revision. Will try to remove library to reproduce original structure
             gc = False
             with cd(lib.path):
