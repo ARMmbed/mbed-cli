@@ -904,19 +904,22 @@ class Repo(object):
                 return scm
 
     # Pass backend SCM commands and parameters if SCM exists
-    def __scm_call(self, method, *args, **kwargs):
-        if self.scm and hasattr(self.scm, method) and callable(getattr(self.scm, method)):
-            with cd(self.path):
-                return getattr(self.scm, method)(*args, **kwargs)
+    def __wrap_scm(self, method):
+        def __scm_call(*args, **kwargs):
+            if self.scm and hasattr(self.scm, method) and callable(getattr(self.scm, method)):
+                with cd(self.path):
+                    return getattr(self.scm, method)(*args, **kwargs)    
+        return __scm_call
 
-    def geturl(self, *args, **kwargs):
-        return self.__scm_call('geturl', *args, **kwargs)
-
-    def getrev(self, *args, **kwargs):
-        return self.__scm_call('getrev', *args, **kwargs)
-
-    def add(self, *args, **kwargs):
-        return self.__scm_call('add', *args, **kwargs)
+    def __getattr__(self, attr):      
+        if attr in ['geturl', 'getrev', 'add',  'remove', 'ignores', 'ignore', 'unignore',
+                    'status', 'dirty', 'commit', 'outgoing', 'publish', 'checkout', 'update',
+                    'isdetached']:
+            wrapper = self.__wrap_scm(attr)
+            self.__dict__[attr] = wrapper
+            return wrapper
+        else:
+            raise AttributeError("Repo instance doesn't have attribute '%s'" % attr)
 
     def remove(self, dest, *args, **kwargs):
         if os.path.isfile(dest):
@@ -925,39 +928,6 @@ class Repo(object):
             except OSError:
                 pass
         return self.__scm_call('remove', dest, *args, **kwargs)
-
-    def ignores(self, *args, **kwargs):
-        return self.__scm_call('ignores', *args, **kwargs)
-
-    def ignore(self, *args, **kwargs):
-        return self.__scm_call('ignore', *args, **kwargs)
-
-    def unignore(self, *args, **kwargs):
-        return self.__scm_call('unignore', *args, **kwargs)
-
-    def status(self, *args, **kwargs):
-        return self.__scm_call('status', *args, **kwargs)
-
-    def dirty(self, *args, **kwargs):
-        return self.__scm_call('dirty', *args, **kwargs)
-
-    def commit(self, *args, **kwargs):
-        return self.__scm_call('commit', *args, **kwargs)
-
-    def outgoing(self, *args, **kwargs):
-        return self.__scm_call('outgoing', *args, **kwargs)
-
-    def publish(self, *args, **kwargs):
-        return self.__scm_call('publish', *args, **kwargs)
-
-    def checkout(self, *args, **kwargs):
-        return self.__scm_call('checkout', *args, **kwargs)
-
-    def update(self, *args, **kwargs):
-        return self.__scm_call('update', *args, **kwargs)
-
-    def isdetached(self, *args, **kwargs):
-        return self.__scm_call('isdetached', *args, **kwargs)
 
     def getlibs(self):
         for root, dirs, files in os.walk(self.path):
