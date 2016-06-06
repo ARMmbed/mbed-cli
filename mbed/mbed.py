@@ -1848,7 +1848,7 @@ def default_(name, value=None):
     dict(name=['-m', '--mcu'], help='Compile target. Example: K64F, NUCLEO_F401RE, NRF51822...'),
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
     dict(name='--prefix', action='append', help='Restrict listing to parameters that have this prefix'),
-    help='Compile program using the native mbed OS build system.')
+    help='Display the project configuration.')
 def config(toolchain=None, mcu=None, source=False, prefix=None):
     # Find the root of the program
     program = Program(os.getcwd(), True)
