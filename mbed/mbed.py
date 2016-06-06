@@ -19,7 +19,7 @@ import zipfile
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
 git_cmd = 'git'
-ver = '0.4.1'
+ver = '0.5.0'
 
 ignores = [
     # Version control folders
@@ -1198,7 +1198,7 @@ class Program(object):
     def get_tools(self):
         mbed_tools_path = self.get_tools_dir()
         if not mbed_tools_path:
-            error('The mbed_tools_pathd in "%s". \n Run `mbed deploy` to install dependencies and tools. ' % self.path, -1)
+            error('The mbed tools were not found in "%s". \n Run `mbed deploy` to install dependencies and tools. ' % self.path, -1)
         return mbed_tools_path
 
     def get_mcu(self, mcu=None):
