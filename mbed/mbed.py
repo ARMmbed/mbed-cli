@@ -1174,7 +1174,7 @@ class Program(object):
         return target
 
     def get_toolchain(self, toolchain=None):
-        tchain = toolchain if toolchain else program.get_cfg('TOOLCHAIN')
+        tchain = toolchain if toolchain else self.get_cfg('TOOLCHAIN')
         if tchain is None:
             error('Please specify compile toolchain using the -t switch or set default toolchain using command "toolchain"', 1)
         return tchain
