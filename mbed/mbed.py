@@ -948,34 +948,33 @@ class Repo(object):
         sorted_scms = sorted(sorted_scms, key=lambda (m, _): not m)
 
         for _, scm in sorted_scms:
-            if scm.isurl(formaturl(url, 'https')):
-                main = True
-                cache = self.get_cache(url)
+            main = True
+            cache = self.get_cache(url)
 
-                # Try to clone with cache ref first
-                if cache:
-                    try:
-                        scm.clone(url, path, depth=depth, protocol=protocol, cache=cache, **kwargs)
-                        main = False
-                    except ProcessException, e:
-                        if os.path.isdir(path):
-                            rmtree_readonly(path)
+            # Try to clone with cache ref first
+            if cache:
+                try:
+                    scm.clone(url, path, depth=depth, protocol=protocol, cache=cache, **kwargs)
+                    main = False
+                except ProcessException, e:
+                    if os.path.isdir(path):
+                        rmtree_readonly(path)
 
-                # Main clone routine if the clone with cache ref failed (might occur if cache ref is dirty)
-                if main:
-                    try:
-                        scm.clone(url, path, depth=depth, protocol=protocol, **kwargs)
-                    except ProcessException:
-                        if os.path.isdir(path):
-                            rmtree_readonly(path)
-                        continue
+            # Main clone routine if the clone with cache ref failed (might occur if cache ref is dirty)
+            if main:
+                try:
+                    scm.clone(url, path, depth=depth, protocol=protocol, **kwargs)
+                except ProcessException:
+                    if os.path.isdir(path):
+                        rmtree_readonly(path)
+                    continue
 
-                self.scm = scm
-                self.url = url
-                self.path = os.path.abspath(path)
-                self.ignores()
-                self.set_cache(url)
-                return True
+            self.scm = scm
+            self.url = url
+            self.path = os.path.abspath(path)
+            self.ignores()
+            self.set_cache(url)
+            return True
         else:
             return False
 
