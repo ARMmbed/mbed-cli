@@ -26,6 +26,7 @@ import shutil
 import stat
 import errno
 from itertools import chain, izip, repeat
+from urlparse import urlparse
 import urllib
 import zipfile
 
@@ -250,7 +251,7 @@ class Bld(object):
         with cd(path):
             Bld.seturl(url)
 
-    def clone(url, path=None, depth=None, protocol=None):
+    def clone(url, path=None, depth=None, protocol=None, cache=None):
         m = Bld.isurl(url)
         if not m:
             raise ProcessException(1, "Not an mbed library build URL")
@@ -355,16 +356,15 @@ class Hg(object):
 
     def isurl(url):
         m_url = re.match(regex_url_ref, url.strip().replace('\\', '/'))
-        if m_url:
-            return ((re.match(regex_hg_url, m_url.group(1)) or re.match(regex_mbed_url, m_url.group(1)))
-                and not re.match(regex_build_url, m_url.group(1)))
+        if m_url and not re.match(regex_build_url, m_url.group(1)):
+            return re.match(regex_hg_url, m_url.group(1)) or re.match(regex_mbed_url, m_url.group(1))
         else:
             return False
 
     def init(path=None):
         popen([hg_cmd, 'init'] + ([path] if path else []) + (['-v'] if verbose else ['-q']))
 
-    def clone(url, name=None, depth=None, protocol=None):
+    def clone(url, name=None, depth=None, protocol=None, cache=None):
         popen([hg_cmd, 'clone', formaturl(url, protocol), name] + (['-v'] if verbose else ['-q']))
 
     def add(dest):
@@ -523,18 +523,17 @@ class Git(object):
 
     def isurl(url):
         m_url = re.match(regex_url_ref, url.strip().replace('\\', '/'))
-        if m_url:
-            return (re.match(regex_git_url, m_url.group(1))
-                and not re.match(regex_mbed_url, m_url.group(1))
-                and not re.match(regex_build_url, m_url.group(1)))
+        if m_url and not re.match(regex_build_url, m_url.group(1)) and not re.match(regex_mbed_url, m_url.group(1)):
+            return re.match(regex_git_url, m_url.group(1))
         else:
             return False
 
     def init(path=None):
         popen([git_cmd, 'init'] + ([path] if path else []) + ([] if verbose else ['-q']))
 
-    def clone(url, name=None, depth=None, protocol=None):
-        popen([git_cmd, 'clone', formaturl(url, protocol), name] + (['--depth', depth] if depth else []) + (['-v'] if verbose else ['-q']))
+    def clone(url, name=None, depth=None, protocol=None, cache=None):
+        popen([git_cmd, 'clone', formaturl(url, protocol), name] + (['--depth', depth] if depth else []) +
+            (['--reference', cache, '--dissociate'] if cache else []) + (['-v'] if verbose else ['-q']))
 
     def add(dest):
         log("Adding reference "+dest)
@@ -591,7 +590,7 @@ class Git(object):
             refs = Git.getrefs(rev)
             for ref in refs: # re-associate with a local or remote branch (rev is the same)
                 branch = re.sub(r'^(.*?)\/(.*?)$', r'\2', ref)
-                log("Revision \"%s\" matches a branch \"%s\"reference. Re-associating with branch" % (rev, branch))
+                log("Revision \"%s\" matches a branch \"%s\" reference. Re-associating with branch" % (rev, branch))
                 popen([git_cmd, 'checkout', branch] + ([] if verbose else ['-q']))
                 break
 
@@ -755,6 +754,7 @@ class Repo(object):
     rev = None
     scm = None
     libs = []
+    cache = '/tmp/repo_cache'
 
     @classmethod
     def fromurl(cls, url, path=None):
@@ -945,16 +945,34 @@ class Repo(object):
         sorted_scms = sorted(sorted_scms, key=lambda (m, _): not m)
 
         for _, scm in sorted_scms:
-            try:
-                scm.clone(url, path, depth=depth, protocol=protocol, **kwargs)
+            if scm.isurl(formaturl(url, 'https')):
+                main = True
+                cache = self.get_cache(url)
+
+                # Try to clone with cache ref first
+                if cache:
+                    try:
+                        scm.clone(url, path, depth=depth, protocol=protocol, cache=cache, **kwargs)
+                        main = False
+                    except ProcessException, e:
+                        if os.path.isdir(path):
+                            rmtree_readonly(path)
+
+                # Main clone routine if the clone with cache ref failed (might occur if cache ref is dirty)
+                if main:
+                    try:
+                        scm.clone(url, path, depth=depth, protocol=protocol, **kwargs)
+                    except ProcessException:
+                        if os.path.isdir(path):
+                            rmtree_readonly(path)
+                        continue
+
                 self.scm = scm
                 self.url = url
                 self.path = os.path.abspath(path)
                 self.ignores()
+                self.set_cache(url)
                 return True
-            except ProcessException:
-                if os.path.isdir(path):
-                    rmtree_readonly(path)
         else:
             return False
 
@@ -993,6 +1011,24 @@ class Repo(object):
             if re.match(r'(.+)\.(lib|bld)$', f) and os.path.isfile(f):
                 action("Remove untracked library reference \"%s\"" % f)
                 os.remove(f)
+
+    def get_cache(self, url):
+        up = urlparse(formaturl(url, 'https'))
+        if self.cache and up and os.path.isdir(os.path.join(self.cache, up.netloc, re.sub(r'^/', '', up.path))):
+            return os.path.join(self.cache, up.netloc, re.sub(r'^/', '', up.path))
+
+    def set_cache(self, url):
+        up = urlparse(formaturl(url, 'https'))
+        if self.cache and up and os.path.isdir(self.path):
+            cpath = os.path.join(self.cache, up.netloc, re.sub(r'^/', '', up.path))
+            if not os.path.isdir(cpath):
+                os.makedirs(cpath)
+
+            scm_dir = '.'+self.scm.name
+            if os.path.isdir(os.path.join(cpath, scm_dir)):
+                rmtree_readonly(os.path.join(cpath, scm_dir))
+            shutil.copytree(os.path.join(self.path, scm_dir), os.path.join(cpath, scm_dir))
+        return False
 
     def can_update(self, clean, force):
         err = None
