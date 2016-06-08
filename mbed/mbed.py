@@ -754,7 +754,7 @@ class Repo(object):
     rev = None
     scm = None
     libs = []
-    cache = '/tmp/repo_cache'
+    cache = None
 
     @classmethod
     def fromurl(cls, url, path=None):
@@ -781,6 +781,8 @@ class Repo(object):
             repo.rev = m_repo_url.group(3)
         else:
             error('Invalid repository (%s)' % url.strip(), -1)
+        repo.cache = Global().get_cfg('CACHE')
+
         return repo
 
     @classmethod
@@ -807,6 +809,7 @@ class Repo(object):
 
         repo.path = os.path.abspath(path)
         repo.name = os.path.basename(repo.path)
+        repo.cache = Global().get_cfg('CACHE')
 
         repo.sync()
 
@@ -830,7 +833,7 @@ class Repo(object):
         path = os.path.abspath(path or os.getcwd())
 
         while cd(path):
-            if os.path.isfile(os.path.join(path, Program.config_file)) or Repo.isrepo(path):
+            if os.path.isfile(os.path.join(path, Cfg.file)) or Repo.isrepo(path):
                 return path
 
             tpath = path
@@ -1070,9 +1073,8 @@ class Repo(object):
         return True
 
 
-# Program object, used to indicate the root of the code base
+# Program class, acts code base root
 class Program(object):
-    config_file = ".mbed"
     path = None
     name = None
     is_cwd = False
@@ -1085,7 +1087,7 @@ class Program(object):
 
         while cd(path):
             tpath = path
-            if os.path.isfile(os.path.join(path, Program.config_file)):
+            if os.path.isfile(os.path.join(path, Cfg.file)):
                 self.path = path
                 self.is_cwd = False
                 break
@@ -1102,45 +1104,17 @@ class Program(object):
                 "Could not find mbed program in current path \"%s\".\n"
                 "You can fix this by calling \"mbed new .\" or \"mbed default root .\" in the root of your program." % self.path)
  
-    # Sets config value
-    def set_cfg(self, var, val):
-        fl = os.path.join(self.path, self.config_file)
-        try:
-            with open(fl) as f:
-                lines = f.read().splitlines()
-        except IOError:
-            lines = []
-
-        for line in lines:
-            m = re.match(r'^([\w+-]+)\=(.*)?$', line)
-            if m and m.group(1) == var:
-                lines.remove(line)
-
-        lines += [var+"="+val]
-
-        with open(fl, 'w') as f:
-            f.write('\n'.join(lines) + '\n')
-
-    # Gets config value
-    def get_cfg(self, var, default_val=None):
-        fl = os.path.join(self.path, self.config_file)
-        try:
-            with open(fl) as f:
-                lines = f.read().splitlines()
-        except IOError:
-            lines = []
-
-        for line in lines:
-            m = re.match(r'^([\w+-]+)\=(.*)?$', line)
-            if m and m.group(1) == var:
-                return m.group(2)
-        return default_val
+    def get_cfg(self, *args, **kwargs):
+        return Cfg(self.path).get(*args, **kwargs) or Global().get_cfg(*args, **kwargs)
+        
+    def set_cfg(self, *args, **kwargs):
+        return Cfg(self.path).set(*args, **kwargs)
 
     def set_root(self):
         return self.set_cfg('ROOT', '.')
 
     def unset_root(self, path=None):
-        fl = os.path.join(path or self.path, self.config_file)
+        fl = os.path.join(path or self.path, Cfg.file)
         if os.path.isfile(fl):
             os.remove(fl)
 
@@ -1255,6 +1229,63 @@ class Program(object):
             with open('MACROS.txt') as f:
                 macros = f.read().splitlines()
         return macros
+
+
+# Global class, used for global config
+class Global(object):
+    def __init__(self):
+        self.path = os.path.join(os.path.expanduser("~"), '.mbed')
+        if not os.path.exists(self.path):
+            os.mkdir(self.path)
+
+    def get_cfg(self, *args, **kwargs):
+        return Cfg(self.path).get(*args, **kwargs)
+        
+    def set_cfg(self, *args, **kwargs):
+        return Cfg(self.path).set(*args, **kwargs)
+
+
+class Cfg(object):
+    path = None
+    file = ".mbed"
+
+    def __init__(self, path):
+        self.path = path
+
+    # Sets config value
+    def set(self, var, val):
+        fl = os.path.join(self.path, self.file)
+        try:
+            with open(fl) as f:
+                lines = f.read().splitlines()
+        except IOError:
+            lines = []
+
+        for line in lines:
+            m = re.match(r'^([\w+-]+)\=(.*)?$', line)
+            if m and m.group(1) == var:
+                lines.remove(line)
+
+        if not val is None:
+            lines += [var+"="+val]
+
+        with open(fl, 'w') as f:
+            f.write('\n'.join(lines) + '\n')
+
+    # Gets config value
+    def get(self, var, default_val=None):
+        fl = os.path.join(self.path, self.file)
+        try:
+            with open(fl) as f:
+                lines = f.read().splitlines()
+        except IOError:
+            lines = []
+
+        for line in lines:
+            m = re.match(r'^([\w+-]+)\=(.*)?$', line)
+            if m and m.group(1) == var:
+                return m.group(2)
+        return default_val
 
 
 def formaturl(url, format="default"):
@@ -1915,19 +1946,42 @@ def toolchain_(name=None):
 @subcommand('default',
     dict(name='name', help='Variable name. E.g. "target", "toolchain", "protocol"'),
     dict(name='value', nargs='?', help='Value. Will show the currently set default value for a variable if not specified.'),
+    dict(name=['-u', '--unset'], dest='unset', action='store_true', help='Unset the specified variable.'),
     help='Set or get program default options.')
-def default_(name, value=None):
+def default_(name, value=None, unset=False):
     # Find the root of the program
     program = Program(os.getcwd())
     # Change current dir to program root
     with cd(program.path):
         var = str(name).upper()
-        if value is None:
-            value = program.get_cfg(var)
-            action(('%s' % value) if value else 'No default %s set in program "%s"' % (name, program.name))
-        else:
+        if unset:
+            program.set_cfg(var, None)
+            action('Unset default %s in program "%s"' % (name, program.name))
+        elif value:
             program.set_cfg(var, value)
             action('%s now set as default %s in program "%s"' % (value, name, program.name))
+        else:
+            value = program.get_cfg(var)
+            action(('%s' % value) if value else 'No default %s set in program "%s"' % (name, program.name))
+
+# Generic config command
+@subcommand('global',
+    dict(name='name', help='Variable name. E.g. "target", "toolchain", "protocol"'),
+    dict(name='value', nargs='?', help='Value. Will show the currently set default value for a variable if not specified.'),
+    dict(name=['-u', '--unset'], dest='unset', action='store_true', help='Unset the specified variable.'),
+    help='Set or get global options for all programs. Global options may be overridden by program defaults.')
+def default_(name, value=None, unset=False):
+    g = Global()
+    var = str(name).upper()
+    if unset:
+        g.set_cfg(var, None)
+        action('Unset global %s' % name)
+    elif value:
+        g.set_cfg(var, value)
+        action('%s now set as global %s' % (value, name))
+    else:
+        value = g.get_cfg(var)
+        action(('%s' % value) if value else 'No global %s set' % (name))
 
 # 'config' command (calls into tools/get_config.py)
 @subcommand('config',
