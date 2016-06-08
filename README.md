@@ -85,14 +85,20 @@ mbed CLI allows creating new programs and importing existing ones, always with t
 
 #### Creating a new program
 
-When you create a new program, *mbed-cli* automatically imports the [mbed-os library](https://github.com/ARMmbed/mbed-os/) for you. This library represents a **release** of mbed OS and will pull in all the components of the OS, including its build system and desktop IDE project generators. 
+When you create a new program, *mbed CLI* automatically imports the [mbed-os library](https://github.com/ARMmbed/mbed-os/) for you. This library represents a **release** of mbed OS and will pull in all the components of the OS, including its build tools and desktop IDE project generators. 
 
 With this in mind, these are the steps for creating a new program (we'll call it `myprog`):
 
 ```
-$ mbed new myprog  # this creates a new folder "myprog", initializes a new repository and imports the latest revision of the mbed-os dependency to your program tree.
+$ mbed new myprog
+```
+
+This creates a new folder "myprog", initializes a new repository and imports the latest revision of the mbed-os dependency to your program tree.
+
+You can use `mbed ls` to list all imported libraries to your program.
+```
 $ cd myprog
-$ mbed ls -a       # this lists all libraries in your program
+$ mbed ls -a
 myprog (no revision)
 `- mbed-os (https://github.com/ARMmbed/mbed-os/#e472a51e45f30d793cbb430b6ebf3e1c53d82f57)
    |- core\mbedtls (https://mbed.org/teams/sandbox/code/mbedtls/#bef26f687287)
@@ -114,8 +120,7 @@ myprog (no revision)
    `- net\sal-stack-nanostack-private (https://github.com/ARMmbed/sal-stack-nanostack-private-mirror/#1374c77b03fb900425c09a1dd9a0cb8b4e4904ea)
 ```
 
-
-<span class="notes">**Note**: At the moment, if you want to start from an existing folder in your workspace, you can simply use `mbed new .`, which will initialize a new Git or Mercurial repository in that folder. While this might seem like a limitation, it helps with correct versioning for all program files, and helps mbed-cli find mbed-os and tooling. You can always drop the version control by removing the ``.git`` or ``.hg`` source management folders.</span>
+<span class="notes">**Note**: If you want to start from an existing folder in your workspace, you can simply use `mbed new .`, which will initialize an mbed program and also initialize a new Git or Mercurial repository in that folder. You can control which source control management is used or prevent source control management initialization via `--scm [name|none]` option.</span>
 
 
 #### Importing an existing program
