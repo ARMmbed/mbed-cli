@@ -939,6 +939,25 @@ class Repo(object):
                 pass
         return self.scm.remove(dest, *args, **kwargs)
 
+    def clone(self, url, path, depth=None, protocol=None, **kwargs):
+        # Sorted so repositories that match urls are attempted first
+        sorted_scms = [(scm.isurl(url), scm) for scm in scms.values()]
+        sorted_scms = sorted(sorted_scms, key=lambda (m, _): not m)
+
+        for _, scm in sorted_scms:
+            try:
+                scm.clone(url, path, depth=depth, protocol=protocol, **kwargs)
+                self.scm = scm
+                self.url = url
+                self.path = os.path.abspath(path)
+                self.ignores()
+                return True
+            except ProcessException:
+                if os.path.isdir(path):
+                    rmtree_readonly(path)
+        else:
+            return False
+
     def getlibs(self):
         for root, dirs, files in os.walk(self.path):
             dirs[:] = [d for d in dirs  if not d.startswith('.')]
@@ -1359,41 +1378,27 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
         if cwd_type != "directory":
             error("Cannot import program in the specified location \"%s\" because it's already part of a program.\n"
                   "Please change your working directory to a different location or use \"mbed add\" to import the URL as a library." % os.path.abspath(repo.path), 1)
-    else:
-        program = Program()
-        protocol = program.get_cfg('PROTOCOL', protocol)
+
+    protocol = Program().get_cfg('PROTOCOL', protocol)
 
     if os.path.isdir(repo.path) and len(os.listdir(repo.path)) > 1:
         error("Directory \"%s\" is not empty. Please ensure that the destination folder is empty." % repo.path, 1)
 
-    # Sorted so repositories that match urls are attempted first
-    sorted_scms = [(scm.isurl(url), scm) for scm in scms.values()]
-    sorted_scms = sorted(sorted_scms, key=lambda (m, _): not m)
-
     text = "Importing program" if top else "Adding library"
     action("%s \"%s\" from \"%s/\"%s" % (text, relpath(cwd_root, repo.path), repo.url, ' at '+(repo.revtype(repo.rev, True))))
-    for _, scm in sorted_scms:
-        try:
-            scm.clone(repo.url, repo.path, depth=depth, protocol=protocol)
-            repo.scm = scm
-            repo.ignores()
-
-            with cd(repo.path):
-                Program(repo.path).set_root()
-                try:
-                    repo.checkout(repo.rev)
-                except ProcessException as e:
-                    err = "Unable to update \"%s\" to %s" % (repo.name, repo.revtype(repo.rev, True))
-                    if depth:
-                        err = err + ("\nThe --depth option might prevent fetching the whole revision tree and checking out %s." % (repo.revtype(repo.rev, True)))
-                    if ignore:
-                        warning(err)
-                    else:
-                        error(err, e[0])
-            break
-        except ProcessException:
-            if os.path.isdir(repo.path):
-                rmtree_readonly(repo.path)
+    if repo.clone(repo.url, repo.path, depth=depth, protocol=protocol):
+        with cd(repo.path):
+            Program(repo.path).set_root()
+            try:
+                repo.checkout(repo.rev)
+            except ProcessException as e:
+                err = "Unable to update \"%s\" to %s" % (repo.name, repo.revtype(repo.rev, True))
+                if depth:
+                    err = err + ("\nThe --depth option might prevent fetching the whole revision tree and checking out %s." % (repo.revtype(repo.rev, True)))
+                if ignore:
+                    warning(err)
+                else:
+                    error(err, e[0])
     else:
         err = "Unable to clone repository (%s)" % url
         if ignore:
