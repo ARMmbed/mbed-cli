@@ -781,7 +781,8 @@ class Repo(object):
             repo.rev = m_repo_url.group(3)
         else:
             error('Invalid repository (%s)' % url.strip(), -1)
-        repo.cache = Global().get_cfg('CACHE')
+
+        repo.cache = Program(repo.path).get_cfg('CACHE')
 
         return repo
 
@@ -1016,12 +1017,12 @@ class Repo(object):
 
     def get_cache(self, url):
         up = urlparse(formaturl(url, 'https'))
-        if self.cache and up and os.path.isdir(os.path.join(self.cache, up.netloc, re.sub(r'^/', '', up.path))):
+        if self.cache and up and up.netloc and os.path.isdir(os.path.join(self.cache, up.netloc, re.sub(r'^/', '', up.path))):
             return os.path.join(self.cache, up.netloc, re.sub(r'^/', '', up.path))
 
     def set_cache(self, url):
         up = urlparse(formaturl(url, 'https'))
-        if self.cache and up and os.path.isdir(self.path):
+        if self.cache and up and up.netloc and os.path.isdir(self.path):
             cpath = os.path.join(self.cache, up.netloc, re.sub(r'^/', '', up.path))
             if not os.path.isdir(cpath):
                 os.makedirs(cpath)
