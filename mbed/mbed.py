@@ -262,7 +262,7 @@ class Bld(object):
             error(e[1], e[0])
 
     def fetch_rev(url, rev):
-        tmp_file = '.rev-' + rev + '.zip'
+        tmp_file = os.path.join('.'+Bld.name, '.rev-' + rev + '.zip')
         arch_dir = 'mbed-' + rev
         try:
             if not os.path.exists(tmp_file):
@@ -374,7 +374,7 @@ class Hg(object):
 
             try:
                 with cd(name):
-                    Hg.update()
+                    Hg.update(None, True)
                     main = False
             except ProcessException:
                 if os.path.exists(name):
