@@ -365,7 +365,23 @@ class Hg(object):
         popen([hg_cmd, 'init'] + ([path] if path else []) + (['-v'] if verbose else ['-q']))
 
     def clone(url, name=None, depth=None, protocol=None, cache=None):
-        popen([hg_cmd, 'clone', formaturl(url, protocol), name] + (['-v'] if verbose else ['-q']))
+        main = True
+
+        if cache and not os.path.isdir(name):
+            if not os.path.isdir(os.path.split(name)[0]):
+                os.makedirs(os.path.split(name)[0])
+            shutil.copytree(cache, name)
+
+            try:
+                with cd(name):
+                    Hg.update()
+                    main = False
+            except ProcessException:
+                if os.path.exists(name):
+                    rmtree_readonly(name)
+
+        if main:
+            popen([hg_cmd, 'clone', formaturl(url, protocol), name] + (['-v'] if verbose else ['-q']))
 
     def add(dest):
         log("Adding reference \"%s\"" % dest)
