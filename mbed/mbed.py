@@ -1037,7 +1037,7 @@ class Repo(object):
                 if os.path.isdir(os.path.join(cpath, scm_dir)):
                     rmtree_readonly(os.path.join(cpath, scm_dir))
                 shutil.copytree(os.path.join(self.path, scm_dir), os.path.join(cpath, scm_dir))
-            except (IOError, OSError, WindowsError):
+            except Exception:
                 warning("Unable to cache \"%s\" to \"%s\"" % (self.path, cpath))
         return False
 
