@@ -284,7 +284,7 @@ class Bld(object):
                 rmtree_readonly(arch_dir)
             raise Exception(128, "An error occurred while unpacking mbed library archive \"%s\" in \"%s\"" % (tmp_file, os.getcwd()))
 
-    def checkout(rev):
+    def checkout(rev, clean=False):
         url = Bld.geturl()
         m = Bld.isurl(url)
         if not m:
@@ -315,7 +315,7 @@ class Bld(object):
             Bld.seturl(url+'/'+rev)
 
     def update(rev=None, clean=False, is_local=False):
-        return Bld.checkout(rev)
+        return Bld.checkout(rev, clean)
 
     def untracked():
         return ""
@@ -395,16 +395,14 @@ class Hg(object):
         log("Discarding local changes in \"%s\"" % os.path.basename(os.getcwd()))
         popen([hg_cmd, 'update', '-C'] + (['-v'] if verbose else ['-q']))
 
-    def checkout(rev):
+    def checkout(rev, clean=False):
         log("Checkout \"%s\" in %s to %s" % (rev, os.path.basename(os.getcwd()), rev))
-        popen([hg_cmd, 'update'] + (['-r', rev] if rev else []) + (['-v'] if verbose else ['-q']))
+        popen([hg_cmd, 'update'] + (['-C'] if clean else []) + (['-r', rev] if rev else []) + (['-v'] if verbose else ['-q']))
 
     def update(rev=None, clean=False, is_local=False):
-        if clean:
-            Hg.discard()
         if not is_local:
             Hg.fetch()
-        Hg.checkout(rev)
+        Hg.checkout(rev, clean)
 
     def status():
         return pquery([hg_cmd, 'status'] + (['-v'] if verbose else ['-q']))
@@ -580,11 +578,11 @@ class Git(object):
         log("Merging \"%s\" with \"%s\"" % (os.path.basename(os.getcwd()), dest))
         popen([git_cmd, 'merge', dest] + (['-v'] if verbose else ['-q']))
 
-    def checkout(rev):
+    def checkout(rev, clean=False):
         if not rev:
             return
         log("Checkout \"%s\" in %s to %s" % (rev, os.path.basename(os.getcwd()), rev))
-        popen([git_cmd, 'checkout', rev] + ([] if verbose else ['-q']))
+        popen([git_cmd, 'checkout', rev] + (['-f'] if clean else []) + ([] if verbose else ['-q']))
         if Git.isdetached(): # try to find associated refs to avoid detached state
             refs = Git.getrefs(rev)
             for ref in refs: # re-associate with a local or remote branch (rev is the same)
@@ -599,7 +597,7 @@ class Git(object):
         if not is_local:
             Git.fetch()
         if rev:
-            Git.checkout(rev)
+            Git.checkout(rev, clean)
         else:
             remote = Git.getremote()
             branch = Git.getbranch()
@@ -1466,7 +1464,7 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
         with cd(repo.path):
             Program(repo.path).set_root()
             try:
-                repo.checkout(repo.rev)
+                repo.checkout(repo.rev, True)
             except ProcessException as e:
                 err = "Unable to update \"%s\" to %s" % (repo.name, repo.revtype(repo.rev, True))
                 if depth:
