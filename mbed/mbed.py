@@ -251,7 +251,7 @@ class Bld(object):
         with cd(path):
             Bld.seturl(url)
 
-    def clone(url, path=None, depth=None, protocol=None, cache=None):
+    def clone(url, path=None, depth=None, protocol=None):
         m = Bld.isurl(url)
         if not m:
             raise ProcessException(1, "Not an mbed library build URL")
@@ -364,24 +364,8 @@ class Hg(object):
     def init(path=None):
         popen([hg_cmd, 'init'] + ([path] if path else []) + (['-v'] if verbose else ['-q']))
 
-    def clone(url, name=None, depth=None, protocol=None, cache=None):
-        main = True
-
-        if cache and not os.path.isdir(name):
-            if not os.path.isdir(os.path.split(name)[0]):
-                os.makedirs(os.path.split(name)[0])
-            shutil.copytree(cache, name)
-
-            try:
-                with cd(name):
-                    Hg.update(None, True)
-                    main = False
-            except ProcessException:
-                if os.path.exists(name):
-                    rmtree_readonly(name)
-
-        if main:
-            popen([hg_cmd, 'clone', formaturl(url, protocol), name] + (['-v'] if verbose else ['-q']))
+    def clone(url, name=None, depth=None, protocol=None):
+        popen([hg_cmd, 'clone', formaturl(url, protocol), name] + (['-v'] if verbose else ['-q']))
 
     def add(dest):
         log("Adding reference \"%s\"" % dest)
@@ -547,9 +531,8 @@ class Git(object):
     def init(path=None):
         popen([git_cmd, 'init'] + ([path] if path else []) + ([] if verbose else ['-q']))
 
-    def clone(url, name=None, depth=None, protocol=None, cache=None):
-        popen([git_cmd, 'clone', formaturl(url, protocol), name] + (['--depth', depth] if depth else []) +
-            (['--reference', cache, '--dissociate'] if cache else []) + (['-v'] if verbose else ['-q']))
+    def clone(url, name=None, depth=None, protocol=None):
+        popen([git_cmd, 'clone', formaturl(url, protocol), name] + (['--depth', depth] if depth else []) + (['-v'] if verbose else ['-q']))
 
     def add(dest):
         log("Adding reference "+dest)
@@ -971,8 +954,18 @@ class Repo(object):
             # Try to clone with cache ref first
             if cache:
                 try:
-                    scm.clone(url, path, depth=depth, protocol=protocol, cache=cache, **kwargs)
-                    main = False
+                    if not os.path.isdir(path):
+                        if not os.path.isdir(os.path.split(path)[0]):
+                            os.makedirs(os.path.split(path)[0])
+                        shutil.copytree(cache, path)
+
+                        try:
+                            with cd(path):
+                                scm.update(None, True)
+                                main = False
+                        except ProcessException:
+                            if os.path.exists(path):
+                                rmtree_readonly(path)
                 except ProcessException, e:
                     if os.path.isdir(path):
                         rmtree_readonly(path)
