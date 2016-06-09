@@ -1028,14 +1028,17 @@ class Repo(object):
     def set_cache(self, url):
         up = urlparse(formaturl(url, 'https'))
         if self.cache and up and up.netloc and os.path.isdir(self.path):
-            cpath = os.path.join(self.cache, up.netloc, re.sub(r'^/', '', up.path))
-            if not os.path.isdir(cpath):
-                os.makedirs(cpath)
+            try:
+                cpath = os.path.join(self.cache, up.netloc, re.sub(r'^/', '', up.path))
+                if not os.path.isdir(cpath):
+                    os.makedirs(cpath)
 
-            scm_dir = '.'+self.scm.name
-            if os.path.isdir(os.path.join(cpath, scm_dir)):
-                rmtree_readonly(os.path.join(cpath, scm_dir))
-            shutil.copytree(os.path.join(self.path, scm_dir), os.path.join(cpath, scm_dir))
+                scm_dir = '.'+self.scm.name
+                if os.path.isdir(os.path.join(cpath, scm_dir)):
+                    rmtree_readonly(os.path.join(cpath, scm_dir))
+                shutil.copytree(os.path.join(self.path, scm_dir), os.path.join(cpath, scm_dir))
+            except (IOError, OSError, WindowsError):
+                warning("Unable to cache \"%s\" to \"%s\"" % (self.path, cpath))
         return False
 
     def can_update(self, clean, force):
