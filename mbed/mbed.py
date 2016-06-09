@@ -952,21 +952,17 @@ class Repo(object):
             cache = self.get_cache(url)
 
             # Try to clone with cache ref first
-            if cache:
+            if cache and not os.path.isdir(path):
+                log("Trying to use cached repository in \"%s\" for \"%s\"" % (cache, path))
                 try:
-                    if not os.path.isdir(path):
-                        if not os.path.isdir(os.path.split(path)[0]):
-                            os.makedirs(os.path.split(path)[0])
-                        shutil.copytree(cache, path)
+                    if os.path.split(path)[0] and not os.path.isdir(os.path.split(path)[0]):
+                        os.makedirs(os.path.split(path)[0])
+                    shutil.copytree(cache, path)
 
-                        try:
-                            with cd(path):
-                                scm.update(None, True)
-                                main = False
-                        except ProcessException:
-                            if os.path.exists(path):
-                                rmtree_readonly(path)
-                except ProcessException, e:
+                    with cd(path):
+                        scm.update(None, True)
+                        main = False
+                except (ProcessException, IOError):
                     if os.path.isdir(path):
                         rmtree_readonly(path)
 
@@ -1208,11 +1204,12 @@ class Program(object):
             if not os.path.exists(tools_dir):
                 try:
                     action("Couldn't find build tools in your program. Downloading the mbed SDK tools...")
-                    Hg.clone(mbed_sdk_tools_url, tools_dir)
+                    repo = Repo.fromurl(mbed_sdk_tools_url)
+                    repo.clone(mbed_sdk_tools_url, tools_dir)
                 except:
                     if os.path.exists(tools_dir):
                         rmtree_readonly(tools_dir)
-                    raise Exception(128, "An error occurred while cloning the mbed SDK tools from \"%s\"" % mbed_sdk_tools_url)
+                    error("An error occurred while cloning the mbed SDK tools from \"%s\"" % mbed_sdk_tools_url)
 
     def get_tools(self):
         mbed_tools_path = self.get_tools_dir()
