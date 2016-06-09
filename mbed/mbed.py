@@ -807,7 +807,7 @@ class Repo(object):
 
         repo.path = os.path.abspath(path)
         repo.name = os.path.basename(repo.path)
-        repo.cache = Global().get_cfg('CACHE')
+        repo.cache = Program(repo.path).get_cfg('CACHE')
 
         repo.sync()
 
