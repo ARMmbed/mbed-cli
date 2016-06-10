@@ -1829,6 +1829,26 @@ def export(ide=None, mcu=None):
               env=env)
 
 
+# Test command
+@subcommand('detect',
+    help='Detect mbed targets/boards connected to this system.')
+def test(tlist=False):
+    # Gather remaining arguments
+    args = remainder
+    # Find the root of the program
+    program = Program(os.getcwd(), True)
+    # Change directories to the program root to use mbed OS tools
+    with cd(program.path):
+        tools_dir = program.get_tools()
+
+        # Prepare environment variables
+        env = os.environ.copy()
+        env['PYTHONPATH'] = '.'
+        popen(['python', '-u', os.path.join(tools_dir, 'detect_targets.py')]
+              + args,
+              env=env)
+
+
 # Build system and exporters
 @subcommand('target',
     dict(name='name', nargs='?', help='Default target name. Example: K64F, NUCLEO_F401RE, NRF51822...'),
