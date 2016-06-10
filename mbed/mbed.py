@@ -1158,11 +1158,11 @@ class Program(object):
 
         if len(missing):
             warning(
-                "-------------------------------------------------------------------------------\n"
+                "-----------------------------------------------------------------\n"
                 "The mbed build tools in this program require Python modules that are not installed.\n"
-                "This might prevent you from compiling your code or exporting to IDEs and other toolchains.\n"
+                "This might prevent compiling code or exporting to IDEs and other toolchains.\n"
                 "The missing Python modules are: %s\n"
-                "You can install all missing modules by opening a command prompt in \"%s\" and running \"pip install -r %s\"" % (', '.join(missing), mbed_os_path, fname))
+                "You can install all missing modules by running \"pip install -r %s\" in \"%s\"" % (', '.join(missing), mbed_os_path, fname))
 
     def add_tools(self, path):
         with cd(path):
