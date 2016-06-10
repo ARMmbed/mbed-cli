@@ -33,7 +33,7 @@ import zipfile
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
 git_cmd = 'git'
-ver = '0.5.0'
+ver = '0.5.2'
 
 ignores = [
     # Version control folders
@@ -1145,7 +1145,7 @@ class Program(object):
         fname = 'requirements.txt'
         try:
             import pip
-            installed_packages = [package.project_name for package in pip.get_installed_distributions()]
+            installed_packages = [package.project_name.lower() for package in pip.get_installed_distributions()]
             with open(os.path.join(mbed_os_path, fname), 'r') as f:
                 for line in f.read().splitlines():
                     pkg = re.sub(r'^([\w-]+).*$', r'\1', line).lower()
@@ -1158,6 +1158,7 @@ class Program(object):
 
         if len(missing):
             warning(
+                "-------------------------------------------------------------------------------\n"
                 "The mbed build tools in this program require Python modules that are not installed.\n"
                 "This might prevent you from compiling your code or exporting to IDEs and other toolchains.\n"
                 "The missing Python modules are: %s\n"
