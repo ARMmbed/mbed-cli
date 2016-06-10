@@ -19,16 +19,15 @@ def read(fname):
 setup(
     name="mbed-cli",
     packages=["mbed"],
-    version="0.5.0",
+    version="0.5.1",
     url='http://github.com/ARMmbed/mbed-cli',
     author='ARM mbed',
     author_email='support@mbed.org',
     license='Apache-2.0',
     entry_points={
         'console_scripts': [
-            'mbed=mbed.mbed',
-            'mbed-cli=mbed.mbed',
-            'neo=mbed.mbed'
+            'mbed=mbed.mbed:main',
+            'mbed-cli=mbed.mbed:main',
         ]
     },
     long_description=read('pypi_readme.rst'),

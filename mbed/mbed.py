@@ -33,7 +33,7 @@ import zipfile
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
 git_cmd = 'git'
-ver = '0.5.0'
+ver = '0.5.1'
 
 ignores = [
     # Version control folders
