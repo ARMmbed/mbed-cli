@@ -1957,5 +1957,9 @@ except OSError as e:
         error('OS Error: %s' % e[1], e[0])
 except KeyboardInterrupt as e:
     error('User aborted!', 255)
-
+except Exception as e:
+    if verbose:
+        import traceback
+        traceback.print_exc(file=sys.stdout)
+    error("Unknown Error: %s" % e, 255)
 sys.exit(status or 0)
