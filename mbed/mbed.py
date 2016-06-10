@@ -1708,13 +1708,14 @@ def status_(ignore=False):
 @subcommand('compile',
     dict(name=['-t', '--toolchain'], help='Compile toolchain. Example: ARM, uARM, GCC_ARM, IAR'),
     dict(name=['-m', '--mcu'], help='Compile target. Example: K64F, NUCLEO_F401RE, NRF51822...'),
+    dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
     dict(name='--build', help='Build directory. Default: .build/'),
     dict(name='--library', dest='compile_library', action='store_true', help='Compile the current %s as a static library.' % cwd_type),
     dict(name='--tests', dest='compile_tests', action='store_true', help='Compile tests in TESTS directory.'),
     dict(name='--test_spec', dest="test_spec", help="Destination path for a test spec file that can be used by the Greentea automated test tool. (Default is 'test_spec.json')"),
     help='Compile program using the native mbed OS build system.')
-def compile(toolchain=None, mcu=None, source=False, build=False, compile_library=False, compile_tests=False, test_spec="test_spec.json"):
+def compile(toolchain=None, mcu=None, clean=False, source=False, build=False, compile_library=False, compile_tests=False, test_spec="test_spec.json"):
     args = remainder
     # Gather remaining arguments
     args = remainder
@@ -1743,6 +1744,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
         popen(['python', '-u', os.path.join(tools_dir, 'test.py')]
               + list(chain.from_iterable(izip(repeat('-D'), macros)))
               + ['-t', tchain, '-m', target]
+              + (['-c'] if clean else [])
               + list(chain.from_iterable(izip(repeat('--source'), source)))
               + ['--build', build]
               + ['--test-spec', test_spec]
