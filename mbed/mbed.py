@@ -1840,7 +1840,7 @@ def export(ide=None, mcu=None):
 # Test command
 @subcommand('detect',
     help='Detect mbed targets/boards connected to this system.')
-def test(tlist=False):
+def detect():
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
