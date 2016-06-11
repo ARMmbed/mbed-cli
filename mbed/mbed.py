@@ -1812,7 +1812,7 @@ def sync(recursive=True, keep_refs=False, top=True):
         "View the dependency tree in this %s." % cwd_type))
 def list_(all=False, prefix='', p_path=None, ignore=False):
     repo = Repo.fromrepo()
-    print prefix + (relpath(p_path, repo.path) if p_path else repo.name), '(%s)' % ((repo.fullurl if all else repo.rev) or 'no revision')
+    print prefix + (relpath(p_path, repo.path) if p_path else repo.name), '(%s)' % ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if all else str(repo.rev)[:12]) or 'no revision')
 
     for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.path)):
         if prefix:
@@ -1849,7 +1849,7 @@ def status_(ignore=False):
     dict(name=['-t', '--toolchain'], help='Compile toolchain. Example: ARM, uARM, GCC_ARM, IAR'),
     dict(name=['-m', '--mcu'], help='Compile target. Example: K64F, NUCLEO_F401RE, NRF51822...'),
     dict(name='--library', dest='compile_library', action='store_true', help='Compile the current %s as a static library.' % cwd_type),
-    dict(name='--config', dest='compile_config', help='Show run-time compile configuration'),
+    dict(name='--config', dest='compile_config', action='store_true', help='Show run-time compile configuration'),
     dict(name='--prefix', dest='config_prefix', action='append', help='Restrict listing to parameters that have this prefix'),
     dict(name='--tests', dest='compile_tests', action='store_true', help='Compile tests in TESTS directory.'),
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
@@ -1896,8 +1896,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
               + (['-v'] if very_verbose else [])
               + (list(chain.from_iterable(izip(repeat('--prefix'), config_prefix))) if config_prefix else []),
               env=env)
-
-    if compile_library:
+    elif compile_library:
         # Compile as a library (current dir is default)
         if not build:
             build = os.path.join(os.path.relpath(program.path, orig_path), '.build', 'libraries', os.path.basename(orig_path), target, tchain)
