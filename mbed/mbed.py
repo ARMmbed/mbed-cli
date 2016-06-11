@@ -31,10 +31,12 @@ import urllib
 import zipfile
 
 
+# Application version
+ver = '0.6.3'
+
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
 git_cmd = 'git'
-ver = '0.6.3'
 
 ignores = [
     # Version control folders
@@ -88,13 +90,11 @@ ignores = [
 
 # reference to local (unpublished) repo - dir#rev
 regex_local_ref = r'^([\w.+-][\w./+-]*?)/?(?:#(.*))?$'
-
 # reference to repo - url#rev
 regex_url_ref = r'^(.*/([\w+-]+)(?:\.\w+)?)/?(?:#(.*))?$'
 
 # git url (no #rev)
 regex_git_url = r'^(git@|git\://|ssh\://|https?\://)([^/:]+)[:/](.+?)(\.git|\/?)$'
-
 # hg url (no #rev)
 regex_hg_url = r'^(file|ssh|https?)://([^/:]+)/([^/]+)/?([^/]+?)?$'
 
@@ -102,12 +102,12 @@ regex_hg_url = r'^(file|ssh|https?)://([^/:]+)/([^/]+)/?([^/]+?)?$'
 regex_mbed_url = r'^(https?)://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+)/?$'
 regex_build_url = r'^(https?://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+))/builds/?([\w\-]{12,40}|tip)?/?$'
 
+# base url for all mbed related repos (used as sort of index)
+mbed_base_url = 'https://github.com/ARMmbed'
 # default mbed OS url
 mbed_os_url = 'https://github.com/ARMmbed/mbed-os'
-
 # default mbed library url
 mbed_lib_url = 'https://mbed.org/users/mbed_official/code/mbed/builds/'
-
 # mbed SDK tools needed for programs based on mbed SDK library
 mbed_sdk_tools_url = 'https://mbed.org/users/mbed_official/code/mbed-sdk-tools'
 
@@ -868,6 +868,11 @@ class Repo(object):
         else:
             return 'branch' + (' '+rev if ret_rev else '')
 
+    @classmethod
+    def isurl(cls, url):
+        m = re.match(regex_url_ref, url.strip().replace('\\', '/'))
+        return True if m else False
+
     @property
     def lib(self):
         return self.path + '.' + ('bld' if self.is_build else 'lib')
@@ -1446,6 +1451,10 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
     help='Import a program and its dependencies into the current directory or specified destination path.')
 def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
     global cwd_root
+
+    # translate 'mbed-os' to https://github.com/ARMmbed/mbed-os
+    if not Repo.isurl(url) and not os.path.exists(url):
+        url = mbed_base_url+'/'+url
 
     repo = Repo.fromurl(url, path)
     if top:
