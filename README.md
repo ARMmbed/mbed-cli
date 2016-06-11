@@ -29,7 +29,7 @@ This document covers the installation and usage of *mbed CLI*.
   5. [Compile-time customizations](#compile-time-customizations)
   6. [Automating toolchain and target selection](#automating-toolchain-and-target-selection)
 1. [Exporting to desktop IDEs](#exporting-to-desktop-ides)
-1. [Testing](#Testing)
+1. [Testing](#testing)
 1. [Known limitations](#known-limitations)
 
 ## Installation
