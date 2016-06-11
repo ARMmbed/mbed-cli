@@ -1390,7 +1390,7 @@ def subcommand(name, *args, **kwargs):
     help='Create new mbed program or library',
     description=(
         "Creates a new mbed program if executed within a non-program location.\n"
-        "Alternatively creates an mbed library if executed within an existing() program.\n"
+        "Alternatively creates an mbed library if executed within an existing program.\n"
         "When creating new program, the latest mbed-os release will be downloaded/added\n unless --create-only is specified.\n"
         "Supported source control management: git, hg"))
 def new(name, scm='git', program=False, library=False, mbedlib=False, create_only=False, depth=None, protocol=None):
@@ -1462,7 +1462,9 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help='Import program from URL',
     description=(
-        "Imports mbed program and its dependencies from a source control based URL\n(GitHub, Bitbucket, mbed.org) into the current directory or\nspecified path.\nUse 'mbed add <URL>' to add a library into an existing program."))
+        "Imports mbed program and its dependencies from a source control based URL\n"
+        "(GitHub, Bitbucket, mbed.org) into the current directory or specified\npath.\n"
+        "Use 'mbed add <URL>' to add a library into an existing program."))
 def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
     global cwd_root
 
@@ -1545,8 +1547,10 @@ def add(url, path=None, ignore=False, depth=None, protocol=None, top=True):
 # Remove library
 @subcommand('remove',
     dict(name='path', help='Local library name or path'),
-    description='Remove specified library and its dependencies from the current %s.' % cwd_type,
-    help='Remove library')
+    help='Remove library',
+    description=(
+        "Remove specified library, its dependencies and references from the current\n"
+        "You can re-add the library from it's URL via 'mbed add <library URL>'."))
 def remove(path):
     repo = Repo.fromrepo()
     if not Repo.isrepo(path):
@@ -1564,8 +1568,11 @@ def remove(path):
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to cloning and updating.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
-    description='Import missing dependencies in the current program or library.',
-    help='Find and add missing libraries')
+    help='Find and add missing libraries',
+    description=(
+        "Import missing dependencies in an existing program or library.\n"
+        "Use 'mbed import <URL>' and 'mbed add <URL>' instead of cloning manually and\n"
+        "then running 'mbed deploy'"))
 def deploy(ignore=False, depth=None, protocol=None, top=True):
     repo = Repo.fromrepo()
     repo.ignores()
@@ -1585,9 +1592,14 @@ def deploy(ignore=False, depth=None, protocol=None, top=True):
 
 # Publish command
 @subcommand('publish',
-    dict(name=['-A', '--all'], action='store_true', help='Publish all branches, including new. Default: push only the current branch.'),
-    description='Publish current %s and its dependencies to associated remote repository URLs.' % cwd_type,
-    help='Publish program or library')
+    dict(name=['-A', '--all'], action='store_true', help='Publish all branches, including new ones. Default: push only the current branch.'),
+    help='Publish program or library',
+    description=(
+        "Publishes this %s and all dependencies to their associated remote\nrepository URLs.\n"
+        "This command performs various consistency checks for local uncommitted changes\n"
+        "and unpublished revisions and encourages to commit/push them.\n"
+        "Online guide about collaboration is available at:\n"
+        "www.mbed.com/collab_guide" % cwd_type))
 def publish(all=None, top=True):
     if top:
         action("Checking for local modifications...")
@@ -1629,8 +1641,11 @@ def publish(all=None, top=True):
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to unpublished libraries, unpublished or uncommitted changes, and attempt to update from associated remote repository URLs.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
-    description='Update current %s and its dependencies from associated remote repository URLs.' % cwd_type,
-    help='Update to branch, tag, revision or latest')
+    help='Update to branch, tag, revision or latest',
+    description=(
+        "Updates this %s and its dependencies to specified branch, tag or revision.\n"
+        "Alternatively fetches from associated remote repository URL and updates to the\n"
+        "latest revision in the current branch." % cwd_type))
 def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=None, protocol=None):
     if top and clean:
         sync()
@@ -1724,8 +1739,11 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
 
 # Synch command
 @subcommand('sync',
-    description='Synchronize dependency references (.lib files) in the current %s.' % cwd_type,
-    help='Synchronize library references')
+    help='Synchronize library references',
+    description=(
+        "Synchronizes all library and dependency references (.lib files) in the\n"
+        "current %s.\n"
+        "Note that this will remove all invalid library references." % cwd_type))
 def sync(recursive=True, keep_refs=False, top=True):
     if top and recursive:
         action("Synchronizing dependency references...")
@@ -1783,8 +1801,9 @@ def sync(recursive=True, keep_refs=False, top=True):
 @subcommand('ls',
     dict(name=['-a', '--all'], action='store_true', help='List repository URL and revision pairs'),
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to missing libraries.'),
-    description='View the current %s dependency tree.' % cwd_type,
-    help='View library tree')
+    help='View dependency tree',
+    description=(
+        "View the dependency tree in this %s." % cwd_type))
 def list_(all=False, prefix='', p_path=None, ignore=False):
     repo = Repo.fromrepo()
     print prefix + (relpath(p_path, repo.path) if p_path else repo.name), '(%s)' % ((repo.fullurl if all else repo.rev) or 'no revision')
@@ -1804,8 +1823,9 @@ def list_(all=False, prefix='', p_path=None, ignore=False):
 # Command status for cross-SCM status of repositories
 @subcommand('status',
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to missing libraries.'),
-    description='Show changes status of the current %s and its dependencies.' % cwd_type,
-    help='Show version control status\n\n')
+    help='Show version control status\n\n',
+    description=(
+        "Show uncommitted changes in this %s and its dependencies." % cwd_type))
 def status_(ignore=False):
     repo = Repo.fromrepo()
     if repo.dirty():
@@ -1822,16 +1842,16 @@ def status_(ignore=False):
 @subcommand('compile',
     dict(name=['-t', '--toolchain'], help='Compile toolchain. Example: ARM, uARM, GCC_ARM, IAR'),
     dict(name=['-m', '--mcu'], help='Compile target. Example: K64F, NUCLEO_F401RE, NRF51822...'),
-    dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
-    dict(name='--build', help='Build directory. Default: .build/'),
     dict(name='--library', dest='compile_library', action='store_true', help='Compile the current %s as a static library.' % cwd_type),
     dict(name='--config', dest='compile_config', help='Show run-time compile configuration'),
     dict(name='--prefix', dest='config_prefix', action='append', help='Restrict listing to parameters that have this prefix'),
     dict(name='--tests', dest='compile_tests', action='store_true', help='Compile tests in TESTS directory.'),
+    dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
+    dict(name='--build', help='Build directory. Default: .build/'),
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
     dict(name=['-S', '--supported'], dest='supported', action='store_true', help='Shows supported matrix of targets and toolchains'),
-    description='Compile program using the native mbed OS build system.',
-    help='Compile program using the mbed build tools')
+    help='Compile this program using the mbed build tools',
+    description=("Compile this program using the mbed build tools."))
 def compile(toolchain=None, mcu=None, source=False, build=False, compile_library=False, compile_config=False, config_prefix=None, compile_tests=False, clean=False, supported=False):
     # Gather remaining arguments
     args = remainder
@@ -1879,6 +1899,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
         popen(['python', '-u', os.path.join(tools_dir, 'build.py')]
               + list(chain.from_iterable(izip(repeat('-D'), macros)))
               + ['-t', tchain, '-m', target]
+              + (['-c'] if clean else [])
               + list(chain.from_iterable(izip(repeat('--source'), source)))
               + ['--build', build]
               + (['-v'] if verbose else [])
@@ -1892,6 +1913,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
         popen(['python', '-u', os.path.join(tools_dir, 'make.py')]
               + list(chain.from_iterable(izip(repeat('-D'), macros)))
               + ['-t', tchain, '-m', target]
+              + (['-c'] if clean else [])
               + list(chain.from_iterable(izip(repeat('--source'), source)))
               + ['--build', build]
               + (['-v'] if verbose else [])
@@ -1952,8 +1974,9 @@ def test_(list_tests=False, compile_tests=False, test_spec="test_spec.json"):
 @subcommand('export',
     dict(name=['-i', '--ide'], help='IDE to create project files for. Example: UVISION,DS5,IAR', required=True),
     dict(name=['-m', '--mcu'], help='Export for target MCU. Example: K64F, NUCLEO_F401RE, NRF51822...'),
-    description='Generate project files for desktop IDEs for the current program.',
-    help='Generate an IDE project')
+    help='Generate an IDE project',
+    description=(
+        "Generate IDE project files for the current program."))
 def export(ide=None, mcu=None):
     # Gather remaining arguments
     args = remainder
@@ -1976,8 +1999,10 @@ def export(ide=None, mcu=None):
 
 # Test command
 @subcommand('detect',
-    description='Detect mbed targets/boards connected to this system.',
-    help='Detect connected mbed targets/boards\n\n')
+    help='Detect connected mbed targets/boards\n\n',
+    description=(
+        "Detects mbed targets/boards connected to this system and shows supported\n"
+        "toolchain matrix."))
 def detect():
     # Gather remaining arguments
     args = remainder
@@ -2001,8 +2026,12 @@ def detect():
     dict(name='value', nargs='?', help='Value. Will show the currently set default value for a variable if not specified.'),
     dict(name=['-G', '--global'], dest='global_cfg', action='store_true', help='Use global settings, not local'),
     dict(name=['-U', '--unset'], dest='unset', action='store_true', help='Unset the specified variable.'),
-    description='Set or get global options for all programs. Global options may be overridden by program defaults.',
-    help='Tool configuration')
+    help='Tool configuration',
+    description=(
+        "Gets, sets or unsets mbed tool configuration options.\n"
+        "Options can be global (via the --global switch) or local (per program)\n"
+        "Global options are always overridden by local/program options.\n"
+        "Currently supported options: target, toolchain, protocol, depth, cache"))
 def config_(var, value=None, global_cfg=False, unset=False):
     name = var
     var = str(var).upper()
@@ -2037,15 +2066,20 @@ def config_(var, value=None, global_cfg=False, unset=False):
 # Build system and exporters
 @subcommand('target',
     dict(name='name', nargs='?', help='Default target name. Example: K64F, NUCLEO_F401RE, NRF51822...'),
-    help='Set default target for the current program.')
-def target_(name=None):
-    return default_('target', name)
+    dict(name=['-G', '--global'], dest='global_cfg', action='store_true', help='Use global settings, not local'),
+    help='Set or get default target',
+    description=(
+        "This is an alias to 'mbed config target [--global] [name]'\n"))
+def target_(name=None, global_cfg=False):
+    return config_('target', name, global_cfg=global_cfg)
 
 @subcommand('toolchain',
     dict(name='name', nargs='?', help='Default toolchain name. Example: ARM, uARM, GCC_ARM, IAR'),
-    help='Set default toolchain for the current program.')
-def toolchain_(name=None):
-    return default_('toolchain', name)
+    help='Set or get default toolchain',
+    description=(
+        "This is an alias to 'mbed config toolchain [--global] [name]'\n"))
+def toolchain_(name=None, global_cfg=False):
+    return config_('toolchain', name, global_cfg=global_cfg)
 
 
 # Parse/run command
