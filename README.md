@@ -7,10 +7,10 @@ This document covers the installation and usage of *mbed CLI*.
 ## Table of Contents
 1. [Requirements](#requirements)
 1. [Installing and uninstalling](#installing-mbed-cli)
-1. [Working context and command help](#working-context-and-command-help)
+1. [Working context and command help](#working-context)
 1. [Creating and importing programs](#creating-and-importing-programs)
-	1. [Importing an existing program](#importing-an-existing-program)
-	2. [Creating a new program](#creating-a-new-program)
+  1. [Creating a new program](#creating-a-new-program)
+	2. [Importing an existing program](#importing-an-existing-program)
 1. [Adding and removing libraries](#adding-and-removing-libraries)
 	1. [Adding a library](#adding-a-library)
 	2. [Removing a library](#removing-a-library)
@@ -26,10 +26,10 @@ This document covers the installation and usage of *mbed CLI*.
 	2. [Compiling your program](#compiling-your-program)
 	3. [Compiling static libraries](#compiling-static-libraries)
   4. [Compile configuration system](#compile-configuration-system)
-  5. [Customizing the build](#customizing-the-build)
+  5. [Compile-time customizations](#compile-time-customizations)
   6. [Automating toolchain and target selection](#automating-toolchain-and-target-selection)
-1. [Testing](#Testing)
 1. [Exporting to desktop IDEs](#exporting-to-desktop-ides)
+1. [Testing](#Testing)
 1. [Known limitations](#known-limitations)
 
 ## Installation
@@ -466,7 +466,7 @@ $ mbed compile --config -t GCC_ARM -m K64F --prefix target
 $ mbed compile --config -t GCC_ARM -m K64F --prefix target --prefix app
 ```
 
-#### Other compile customizations
+#### Compile-time customizations
 
 ___Macros___
 
@@ -485,8 +485,23 @@ $ mbed compile -t GCC_ARM -m K64F -o debug-info
 <span class="tips">**Tip:** If you have files that you want to compile only in release mode, put them in a directory called `TARGET_RELEASE` at any level of your tree. If you have files that you want to compile only in debug mode, put them in a directory called `TARGET_DEBUG` at any level of your tree (then use `-o debug-info` as explained above).
 </span>
 
+#### Automating toolchain and target selection
 
-#### Compiling tests
+Using ``mbed target <target>`` and ``mbed toolchain <toolchain>`` you can set the default target and toolchain for your program, meaning you won't have to specify these every time you compile or generate IDE project files.
+
+### Exporting to desktop IDEs
+
+If you need to debug your code, a good way to do that is to export your source tree to an IDE project file, so that you can use the IDE's debugging facilities. Currently *mbed CLI* supports exporting to Keil uVision, DS-5, IAR Workbench, Simplicity Studio and other IDEs.
+
+For example, to export to uVision run:
+
+```
+$ mbed export -i uvision -m K64F
+```
+
+A ``.uvproj`` file is created in the projectfiles/uvision folder. You can open the project file with uVision.
+
+### Testing
 
 Use `mbed test --list-compile` to list the tests available:
 
@@ -545,21 +560,6 @@ Compiled test binaries are created in ```.build/<TARGET>/<TOOLCHAIN>/TestCase1.b
 
 <span class="notes">**Note:** This feature does not work in application modules that contain ```main()```. This issue is being worked on in parallel. However, currently we don't have any module with ```main()``` and ```TESTS``` together. Hence it does not break any existing module.</span>
 
-#### Automating toolchain and target selection
-
-Using ``mbed target <target>`` and ``mbed toolchain <toolchain>`` you can set the default target and toolchain for your program, meaning you won't have to specify these every time you compile or generate IDE project files.
-
-### Exporting to desktop IDEs
-
-If you need to debug your code, a good way to do that is to export your source tree to an IDE project file, so that you can use the IDE's debugging facilities. Currently *mbed CLI* supports exporting to Keil uVision, DS-5, IAR Workbench, Simplicity Studio and other IDEs.
-
-For example, to export to uVision run:
-
-```
-$ mbed export -i uvision -m K64F
-```
-
-A ``.uvproj`` file is created in the projectfiles/uvision folder. You can open the project file with uVision.
 
 ## Known limitations
 
