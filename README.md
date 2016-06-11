@@ -46,27 +46,27 @@ This document covers the installation and usage of *mbed CLI*.
 
     <span class="tips">**Note:** The directories of Git and Mercurial executables (`git` and `hg`) need to be in your system's PATH.</span>
 
-* **A command-line compiler or IDE Toolchain** - *mbed CLI* invokes the [mbed OS](https://github.com/ARMmbed/mbed-os) tools for various features - compiling, testing, exporting to industry standard toolchains. To compile your code, you would need either of these:
-    * Compilers: GCC ARM, ARMCC, IAR
+* **Command-line compiler or IDE Toolchain** - *mbed CLI* invokes the [mbed OS](https://github.com/ARMmbed/mbed-os) tools for various features - compiling, testing, exporting to industry standard toolchains. To compile your code, you would need either of these:
+    * Compilers: GCC ARM, ARMCC 5, IAR
     * Toolchains: Keil uVision, DS-5, IAR Workbench
 
 ### Installing mbed CLI
 
-1. You can get the latest stable version of *mbed CLI* via PyPI by running:
+You can get the latest stable version of *mbed CLI* via PyPI by running:
 
     ``$ pip install mbed-cli``
 
-1. Alternatively you get the development version of *mbed CLI* by cloning the development repository [https://github.com/ARMmbed/mbed-cli](https://github.com/ARMmbed/mbed-cli):
+Alternatively you get the development version of *mbed CLI* by cloning the development repository [https://github.com/ARMmbed/mbed-cli](https://github.com/ARMmbed/mbed-cli):
 
-    ``$ git clone https://github.com/ARMmbed/mbed-cli``
+  ``$ git clone https://github.com/ARMmbed/mbed-cli``
 
-    Once cloned you can install *mbed CLI* as a python package:
+  Once cloned you can install *mbed CLI* as a python package:
 
-    ``$ python setup.py install`` (on Linux/Mac, you may need to run with ``sudo`` as well)
+  ``$ python setup.py install`` (on Linux/Mac, you may need to run with ``sudo`` as well)
 
 <span class="tips">**Note:** *mbed CLI* is compatible with [Virtual Python Environment (virtualenv)](https://pypi.python.org/pypi/virtualenv). You can read more about isolated Python virtual environments [here](http://docs.python-guide.org/en/latest/).</span>
 
-### Uninstalling mbed-cli
+### Uninstalling mbed CLI
 
 To uninstall *mbed CLI*, simply run:
 
@@ -88,6 +88,7 @@ Various *mbed CLI* features require a program root, which whenever possible shou
 <span class="warnings">**Warning**: *mbed CLI* stores information about libraries and dependencies in reference files that use the `.lib` extension (e.g. `lib_name.lib`). While these files are human-readable, we *strongly* advise that you don't edit these manually and let *mbed CLI* manage them instead.</span>
 
 ### mbed CLI help
+
 To list all *mbed CLI* commands use `mbed --help`. A detailed command-specific help is available via `mbed <command> --help`. 
 
 ### Creating and importing programs
@@ -505,6 +506,9 @@ A ``.uvproj`` file is created in the projectfiles/uvision folder. You can open t
 
 mbed OS comes with a comprehensive set of test tools (see blah.blah.com), and you can use *mbed CLI* to manage and execute tests for you. Use `mbed test --list-compile` to list the tests available:
 
+#### Listing and compiling tests
+
+
 ```
 $ mbed test --list-compile
 Test Case:
@@ -560,6 +564,7 @@ Compiled test binaries are created in ```.build/<TARGET>/<TOOLCHAIN>/TestCase1.b
 
 <span class="notes">**Note:** This feature does not work in application modules that contain ```main()```. This issue is being worked on in parallel. However, currently we don't have any module with ```main()``` and ```TESTS``` together. Hence it does not break any existing module.</span>
 
+#### Listing and compiling tests
 
 ## Known limitations
 
