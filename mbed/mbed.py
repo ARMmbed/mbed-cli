@@ -1158,11 +1158,11 @@ class Program(object):
 
         if len(missing):
             warning(
-                "-------------------------------------------------------------------------------\n"
+                "-----------------------------------------------------------------\n"
                 "The mbed build tools in this program require Python modules that are not installed.\n"
-                "This might prevent you from compiling your code or exporting to IDEs and other toolchains.\n"
+                "This might prevent compiling code or exporting to IDEs and other toolchains.\n"
                 "The missing Python modules are: %s\n"
-                "You can install all missing modules by opening a command prompt in \"%s\" and running \"pip install -r %s\"" % (', '.join(missing), mbed_os_path, fname))
+                "You can install all missing modules by running \"pip install -r %s\" in \"%s\"" % (', '.join(missing), mbed_os_path, fname))
 
     def add_tools(self, path):
         with cd(path):
@@ -1709,14 +1709,15 @@ def status_(ignore=False):
 @subcommand('compile',
     dict(name=['-t', '--toolchain'], help='Compile toolchain. Example: ARM, uARM, GCC_ARM, IAR'),
     dict(name=['-m', '--mcu'], help='Compile target. Example: K64F, NUCLEO_F401RE, NRF51822...'),
-    dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
     dict(name='--build', help='Build directory. Default: .build/'),
+    dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
+    dict(name=['-S', '--supported'], dest='supported', action='store_true', help='Displays supported matrix of targets and toolchains'),
     dict(name='--library', dest='compile_library', action='store_true', help='Compile the current %s as a static library.' % cwd_type),
     dict(name='--tests', dest='compile_tests', action='store_true', help='Compile tests in TESTS directory.'),
     dict(name='--test_spec', dest="test_spec", help="Destination path for a test spec file that can be used by the Greentea automated test tool. (Default is 'test_spec.json')"),
     help='Compile program using the native mbed OS build system.')
-def compile(toolchain=None, mcu=None, clean=False, source=False, build=False, compile_library=False, compile_tests=False, test_spec="test_spec.json"):
+def compile(toolchain=None, mcu=None, source=False, build=False, clean=False, supported=False, compile_library=False, compile_tests=False, test_spec="test_spec.json"):
     args = remainder
     # Gather remaining arguments
     args = remainder
@@ -1727,15 +1728,22 @@ def compile(toolchain=None, mcu=None, clean=False, source=False, build=False, co
 
     with cd(program.path):
         tools_dir = os.path.abspath(program.get_tools())
-        target = program.get_mcu(mcu)
-        tchain = program.get_toolchain(toolchain)
-        macros = program.get_macros()
-
         env = os.environ.copy()
         env['PYTHONPATH'] = os.path.abspath(program.path)
 
     if not source or len(source) == 0:
         source = [os.path.relpath(program.path, orig_path)]
+
+    if supported:
+        popen(['python', '-u', os.path.join(tools_dir, 'make.py')]
+              + (['-S'] if supported else []) + (['-v'] if verbose else [])
+              + args,
+              env=env)
+        return
+
+    target = program.get_mcu(mcu)
+    tchain = program.get_toolchain(toolchain)
+    macros = program.get_macros()
 
     if compile_tests:
         # Compile tests
@@ -1825,6 +1833,26 @@ def export(ide=None, mcu=None):
         popen(['python', '-u', os.path.join(tools_dir, 'project.py')]
               + list(chain.from_iterable(izip(repeat('-D'), macros)))
               + ['-i', ide, '-m', target, '--source=%s' % program.path]
+              + args,
+              env=env)
+
+
+# Test command
+@subcommand('detect',
+    help='Detect mbed targets/boards connected to this system.')
+def detect():
+    # Gather remaining arguments
+    args = remainder
+    # Find the root of the program
+    program = Program(os.getcwd(), True)
+    # Change directories to the program root to use mbed OS tools
+    with cd(program.path):
+        tools_dir = program.get_tools()
+
+        # Prepare environment variables
+        env = os.environ.copy()
+        env['PYTHONPATH'] = '.'
+        popen(['python', '-u', os.path.join(tools_dir, 'detect_targets.py')]
               + args,
               env=env)
 
@@ -1929,5 +1957,9 @@ except OSError as e:
         error('OS Error: %s' % e[1], e[0])
 except KeyboardInterrupt as e:
     error('User aborted!', 255)
-
+except Exception as e:
+    if verbose:
+        import traceback
+        traceback.print_exc(file=sys.stdout)
+    error("Unknown Error: %s" % e, 255)
 sys.exit(status or 0)
