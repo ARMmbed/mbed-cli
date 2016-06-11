@@ -1880,7 +1880,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
     macros = program.get_macros()
 
     if compile_tests:
-        return test_(toolchain=toolchain, mcu=mcu, source=source, build=build, compile_tests=True)
+        return test_(toolchain=toolchain, mcu=mcu, source=source, build=build, compile_only=True)
 
     if compile_config:
         # Compile configuration
@@ -1923,51 +1923,95 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
 
 # Test command
 @subcommand('test',
-    dict(name=['-L', '--list'], dest='list_tests', action='store_true', help='List all of the available tests'),
-    dict(name=['-C', '--compile'], dest='compile_tests', action='store_true', help='List all of the available tests'),
     dict(name=['-t', '--toolchain'], help='Compile toolchain. Example: ARM, uARM, GCC_ARM, IAR'),
     dict(name=['-m', '--mcu'], help='Compile target. Example: K64F, NUCLEO_F401RE, NRF51822...'),
+    dict(name='--list-compile', dest='list_compile', action='store_true', help='List all tests that can be built'),
+    dict(name='--list-run', dest='list_run', action='store_true', help='List all built tests that can be ran'),
+    dict(name='--compile', dest='compile_only', action='store_true', help='Only compile tests'),
+    dict(name='--run', dest='run_only', action='store_true', help='Only run tests'),
+    dict(name=['-n', '--tests-by-name'], dest='tests_by_name', help='Limit the tests to a list (ex. test1,test2,test3)'),
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
     dict(name='--build', help='Build directory. Default: .build/'),
-    dict(name='--test_spec', dest="test_spec", help="Destination path for a test spec file that can be used by the Greentea automated test tool. (Default is 'test_spec.json')"),
-    description='Find and build tests in a program and its libraries.',
-    help='List, build and run tests')
-def test_(list_tests=False, compile_tests=False, test_spec="test_spec.json"):
+    dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
+    dict(name='--test-spec', dest="test_spec", help="Destination path for the test spec file used when running tests (only override if a test spec file that can be used by the Greentea automated test tool. The default is placed in the build directory"),
+    help='Find, build, and run tests in a program and its libraries')
+def test_(toolchain=None, mcu=None, list_compile=False, list_run=False, compile_only=False, run_only=False, tests_by_name=None, source=False, build=False, clean=False, test_spec=None):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
     program = Program(os.getcwd(), True)
     # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
     orig_path = os.getcwd()
-
+    
+    # Change directories to the program root to use mbed OS tools
     with cd(program.path):
+        target = program.get_mcu(mcu)
+        tchain = program.get_toolchain(toolchain)
+        macros = program.get_macros()
         tools_dir = program.get_tools()
 
         env = os.environ.copy()
         env['PYTHONPATH'] = os.path.abspath(program.path)
-
-    if list_tests:
-        # List all available tests (by default in a human-readable format)
-        try:
-            popen(['python', '-u', os.path.join(tools_dir, 'test.py'), '-l'] + args, env=env)
-        except ProcessException:
-            error('Failed to run test script')
-
-    if compile_tests:
-        # Compile tests
+        
+        # Setup the source path if not specified
+        if not source or len(source) == 0:
+            source = [os.path.relpath(program.path, orig_path)]
+        
+        # Setup the build path if not specified
         if not build:
             build = os.path.join(os.path.relpath(program.path, orig_path), '.build/tests', target, tchain)
-
-        popen(['python', '-u', os.path.join(tools_dir, 'test.py')]
-              + list(chain.from_iterable(izip(repeat('-D'), macros)))
-              + ['-t', tchain, '-m', target]
-              + (['-c'] if clean else [])
-              + list(chain.from_iterable(izip(repeat('--source'), source)))
-              + ['--build', build]
-              + ['--test-spec', test_spec]
-              + (['-v'] if verbose else [])
-              + args,
-              env=env)
+        
+        # Create the path to the test spec file
+        test_spec = os.path.join(build, 'test_spec.json')
+        
+        # Determine if building and running tests
+        build_and_run_tests = not list_compile and not list_run and not compile_only and not run_only
+        
+        if compile_only or build_and_run_tests:
+            cmd = ['python', '-u', os.path.join(tools_dir, 'test.py')]
+            cmd += list(chain.from_iterable(izip(repeat('-D'), macros)))
+            cmd += ['-t', tchain, '-m', target]
+            cmd += (['-c'] if clean else [])
+            cmd += list(chain.from_iterable(izip(repeat('--source'), source)))
+            cmd += ['--build', build]
+            cmd += ['--test-spec', test_spec]
+            cmd += (['-n', tests_by_name] if tests_by_name else [])
+            cmd += (['-v'] if verbose else [])
+            
+            try:
+                popen(cmd + args, env=env)
+            except ProcessException:
+                error('Failed to run the test compiling script')
+        
+        if run_only or build_and_run_tests:
+            cmd = ['mbedgt', '--test-spec', test_spec]
+            cmd += (['-n', tests_by_name] if tests_by_name else [])
+            cmd += (['-V'] if verbose else [])
+            
+            try:
+                popen(cmd + args, env=env)
+            except ProcessException:
+                error('Failed to run test runner')
+        
+        if list_compile:
+            cmd = ['python', '-u', os.path.join(tools_dir, 'test.py'), '--list']
+            cmd += (['-n', tests_by_name] if tests_by_name else [])
+            cmd += (['-v'] if verbose else [])
+            
+            try:
+                popen(cmd + args, env=env)
+            except ProcessException:
+                error('Failed to run buildable tests listing script')
+        
+        if list_run:
+            cmd = ['mbedgt', '--test-spec', test_spec, '--list']
+            cmd += (['-n', tests_by_name] if tests_by_name else [])
+            cmd += (['-V'] if verbose else [])
+            
+            try:
+                popen(cmd + args, env=env)
+            except ProcessException:
+                error('Failed to run test runner')
 
 
 # Export command
