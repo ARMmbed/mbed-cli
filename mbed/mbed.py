@@ -1335,12 +1335,17 @@ cwd_type = Repo.pathtype(cwd_root)
 cwd_dest = "program" if cwd_type == "directory" else "library"
 
 # Subparser handling
-parser = argparse.ArgumentParser(description="Command-line code management tool for ARM mbed OS - http://www.mbed.com\nversion %s" % ver)
+parser = argparse.ArgumentParser(prog='mbed',
+    description="Command-line code management tool for ARM mbed OS - http://www.mbed.com\nversion %s\n\n" % ver,
+    formatter_class=argparse.RawTextHelpFormatter)
 subparsers = parser.add_subparsers(title="Commands", metavar="           ")
 
 # Process handling
 def subcommand(name, *args, **kwargs):
     def subcommand(command):
+        if not kwargs.get('description') and kwargs.get('help'):
+            kwargs['description'] = kwargs['help']
+
         subparser = subparsers.add_parser(name, **kwargs)
 
         for arg in args:
@@ -1380,7 +1385,8 @@ def subcommand(name, *args, **kwargs):
     dict(name='--create-only', action='store_true', help='Only create program, do not import mbed-os or mbed library.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch the mbed OS repository when creating new program. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol when fetching the mbed OS repository when creating new program. Supported: https, http, ssh, git. Default: inferred from URL.'),
-    help='Create a new program based on the specified source control management. Will create a new library when called from inside a program. Supported SCMs: %s.' % (', '.join([s.name for s in scms.values()])))
+    description='Create new mbed program or library. Will create a new library when called from inside a program. Supported SCMs: %s.' % (', '.join([s.name for s in scms.values()])),
+    help='Create new mbed program or library')
 def new(name, scm='git', program=False, library=False, mbedlib=False, create_only=False, depth=None, protocol=None):
     global cwd_root
 
@@ -1448,7 +1454,8 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to cloning and updating.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
-    help='Import a program and its dependencies into the current directory or specified destination path.')
+    description='Import a program and its dependencies into the current directory or specified destination path.',
+    help='Import program from URL')
 def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
     global cwd_root
 
@@ -1501,29 +1508,6 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
         Program(repo.path).post_action()
 
 
-# Deploy command
-@subcommand('deploy',
-    dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to cloning and updating.'),
-    dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
-    dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
-    help='Import missing dependencies in the current program or library.')
-def deploy(ignore=False, depth=None, protocol=None, top=True):
-    repo = Repo.fromrepo()
-    repo.ignores()
-
-    for lib in repo.libs:
-        if os.path.isdir(lib.path):
-            if lib.check_repo():
-                with cd(lib.path):
-                    update(lib.rev, ignore=ignore, depth=depth, protocol=protocol, top=False)
-        else:
-            import_(lib.fullurl, lib.path, ignore=ignore, depth=depth, protocol=protocol, top=False)
-            repo.ignore(relpath(repo.path, lib.path))
-
-    if top:
-        Program(repo.path).post_action()
-
-
 # Add library command
 @subcommand('add',
     dict(name='url', help='URL of the library'),
@@ -1531,7 +1515,8 @@ def deploy(ignore=False, depth=None, protocol=None, top=True):
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to cloning and updating.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
-    help='Add a library and its dependencies into the current %s or specified destination path.' % cwd_type)
+    description='Add a library and its dependencies into the current %s or specified destination path.' % cwd_type,
+    help='Add library from URL')
 def add(url, path=None, ignore=False, depth=None, protocol=None, top=True):
     repo = Repo.fromrepo()
 
@@ -1550,7 +1535,8 @@ def add(url, path=None, ignore=False, depth=None, protocol=None, top=True):
 # Remove library
 @subcommand('remove',
     dict(name='path', help='Local library name or path'),
-    help='Remove specified library and its dependencies from the current %s.' % cwd_type)
+    description='Remove specified library and its dependencies from the current %s.' % cwd_type,
+    help='Remove library')
 def remove(path):
     repo = Repo.fromrepo()
     if not Repo.isrepo(path):
@@ -1563,10 +1549,35 @@ def remove(path):
     repo.unignore(relpath(repo.path, lib.path))
 
 
+# Deploy command
+@subcommand('deploy',
+    dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to cloning and updating.'),
+    dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
+    dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
+    description='Import missing dependencies in the current program or library.',
+    help='Find and add missing libraries')
+def deploy(ignore=False, depth=None, protocol=None, top=True):
+    repo = Repo.fromrepo()
+    repo.ignores()
+
+    for lib in repo.libs:
+        if os.path.isdir(lib.path):
+            if lib.check_repo():
+                with cd(lib.path):
+                    update(lib.rev, ignore=ignore, depth=depth, protocol=protocol, top=False)
+        else:
+            import_(lib.fullurl, lib.path, ignore=ignore, depth=depth, protocol=protocol, top=False)
+            repo.ignore(relpath(repo.path, lib.path))
+
+    if top:
+        Program(repo.path).post_action()
+
+
 # Publish command
 @subcommand('publish',
     dict(name=['-A', '--all'], action='store_true', help='Publish all branches, including new. Default: push only the current branch.'),
-    help='Publish current %s and its dependencies to associated remote repository URLs.' % cwd_type)
+    description='Publish current %s and its dependencies to associated remote repository URLs.' % cwd_type,
+    help='Publish program or library')
 def publish(all=None, top=True):
     if top:
         action("Checking for local modifications...")
@@ -1608,7 +1619,8 @@ def publish(all=None, top=True):
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to unpublished libraries, unpublished or uncommitted changes, and attempt to update from associated remote repository URLs.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
-    help='Update current %s and its dependencies from associated remote repository URLs.' % cwd_type)
+    description='Update current %s and its dependencies from associated remote repository URLs.' % cwd_type,
+    help='Update to branch, tag, revision or latest')
 def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=None, protocol=None):
     if top and clean:
         sync()
@@ -1702,7 +1714,8 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
 
 # Synch command
 @subcommand('sync',
-    help='Synchronize dependency references (.lib files) in the current %s.' % cwd_type)
+    description='Synchronize dependency references (.lib files) in the current %s.' % cwd_type,
+    help='Synchronize library references')
 def sync(recursive=True, keep_refs=False, top=True):
     if top and recursive:
         action("Synchronizing dependency references...")
@@ -1760,7 +1773,8 @@ def sync(recursive=True, keep_refs=False, top=True):
 @subcommand('ls',
     dict(name=['-a', '--all'], action='store_true', help='List repository URL and revision pairs'),
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to missing libraries.'),
-    help='View the current %s dependency tree.' % cwd_type)
+    description='View the current %s dependency tree.' % cwd_type,
+    help='View library tree')
 def list_(all=False, prefix='', p_path=None, ignore=False):
     repo = Repo.fromrepo()
     print prefix + (relpath(p_path, repo.path) if p_path else repo.name), '(%s)' % ((repo.fullurl if all else repo.rev) or 'no revision')
@@ -1780,7 +1794,8 @@ def list_(all=False, prefix='', p_path=None, ignore=False):
 # Command status for cross-SCM status of repositories
 @subcommand('status',
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to missing libraries.'),
-    help='Show status of the current %s and its dependencies.' % cwd_type)
+    description='Show changes status of the current %s and its dependencies.' % cwd_type,
+    help='Show version control status\n\n')
 def status_(ignore=False):
     repo = Repo.fromrepo()
     if repo.dirty():
@@ -1804,7 +1819,8 @@ def status_(ignore=False):
     dict(name='--library', dest='compile_library', action='store_true', help='Compile the current %s as a static library.' % cwd_type),
     dict(name='--tests', dest='compile_tests', action='store_true', help='Compile tests in TESTS directory.'),
     dict(name='--test_spec', dest="test_spec", help="Destination path for a test spec file that can be used by the Greentea automated test tool. (Default is 'test_spec.json')"),
-    help='Compile program using the native mbed OS build system.')
+    description='Compile program using the native mbed OS build system.',
+    help='Compile program using the mbed build tools')
 def compile(toolchain=None, mcu=None, source=False, build=False, clean=False, supported=False, compile_library=False, compile_tests=False, test_spec="test_spec.json"):
     args = remainder
     # Gather remaining arguments
@@ -1882,7 +1898,8 @@ def compile(toolchain=None, mcu=None, source=False, build=False, clean=False, su
     dict(name=['-m', '--mcu'], help='Compile target. Example: K64F, NUCLEO_F401RE, NRF51822...'),
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
     dict(name='--prefix', action='append', help='Restrict listing to parameters that have this prefix'),
-    help='Display program\'s compile configuration.')
+    description='Show program\'s compile configuration.',
+    help='Show compile configuration.')
 def config(toolchain=None, mcu=None, source=False, prefix=None):
     # Find the root of the program
     program = Program(os.getcwd(), True)
@@ -1923,7 +1940,8 @@ def config(toolchain=None, mcu=None, source=False, prefix=None):
 # Test command
 @subcommand('test',
     dict(name=['-l', '--list'], dest='tlist', action='store_true', help='List all of the available tests'),
-    help='Find and build tests in a program and its libraries.')
+    description='Find and build tests in a program and its libraries.',
+    help='Find and build tests')
 def test(tlist=False):
     # Gather remaining arguments
     args = remainder
@@ -1948,7 +1966,8 @@ def test(tlist=False):
 @subcommand('export',
     dict(name=['-i', '--ide'], help='IDE to create project files for. Example: UVISION,DS5,IAR', required=True),
     dict(name=['-m', '--mcu'], help='Export for target MCU. Example: K64F, NUCLEO_F401RE, NRF51822...'),
-    help='Generate project files for desktop IDEs for the current program.')
+    description='Generate project files for desktop IDEs for the current program.',
+    help='Generate IDE project')
 def export(ide=None, mcu=None):
     # Gather remaining arguments
     args = remainder
@@ -1971,7 +1990,8 @@ def export(ide=None, mcu=None):
 
 # Test command
 @subcommand('detect',
-    help='Detect mbed targets/boards connected to this system.')
+    description='Detect mbed targets/boards connected to this system.',
+    help='Detect connected mbed targets/boards\n\n')
 def detect():
     # Gather remaining arguments
     args = remainder
@@ -2007,7 +2027,8 @@ def toolchain_(name=None):
     dict(name='name', help='Variable name. E.g. "target", "toolchain", "protocol"'),
     dict(name='value', nargs='?', help='Value. Will show the currently set default value for a variable if not specified.'),
     dict(name=['-u', '--unset'], dest='unset', action='store_true', help='Unset the specified variable.'),
-    help='Set or get program default options.')
+    description='Set or get program default options.',
+    help='Program options')
 def default_(name, value=None, unset=False):
     # Find the root of the program
     program = Program(os.getcwd())
@@ -2029,7 +2050,8 @@ def default_(name, value=None, unset=False):
     dict(name='name', help='Variable name. E.g. "target", "toolchain", "protocol"'),
     dict(name='value', nargs='?', help='Value. Will show the currently set default value for a variable if not specified.'),
     dict(name=['-u', '--unset'], dest='unset', action='store_true', help='Unset the specified variable.'),
-    help='Set or get global options for all programs. Global options may be overridden by program defaults.')
+    description='Set or get global options for all programs. Global options may be overridden by program defaults.',
+    help='Global options')
 def default_(name, value=None, unset=False):
     g = Global()
     var = str(name).upper()
