@@ -19,7 +19,7 @@ def read(fname):
 setup(
     name="mbed-cli",
     packages=["mbed"],
-    version="0.6.3",
+    version="0.6.5",
     url='http://github.com/ARMmbed/mbed-cli',
     author='ARM mbed',
     author_email='support@mbed.org',

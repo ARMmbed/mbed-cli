@@ -32,7 +32,7 @@ import zipfile
 
 
 # Application version
-ver = '0.6.3'
+ver = '0.6.5'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
@@ -1336,8 +1336,8 @@ cwd_dest = "program" if cwd_type == "directory" else "library"
 
 # Subparser handling
 parser = argparse.ArgumentParser(prog='mbed',
-    description="Command-line code management tool for ARM mbed OS - http://www.mbed.com\nversion %s\n\n" % ver,
-    formatter_class=argparse.RawTextHelpFormatter)
+    description="Command-line code management tool for ARM mbed OS - http://www.mbed.com\nversion %s\n\nUse 'mbed <command> -h|--help' for detailed help.\nOnline manual and guides at www.mbed.com/cli_help" % ver,
+    formatter_class=argparse.RawDescriptionHelpFormatter)
 subparsers = parser.add_subparsers(title="Commands", metavar="           ")
 
 # Process handling
@@ -1382,10 +1382,10 @@ def subcommand(name, *args, **kwargs):
     dict(name='--program', action='store_true', help='Force creation of an mbed program. Default: auto.'),
     dict(name='--library', action='store_true', help='Force creation of an mbed library. Default: auto.'),
     dict(name='--mbedlib', action='store_true', help='Add the mbed library instead of mbed-os into the program.'),
-    dict(name='--create-only', action='store_true', help='Only create program, do not import mbed-os or mbed library.'),
+    dict(name='--create-only', action='store_true', help='Only create a program, do not import mbed-os or mbed library.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch the mbed OS repository when creating new program. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol when fetching the mbed OS repository when creating new program. Supported: https, http, ssh, git. Default: inferred from URL.'),
-    description='Create new mbed program or library. Will create a new library when called from inside a program. Supported SCMs: %s.' % (', '.join([s.name for s in scms.values()])),
+    description='Creates a new mbed program if executed within a non-program location. Alternatively creates an mbed library if executed within an existing mbed program.\nThe latest mbed-os release will be downloaded/added as well if a new program is created (unless --create-only is specified).\nSupported source control management: git, hg',
     help='Create new mbed program or library')
 def new(name, scm='git', program=False, library=False, mbedlib=False, create_only=False, depth=None, protocol=None):
     global cwd_root
@@ -1814,15 +1814,15 @@ def status_(ignore=False):
     dict(name=['-m', '--mcu'], help='Compile target. Example: K64F, NUCLEO_F401RE, NRF51822...'),
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
     dict(name='--build', help='Build directory. Default: .build/'),
-    dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
-    dict(name=['-S', '--supported'], dest='supported', action='store_true', help='Displays supported matrix of targets and toolchains'),
     dict(name='--library', dest='compile_library', action='store_true', help='Compile the current %s as a static library.' % cwd_type),
+    dict(name='--config', dest='compile_config', help='Show run-time compile configuration'),
+    dict(name='--prefix', dest='config_prefix', action='append', help='Restrict listing to parameters that have this prefix'),
     dict(name='--tests', dest='compile_tests', action='store_true', help='Compile tests in TESTS directory.'),
-    dict(name='--test_spec', dest="test_spec", help="Destination path for a test spec file that can be used by the Greentea automated test tool. (Default is 'test_spec.json')"),
+    dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
+    dict(name=['-S', '--supported'], dest='supported', action='store_true', help='Shows supported matrix of targets and toolchains'),
     description='Compile program using the native mbed OS build system.',
     help='Compile program using the mbed build tools')
-def compile(toolchain=None, mcu=None, source=False, build=False, clean=False, supported=False, compile_library=False, compile_tests=False, test_spec="test_spec.json"):
-    args = remainder
+def compile(toolchain=None, mcu=None, source=False, build=False, compile_library=False, compile_config=False, config_prefix=None, compile_tests=False, clean=False, supported=False):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
@@ -1850,21 +1850,18 @@ def compile(toolchain=None, mcu=None, source=False, build=False, clean=False, su
     macros = program.get_macros()
 
     if compile_tests:
-        # Compile tests
-        if not build:
-            build = os.path.join(os.path.relpath(program.path, orig_path), '.build/tests', target, tchain)
+        return test_(toolchain=toolchain, mcu=mcu, source=source, build=build, compile_tests=True)
 
-        popen(['python', '-u', os.path.join(tools_dir, 'test.py')]
-              + list(chain.from_iterable(izip(repeat('-D'), macros)))
+    if compile_config:
+        # Compile configuration
+        popen(['python', os.path.join(tools_dir, 'get_config.py')]
               + ['-t', tchain, '-m', target]
-              + (['-c'] if clean else [])
               + list(chain.from_iterable(izip(repeat('--source'), source)))
-              + ['--build', build]
-              + ['--test-spec', test_spec]
               + (['-v'] if verbose else [])
-              + args,
+              + (list(chain.from_iterable(izip(repeat('--prefix'), prefix))) if prefix else []),
               env=env)
-    elif compile_library:
+
+    if compile_library:
         # Compile as a library (current dir is default)
         if not build:
             build = os.path.join(os.path.relpath(program.path, orig_path), '.build', 'libraries', os.path.basename(orig_path), target, tchain)
@@ -1892,74 +1889,53 @@ def compile(toolchain=None, mcu=None, source=False, build=False, clean=False, su
               env=env)
 
 
-# 'config' command (calls into tools/get_config.py)
-@subcommand('config',
+# Test command
+@subcommand('test',
+    dict(name=['-L', '--list'], dest='list_tests', action='store_true', help='List all of the available tests'),
+    dict(name=['-C', '--compile'], dest='compile_tests', action='store_true', help='List all of the available tests'),
     dict(name=['-t', '--toolchain'], help='Compile toolchain. Example: ARM, uARM, GCC_ARM, IAR'),
     dict(name=['-m', '--mcu'], help='Compile target. Example: K64F, NUCLEO_F401RE, NRF51822...'),
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
-    dict(name='--prefix', action='append', help='Restrict listing to parameters that have this prefix'),
-    description='Show program\'s compile configuration.',
-    help='Show compile configuration.')
-def config(toolchain=None, mcu=None, source=False, prefix=None):
+    dict(name='--build', help='Build directory. Default: .build/'),
+    dict(name='--test_spec', dest="test_spec", help="Destination path for a test spec file that can be used by the Greentea automated test tool. (Default is 'test_spec.json')"),
+    description='Find and build tests in a program and its libraries.',
+    help='List, build and run tests')
+def test_(list_tests=False, compile_tests=False, test_spec="test_spec.json"):
+    # Gather remaining arguments
+    args = remainder
     # Find the root of the program
     program = Program(os.getcwd(), True)
     # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
     orig_path = os.getcwd()
 
     with cd(program.path):
-        mbed_tools_path = program.get_tools_dir()
-        if not mbed_tools_path:
-            error('The mbed tools were not found in "%s". \n Run `mbed deploy` to install dependencies and tools. ' % program.path, -1)
-        tools_dir = os.path.abspath(mbed_tools_path)
-
-        if not os.path.isfile(os.path.join(tools_dir, 'get_config.py')):
-            error("'get_config_py' not found in tools/. Please update mbed-os to get the latest tools.", -1)
-
-        target = mcu if mcu else program.get_cfg('TARGET')
-        if target is None:
-            error('Please specify compile target using the -m switch or set default target using command "target"', 1)
-
-        tchain = toolchain if toolchain else program.get_cfg('TOOLCHAIN')
-        if tchain is None:
-            error('Please specify compile toolchain using the -t switch or set default toolchain using command "toolchain"', 1)
+        tools_dir = program.get_tools()
 
         env = os.environ.copy()
         env['PYTHONPATH'] = os.path.abspath(program.path)
 
-    if not source or len(source) == 0:
-        source = [os.path.relpath(program.path, orig_path)]
+    if list_tests:
+        # List all available tests (by default in a human-readable format)
+        try:
+            popen(['python', '-u', os.path.join(tools_dir, 'test.py'), '-l'] + args, env=env)
+        except ProcessException:
+            error('Failed to run test script')
 
-    popen(['python', os.path.join(tools_dir, 'get_config.py')]
-          + ['-t', tchain, '-m', target]
-          + list(chain.from_iterable(izip(repeat('--source'), source)))
-          + (['-v'] if verbose else [])
-          + (list(chain.from_iterable(izip(repeat('--prefix'), prefix))) if prefix else []),
-          env=env)
+    if compile_tests:
+        # Compile tests
+        if not build:
+            build = os.path.join(os.path.relpath(program.path, orig_path), '.build/tests', target, tchain)
 
-
-# Test command
-@subcommand('test',
-    dict(name=['-l', '--list'], dest='tlist', action='store_true', help='List all of the available tests'),
-    description='Find and build tests in a program and its libraries.',
-    help='Find and build tests')
-def test(tlist=False):
-    # Gather remaining arguments
-    args = remainder
-    # Find the root of the program
-    program = Program(os.getcwd(), True)
-    # Change directories to the program root to use mbed OS tools
-    with cd(program.path):
-        tools_dir = program.get_tools()
-
-        # Prepare environment variables
-        env = os.environ.copy()
-        env['PYTHONPATH'] = '.'
-        if tlist:
-            # List all available tests (by default in a human-readable format)
-            try:
-                popen(['python', '-u', os.path.join(tools_dir, 'test.py'), '-l'] + args, env=env)
-            except ProcessException:
-                error('Failed to run test script')
+        popen(['python', '-u', os.path.join(tools_dir, 'test.py')]
+              + list(chain.from_iterable(izip(repeat('-D'), macros)))
+              + ['-t', tchain, '-m', target]
+              + (['-c'] if clean else [])
+              + list(chain.from_iterable(izip(repeat('--source'), source)))
+              + ['--build', build]
+              + ['--test-spec', test_spec]
+              + (['-v'] if verbose else [])
+              + args,
+              env=env)
 
 
 # Export command
@@ -1967,7 +1943,7 @@ def test(tlist=False):
     dict(name=['-i', '--ide'], help='IDE to create project files for. Example: UVISION,DS5,IAR', required=True),
     dict(name=['-m', '--mcu'], help='Export for target MCU. Example: K64F, NUCLEO_F401RE, NRF51822...'),
     description='Generate project files for desktop IDEs for the current program.',
-    help='Generate IDE project')
+    help='Generate an IDE project')
 def export(ide=None, mcu=None):
     # Gather remaining arguments
     args = remainder
@@ -2009,6 +1985,45 @@ def detect():
               env=env)
 
 
+# Generic config command
+@subcommand('config',
+    dict(name='var', help='Variable name. E.g. "target", "toolchain", "protocol"'),
+    dict(name='value', nargs='?', help='Value. Will show the currently set default value for a variable if not specified.'),
+    dict(name=['-G', '--global'], dest='global_cfg', action='store_true', help='Use global settings, not local'),
+    dict(name=['-U', '--unset'], dest='unset', action='store_true', help='Unset the specified variable.'),
+    description='Set or get global options for all programs. Global options may be overridden by program defaults.',
+    help='Tool configuration')
+def config_(var, value=None, global_cfg=False, unset=False):
+    name = var
+    var = str(var).upper()
+
+    if global_cfg:
+        # Global configuration
+        g = Global()
+        if unset:
+            g.set_cfg(var, None)
+            action('Unset global %s' % name)
+        elif value:
+            g.set_cfg(var, value)
+            action('%s now set as global %s' % (value, name))
+        else:
+            value = g.get_cfg(var)
+            action(('%s' % value) if value else 'No global %s set' % (name))
+    else:
+        # Find the root of the program
+        program = Program(os.getcwd())
+        with cd(program.path):
+            if unset:
+                program.set_cfg(var, None)
+                action('Unset default %s in program "%s"' % (name, program.name))
+            elif value:
+                program.set_cfg(var, value)
+                action('%s now set as default %s in program "%s"' % (value, name, program.name))
+            else:
+                value = program.get_cfg(var)
+                action(('%s' % value) if value else 'No default %s set in program "%s"' % (name, program.name))
+
+
 # Build system and exporters
 @subcommand('target',
     dict(name='name', nargs='?', help='Default target name. Example: K64F, NUCLEO_F401RE, NRF51822...'),
@@ -2021,49 +2036,6 @@ def target_(name=None):
     help='Set default toolchain for the current program.')
 def toolchain_(name=None):
     return default_('toolchain', name)
-
-# Generic config command
-@subcommand('default',
-    dict(name='name', help='Variable name. E.g. "target", "toolchain", "protocol"'),
-    dict(name='value', nargs='?', help='Value. Will show the currently set default value for a variable if not specified.'),
-    dict(name=['-u', '--unset'], dest='unset', action='store_true', help='Unset the specified variable.'),
-    description='Set or get program default options.',
-    help='Program options')
-def default_(name, value=None, unset=False):
-    # Find the root of the program
-    program = Program(os.getcwd())
-    # Change current dir to program root
-    with cd(program.path):
-        var = str(name).upper()
-        if unset:
-            program.set_cfg(var, None)
-            action('Unset default %s in program "%s"' % (name, program.name))
-        elif value:
-            program.set_cfg(var, value)
-            action('%s now set as default %s in program "%s"' % (value, name, program.name))
-        else:
-            value = program.get_cfg(var)
-            action(('%s' % value) if value else 'No default %s set in program "%s"' % (name, program.name))
-
-# Generic config command
-@subcommand('global',
-    dict(name='name', help='Variable name. E.g. "target", "toolchain", "protocol"'),
-    dict(name='value', nargs='?', help='Value. Will show the currently set default value for a variable if not specified.'),
-    dict(name=['-u', '--unset'], dest='unset', action='store_true', help='Unset the specified variable.'),
-    description='Set or get global options for all programs. Global options may be overridden by program defaults.',
-    help='Global options')
-def default_(name, value=None, unset=False):
-    g = Global()
-    var = str(name).upper()
-    if unset:
-        g.set_cfg(var, None)
-        action('Unset global %s' % name)
-    elif value:
-        g.set_cfg(var, value)
-        action('%s now set as global %s' % (value, name))
-    else:
-        value = g.get_cfg(var)
-        action(('%s' % value) if value else 'No global %s set' % (name))
 
 
 # Parse/run command
