@@ -287,7 +287,7 @@ Use these with caution as your uncommitted changes and unpublished libraries can
 
 #### Checking status
 
-As you work on s code, you'll edit parts of it - either your own program code or code in some of the libraries that it depends on. You can get the status of all the repositories in your program (recursively) by running `mbed status`. If a repository has uncommitted changes, this command will display these changes. Example:
+As you develop your program, you'll edit parts of it - either your own code or code in some of the libraries that it depends on. You can get the status of all the repositories in your program (recursively) by running `mbed status`. If a repository has uncommitted changes, this command will display these changes. Example:
 
 ```
 [mbed] Status for "mbed-os-program":
@@ -503,7 +503,7 @@ A ``.uvproj`` file is created in the projectfiles/uvision folder. You can open t
 
 ### Testing
 
-Use `mbed test --list-compile` to list the tests available:
+mbed OS comes with a comprehensive set of test tools (see blah.blah.com), and you can use *mbed CLI* to manage and execute tests for you. Use `mbed test --list-compile` to list the tests available:
 
 ```
 $ mbed test --list-compile
