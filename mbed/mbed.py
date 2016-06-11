@@ -1336,8 +1336,8 @@ cwd_dest = "program" if cwd_type == "directory" else "library"
 
 # Subparser handling
 parser = argparse.ArgumentParser(prog='mbed',
-    description="Command-line code management tool for ARM mbed OS - http://www.mbed.com\nversion %s\n\nUse 'mbed <command> -h|--help' for detailed help.\nOnline manual and guides at www.mbed.com/cli_help" % ver,
-    formatter_class=argparse.RawDescriptionHelpFormatter)
+    description="Command-line code management tool for ARM mbed OS - http://www.mbed.com\nversion %s\n\nUse 'mbed <command> -h|--help' for detailed help.\nOnline manual and guide available at www.mbed.com/cli_help" % ver,
+    formatter_class=argparse.RawTextHelpFormatter)
 subparsers = parser.add_subparsers(title="Commands", metavar="           ")
 
 # Process handling
@@ -1345,6 +1345,8 @@ def subcommand(name, *args, **kwargs):
     def subcommand(command):
         if not kwargs.get('description') and kwargs.get('help'):
             kwargs['description'] = kwargs['help']
+        if not kwargs.get('formatter_class'):
+            kwargs['formatter_class'] = argparse.RawDescriptionHelpFormatter
 
         subparser = subparsers.add_parser(name, **kwargs)
 
@@ -1385,8 +1387,12 @@ def subcommand(name, *args, **kwargs):
     dict(name='--create-only', action='store_true', help='Only create a program, do not import mbed-os or mbed library.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch the mbed OS repository when creating new program. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol when fetching the mbed OS repository when creating new program. Supported: https, http, ssh, git. Default: inferred from URL.'),
-    description='Creates a new mbed program if executed within a non-program location. Alternatively creates an mbed library if executed within an existing mbed program.\nThe latest mbed-os release will be downloaded/added as well if a new program is created (unless --create-only is specified).\nSupported source control management: git, hg',
-    help='Create new mbed program or library')
+    help='Create new mbed program or library',
+    description=(
+        "Creates a new mbed program if executed within a non-program location.\n"
+        "Alternatively creates an mbed library if executed within an existing() program.\n"
+        "When creating new program, the latest mbed-os release will be downloaded/added\n unless --create-only is specified.\n"
+        "Supported source control management: git, hg"))
 def new(name, scm='git', program=False, library=False, mbedlib=False, create_only=False, depth=None, protocol=None):
     global cwd_root
 
@@ -1454,8 +1460,9 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to cloning and updating.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
-    description='Import a program and its dependencies into the current directory or specified destination path.',
-    help='Import program from URL')
+    help='Import program from URL',
+    description=(
+        "Imports mbed program and its dependencies from a source control based URL\n(GitHub, Bitbucket, mbed.org) into the current directory or\nspecified path.\nUse 'mbed add <URL>' to add a library into an existing program."))
 def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
     global cwd_root
 
@@ -1515,8 +1522,11 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to cloning and updating.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
-    description='Add a library and its dependencies into the current %s or specified destination path.' % cwd_type,
-    help='Add library from URL')
+    help='Add library from URL',
+    description=(
+        "Adds mbed library and its dependencies from a source control based URL\n"
+        "(GitHub, Bitbucket, mbed.org) into an existing program.\n"
+        "Use 'mbed import <URL>' to import as a program"))
 def add(url, path=None, ignore=False, depth=None, protocol=None, top=True):
     repo = Repo.fromrepo()
 
