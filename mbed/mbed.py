@@ -3,20 +3,22 @@
 # Copyright (c) 2016 ARM Limited, All Rights Reserved
 # SPDX-License-Identifier: Apache-2.0
 
-# Licensed under the Apache License, Version 2.0 (the "License"); 
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 
 # You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
 
-# Unless required by applicable law or agreed to in writing, software 
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
 # either express or implied.
 
 
-# pylint: disable=too-many-arguments, too-many-locals, too-many-branches, too-many-lines, line-too-long, too-many-nested-blocks, too-many-public-methods, too-many-instance-attributes
-# pylint: disable=invalid-name, missing-docstring
+# pylint: disable=too-many-arguments, too-many-locals, too-many-branches, too-many-lines, line-too-long,
+# pylint: disable=too-many-nested-blocks, too-many-public-methods, too-many-instance-attributes, too-many-statements
+# pylint: disable=invalid-name, missing-docstring, bad-continuation
 
-import argparse
+import traceback
 import sys
 import re
 import subprocess
@@ -29,6 +31,7 @@ from itertools import chain, izip, repeat
 from urlparse import urlparse
 import urllib
 import zipfile
+import argparse
 
 
 # Application version
@@ -227,10 +230,10 @@ def staticclass(cls):
 # Handling for multiple version controls
 scms = {}
 def scm(name):
-    def scm(cls):
+    def _scm(cls):
         scms[name] = cls()
         return cls
-    return scm
+    return _scm
 
 # pylint: disable=no-self-argument, no-method-argument, no-member, no-self-use, unused-argument
 @scm('bld')
@@ -245,11 +248,9 @@ class Bld(object):
         else:
             return False
 
-    def init(path, url):
+    def init(path):
         if not os.path.exists(path):
             os.mkdir(path)
-        with cd(path):
-            Bld.seturl(url)
 
     def clone(url, path=None, depth=None, protocol=None):
         m = Bld.isurl(url)
@@ -257,7 +258,9 @@ class Bld(object):
             raise ProcessException(1, "Not an mbed library build URL")
 
         try:
-            Bld.init(path, url+'/tip')
+            Bld.init(path)
+            with cd(path):
+                Bld.seturl(url+'/tip')
         except Exception as e:
             error(e[1], e[0])
 
@@ -924,11 +927,11 @@ class Repo(object):
         def __scm_call(*args, **kwargs):
             if self.scm and hasattr(self.scm, method) and callable(getattr(self.scm, method)):
                 with cd(self.path):
-                    return getattr(self.scm, method)(*args, **kwargs)    
+                    return getattr(self.scm, method)(*args, **kwargs)
         return __scm_call
 
-    def __getattr__(self, attr):      
-        if attr in ['geturl', 'getrev', 'add',  'remove', 'ignores', 'ignore', 'unignore',
+    def __getattr__(self, attr):
+        if attr in ['geturl', 'getrev', 'add', 'remove', 'ignores', 'ignore', 'unignore',
                     'status', 'dirty', 'commit', 'outgoing', 'publish', 'checkout', 'update',
                     'isdetached']:
             wrapper = self.__wrap_scm(attr)
@@ -984,8 +987,8 @@ class Repo(object):
             self.ignores()
             self.set_cache(url)
             return True
-        else:
-            return False
+
+        return False
 
     def getlibs(self):
         for root, dirs, files in os.walk(self.path):
@@ -1114,10 +1117,10 @@ class Program(object):
             warning(
                 "Could not find mbed program in current path \"%s\".\n"
                 "You can fix this by calling \"mbed new .\" or \"mbed default root .\" in the root of your program." % self.path)
- 
+
     def get_cfg(self, *args, **kwargs):
         return Cfg(self.path).get(*args, **kwargs) or Global().get_cfg(*args, **kwargs)
-        
+
     def set_cfg(self, *args, **kwargs):
         return Cfg(self.path).set(*args, **kwargs)
 
@@ -1212,7 +1215,7 @@ class Program(object):
                     action("Couldn't find build tools in your program. Downloading the mbed SDK tools...")
                     repo = Repo.fromurl(mbed_sdk_tools_url)
                     repo.clone(mbed_sdk_tools_url, tools_dir)
-                except:
+                except Exception:
                     if os.path.exists(tools_dir):
                         rmtree_readonly(tools_dir)
                     error("An error occurred while cloning the mbed SDK tools from \"%s\"" % mbed_sdk_tools_url)
@@ -1252,7 +1255,7 @@ class Global(object):
 
     def get_cfg(self, *args, **kwargs):
         return Cfg(self.path).get(*args, **kwargs)
-        
+
     def set_cfg(self, *args, **kwargs):
         return Cfg(self.path).set(*args, **kwargs)
 
@@ -1342,7 +1345,7 @@ subparsers = parser.add_subparsers(title="Commands", metavar="           ")
 
 # Process handling
 def subcommand(name, *args, **kwargs):
-    def subcommand(command):
+    def __subcommand(command):
         if not kwargs.get('description') and kwargs.get('help'):
             kwargs['description'] = kwargs['help']
         if not kwargs.get('formatter_class'):
@@ -1374,7 +1377,7 @@ def subcommand(name, *args, **kwargs):
 
         subparser.set_defaults(command=thunk)
         return command
-    return subcommand
+    return __subcommand
 
 
 # New command
@@ -1888,7 +1891,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
               + ['-t', tchain, '-m', target]
               + list(chain.from_iterable(izip(repeat('--source'), source)))
               + (['-v'] if verbose else [])
-              + (list(chain.from_iterable(izip(repeat('--prefix'), prefix))) if prefix else []),
+              + (list(chain.from_iterable(izip(repeat('--prefix'), config_prefix))) if config_prefix else []),
               env=env)
 
     if compile_library:
@@ -1942,7 +1945,7 @@ def test_(toolchain=None, mcu=None, list_compile=False, list_run=False, compile_
     program = Program(os.getcwd(), True)
     # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
     orig_path = os.getcwd()
-    
+
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
         target = program.get_mcu(mcu)
@@ -1952,21 +1955,21 @@ def test_(toolchain=None, mcu=None, list_compile=False, list_run=False, compile_
 
         env = os.environ.copy()
         env['PYTHONPATH'] = os.path.abspath(program.path)
-        
+
         # Setup the source path if not specified
         if not source or len(source) == 0:
             source = [os.path.relpath(program.path, orig_path)]
-        
+
         # Setup the build path if not specified
         if not build:
             build = os.path.join(os.path.relpath(program.path, orig_path), '.build/tests', target, tchain)
-        
+
         # Create the path to the test spec file
         test_spec = os.path.join(build, 'test_spec.json')
-        
+
         # Determine if building and running tests
         build_and_run_tests = not list_compile and not list_run and not compile_only and not run_only
-        
+
         if compile_only or build_and_run_tests:
             cmd = ['python', '-u', os.path.join(tools_dir, 'test.py')]
             cmd += list(chain.from_iterable(izip(repeat('-D'), macros)))
@@ -1977,37 +1980,37 @@ def test_(toolchain=None, mcu=None, list_compile=False, list_run=False, compile_
             cmd += ['--test-spec', test_spec]
             cmd += (['-n', tests_by_name] if tests_by_name else [])
             cmd += (['-v'] if verbose else [])
-            
+
             try:
                 popen(cmd + args, env=env)
             except ProcessException:
                 error('Failed to run the test compiling script')
-        
+
         if run_only or build_and_run_tests:
             cmd = ['mbedgt', '--test-spec', test_spec]
             cmd += (['-n', tests_by_name] if tests_by_name else [])
             cmd += (['-V'] if verbose else [])
-            
+
             try:
                 popen(cmd + args, env=env)
             except ProcessException:
                 error('Failed to run test runner')
-        
+
         if list_compile:
             cmd = ['python', '-u', os.path.join(tools_dir, 'test.py'), '--list']
             cmd += (['-n', tests_by_name] if tests_by_name else [])
             cmd += (['-v'] if verbose else [])
-            
+
             try:
                 popen(cmd + args, env=env)
             except ProcessException:
                 error('Failed to run buildable tests listing script')
-        
+
         if list_run:
             cmd = ['mbedgt', '--test-spec', test_spec, '--list']
             cmd += (['-n', tests_by_name] if tests_by_name else [])
             cmd += (['-V'] if verbose else [])
-            
+
             try:
                 popen(cmd + args, env=env)
             except ProcessException:
@@ -2033,7 +2036,8 @@ def export(ide=None, mcu=None):
         macros = program.get_macros()
 
         env = os.environ.copy()
-        env['PYTHONPATH'] = '.'
+        env['PYTHONPATH'] = os.path.abspath(program.path)
+
         popen(['python', '-u', os.path.join(tools_dir, 'project.py')]
               + list(chain.from_iterable(izip(repeat('-D'), macros)))
               + ['-i', ide, '-m', target, '--source=%s' % program.path]
@@ -2058,7 +2062,8 @@ def detect():
 
         # Prepare environment variables
         env = os.environ.copy()
-        env['PYTHONPATH'] = '.'
+        env['PYTHONPATH'] = os.path.abspath(program.path)
+
         popen(['python', '-u', os.path.join(tools_dir, 'detect_targets.py')]
               + args,
               env=env)
@@ -2153,8 +2158,7 @@ except OSError as e:
 except KeyboardInterrupt as e:
     error('User aborted!', 255)
 except Exception as e:
-    if verbose:
-        import traceback
+    if very_verbose:
         traceback.print_exc(file=sys.stdout)
     error("Unknown Error: %s" % e, 255)
 sys.exit(status or 0)
