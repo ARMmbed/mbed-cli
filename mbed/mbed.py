@@ -365,42 +365,42 @@ class Hg(object):
             return False
 
     def init(path=None):
-        popen([hg_cmd, 'init'] + ([path] if path else []) + (['-v'] if verbose else ['-q']))
+        popen([hg_cmd, 'init'] + ([path] if path else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def clone(url, name=None, depth=None, protocol=None):
-        popen([hg_cmd, 'clone', formaturl(url, protocol), name] + (['-v'] if verbose else ['-q']))
+        popen([hg_cmd, 'clone', formaturl(url, protocol), name] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def add(dest):
         log("Adding reference \"%s\"" % dest)
         try:
-            popen([hg_cmd, 'add', dest] + (['-v'] if verbose else ['-q']))
+            popen([hg_cmd, 'add', dest] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
         except ProcessException:
             pass
 
     def remove(dest):
         log("Removing reference \"%s\" " % dest)
         try:
-            popen([hg_cmd, 'rm', '-f', dest] + (['-v'] if verbose else ['-q']))
+            popen([hg_cmd, 'rm', '-f', dest] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
         except ProcessException:
             pass
 
     def commit():
-        popen([hg_cmd, 'commit'] + (['-v'] if verbose else ['-q']))
+        popen([hg_cmd, 'commit'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def publish(all=None):
-        popen([hg_cmd, 'push'] + (['--new-branch'] if all else []) + (['-v'] if verbose else ['-q']))
+        popen([hg_cmd, 'push'] + (['--new-branch'] if all else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def fetch():
         log("Fetching revisions from remote repository to \"%s\"" % os.path.basename(os.getcwd()))
-        popen([hg_cmd, 'pull'] + (['-v'] if verbose else ['-q']))
+        popen([hg_cmd, 'pull'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def discard():
         log("Discarding local changes in \"%s\"" % os.path.basename(os.getcwd()))
-        popen([hg_cmd, 'update', '-C'] + (['-v'] if verbose else ['-q']))
+        popen([hg_cmd, 'update', '-C'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def checkout(rev, clean=False):
         log("Checkout \"%s\" in %s to %s" % (rev, os.path.basename(os.getcwd()), rev))
-        popen([hg_cmd, 'update'] + (['-C'] if clean else []) + (['-r', rev] if rev else []) + (['-v'] if verbose else ['-q']))
+        popen([hg_cmd, 'update'] + (['-C'] if clean else []) + (['-r', rev] if rev else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def update(rev=None, clean=False, is_local=False):
         if not is_local:
@@ -408,7 +408,7 @@ class Hg(object):
         Hg.checkout(rev, clean)
 
     def status():
-        return pquery([hg_cmd, 'status'] + (['-v'] if verbose else ['-q']))
+        return pquery([hg_cmd, 'status'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def dirty():
         return pquery([hg_cmd, 'status', '-q'])
@@ -530,36 +530,36 @@ class Git(object):
             return False
 
     def init(path=None):
-        popen([git_cmd, 'init'] + ([path] if path else []) + ([] if verbose else ['-q']))
+        popen([git_cmd, 'init'] + ([path] if path else []) + ([] if very_verbose else ['-q']))
 
     def clone(url, name=None, depth=None, protocol=None):
-        popen([git_cmd, 'clone', formaturl(url, protocol), name] + (['--depth', depth] if depth else []) + (['-v'] if verbose else ['-q']))
+        popen([git_cmd, 'clone', formaturl(url, protocol), name] + (['--depth', depth] if depth else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def add(dest):
         log("Adding reference "+dest)
         try:
-            popen([git_cmd, 'add', dest] + (['-v'] if verbose else []))
+            popen([git_cmd, 'add', dest] + (['-v'] if very_verbose else []))
         except ProcessException:
             pass
 
     def remove(dest):
         log("Removing reference "+dest)
         try:
-            popen([git_cmd, 'rm', '-f', dest] + ([] if verbose else ['-q']))
+            popen([git_cmd, 'rm', '-f', dest] + ([] if very_verbose else ['-q']))
         except ProcessException:
             pass
 
     def commit():
-        popen([git_cmd, 'commit', '-a'] + (['-v'] if verbose else ['-q']))
+        popen([git_cmd, 'commit', '-a'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def publish(all=None):
         if all:
-            popen([git_cmd, 'push', '--all'] + (['-v'] if verbose else ['-q']))
+            popen([git_cmd, 'push', '--all'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
         else:
             remote = Git.getremote()
             branch = Git.getbranch()
             if remote and branch:
-                popen([git_cmd, 'push', remote, branch] + (['-v'] if verbose else ['-q']))
+                popen([git_cmd, 'push', remote, branch] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
             else:
                 err = "Unable to publish outgoing changes for \"%s\" in \"%s\".\n" % (os.path.basename(os.getcwd()), os.getcwd())
                 if not remote:
@@ -569,29 +569,29 @@ class Git(object):
 
     def fetch():
         log("Fetching revisions from remote repository to \"%s\"" % os.path.basename(os.getcwd()))
-        popen([git_cmd, 'fetch', '--all'] + (['-v'] if verbose else ['-q']))
+        popen([git_cmd, 'fetch', '--all'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def discard():
         log("Discarding local changes in \"%s\"" % os.path.basename(os.getcwd()))
-        popen([git_cmd, 'reset', 'HEAD'] + ([] if verbose else ['-q'])) # unmarks files for commit
-        popen([git_cmd, 'checkout', '.'] + ([] if verbose else ['-q'])) # undo  modified files
-        popen([git_cmd, 'clean', '-fdq'] + ([] if verbose else ['-q'])) # cleans up untracked files and folders
+        pquery([git_cmd, 'reset', 'HEAD'] + ([] if very_verbose else ['-q'])) # unmarks files for commit
+        pquery([git_cmd, 'checkout', '.'] + ([] if very_verbose else ['-q'])) # undo  modified files
+        pquery([git_cmd, 'clean', '-fdq'] + ([] if very_verbose else ['-q'])) # cleans up untracked files and folders
 
     def merge(dest):
         log("Merging \"%s\" with \"%s\"" % (os.path.basename(os.getcwd()), dest))
-        popen([git_cmd, 'merge', dest] + (['-v'] if verbose else ['-q']))
+        popen([git_cmd, 'merge', dest] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def checkout(rev, clean=False):
         if not rev:
             return
         log("Checkout \"%s\" in %s to %s" % (rev, os.path.basename(os.getcwd()), rev))
-        popen([git_cmd, 'checkout', rev] + (['-f'] if clean else []) + ([] if verbose else ['-q']))
+        popen([git_cmd, 'checkout', rev] + (['-f'] if clean else []) + ([] if very_verbose else ['-q']))
         if Git.isdetached(): # try to find associated refs to avoid detached state
             refs = Git.getrefs(rev)
             for ref in refs: # re-associate with a local or remote branch (rev is the same)
                 branch = re.sub(r'^(.*?)\/(.*?)$', r'\2', ref)
                 log("Revision \"%s\" matches a branch \"%s\" reference. Re-associating with branch" % (rev, branch))
-                popen([git_cmd, 'checkout', branch] + ([] if verbose else ['-q']))
+                popen([git_cmd, 'checkout', branch] + ([] if very_verbose else ['-q']))
                 break
 
     def update(rev=None, clean=False, is_local=False):
@@ -614,7 +614,7 @@ class Git(object):
                     log(err+"Working set is not on a branch.")
 
     def status():
-        return pquery([git_cmd, 'status', '-s'] + (['-v'] if verbose else []))
+        return pquery([git_cmd, 'status', '-s'] + (['-v'] if very_verbose else []))
 
     def dirty():
         return pquery([git_cmd, 'status', '-uno', '--porcelain'])
@@ -948,7 +948,7 @@ class Repo(object):
                 pass
         return self.scm.remove(dest, *args, **kwargs)
 
-    def clone(self, url, path, depth=None, protocol=None, **kwargs):
+    def clone(self, url, path, rev=None, depth=None, protocol=None, **kwargs):
         # Sorted so repositories that match urls are attempted first
         sorted_scms = [(scm.isurl(url), scm) for scm in scms.values()]
         sorted_scms = sorted(sorted_scms, key=lambda (m, _): not m)
@@ -959,14 +959,17 @@ class Repo(object):
 
             # Try to clone with cache ref first
             if cache and not os.path.isdir(path):
-                log("Trying to use cached repository in \"%s\" for \"%s\"" % (cache, path))
+                log("Found matching cached repository in \"%s\"" % cache)
                 try:
                     if os.path.split(path)[0] and not os.path.isdir(os.path.split(path)[0]):
                         os.makedirs(os.path.split(path)[0])
+
+                    log("Carbon copy from \"%s\" to \"%s\"" % (cache, path))
                     shutil.copytree(cache, path)
 
                     with cd(path):
-                        scm.update(None, True)
+                        log("Update cached copy from remote repository")
+                        scm.update(rev, True)
                         main = False
                 except (ProcessException, IOError):
                     if os.path.isdir(path):
@@ -1488,7 +1491,7 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
 
     text = "Importing program" if top else "Adding library"
     action("%s \"%s\" from \"%s/\"%s" % (text, relpath(cwd_root, repo.path), repo.url, ' at '+(repo.revtype(repo.rev, True))))
-    if repo.clone(repo.url, repo.path, depth=depth, protocol=protocol):
+    if repo.clone(repo.url, repo.path, rev=repo.rev, depth=depth, protocol=protocol):
         with cd(repo.path):
             Program(repo.path).set_root()
             try:
@@ -1873,7 +1876,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
 
     if supported:
         popen(['python', '-u', os.path.join(tools_dir, 'make.py')]
-              + (['-S'] if supported else []) + (['-v'] if verbose else [])
+              + (['-S'] if supported else []) + (['-v'] if very_verbose else [])
               + args,
               env=env)
         return
@@ -1890,7 +1893,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
         popen(['python', os.path.join(tools_dir, 'get_config.py')]
               + ['-t', tchain, '-m', target]
               + list(chain.from_iterable(izip(repeat('--source'), source)))
-              + (['-v'] if verbose else [])
+              + (['-v'] if very_verbose else [])
               + (list(chain.from_iterable(izip(repeat('--prefix'), config_prefix))) if config_prefix else []),
               env=env)
 
@@ -1905,7 +1908,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
               + (['-c'] if clean else [])
               + list(chain.from_iterable(izip(repeat('--source'), source)))
               + ['--build', build]
-              + (['-v'] if verbose else [])
+              + (['-v'] if very_verbose else [])
               + args,
               env=env)
     else:
@@ -1919,7 +1922,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
               + (['-c'] if clean else [])
               + list(chain.from_iterable(izip(repeat('--source'), source)))
               + ['--build', build]
-              + (['-v'] if verbose else [])
+              + (['-v'] if very_verbose else [])
               + args,
               env=env)
 
@@ -1979,7 +1982,7 @@ def test_(toolchain=None, mcu=None, list_compile=False, list_run=False, compile_
             cmd += ['--build', build]
             cmd += ['--test-spec', test_spec]
             cmd += (['-n', tests_by_name] if tests_by_name else [])
-            cmd += (['-v'] if verbose else [])
+            cmd += (['-v'] if very_verbose else [])
 
             try:
                 popen(cmd + args, env=env)
@@ -1999,7 +2002,7 @@ def test_(toolchain=None, mcu=None, list_compile=False, list_run=False, compile_
         if list_compile:
             cmd = ['python', '-u', os.path.join(tools_dir, 'test.py'), '--list']
             cmd += (['-n', tests_by_name] if tests_by_name else [])
-            cmd += (['-v'] if verbose else [])
+            cmd += (['-v'] if very_verbose else [])
 
             try:
                 popen(cmd + args, env=env)
