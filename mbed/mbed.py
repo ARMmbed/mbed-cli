@@ -1768,6 +1768,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, clean=False, su
         popen(['python', '-u', os.path.join(tools_dir, 'build.py')]
               + list(chain.from_iterable(izip(repeat('-D'), macros)))
               + ['-t', tchain, '-m', target]
+              + (['-c'] if clean else [])
               + list(chain.from_iterable(izip(repeat('--source'), source)))
               + ['--build', build]
               + (['-v'] if verbose else [])
@@ -1781,6 +1782,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, clean=False, su
         popen(['python', '-u', os.path.join(tools_dir, 'make.py')]
               + list(chain.from_iterable(izip(repeat('-D'), macros)))
               + ['-t', tchain, '-m', target]
+              + (['-c'] if clean else [])
               + list(chain.from_iterable(izip(repeat('--source'), source)))
               + ['--build', build]
               + (['-v'] if verbose else [])
