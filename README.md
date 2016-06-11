@@ -9,14 +9,14 @@ This document covers the installation and usage of *mbed CLI*.
 1. [Installing and uninstalling](#installing-mbed-cli)
 1. [Working context and command help](#working-context-and-command-help)
 1. [Creating and importing programs](#creating-and-importing-programs)
-	1. [Importing an existing program](#importing-and-creating-programs)
+	1. [Importing an existing program](#importing-an-existing-program)
 	2. [Creating a new program](#creating-a-new-program)
 1. [Adding and removing libraries](#adding-and-removing-libraries)
 	1. [Adding a library](#adding-a-library)
 	2. [Removing a library](#removing-a-library)
 1. [Updating programs and libraries](#updating-programs-and-libraries)
 	1. [Synchronizing library references](#synchronizing-library-references)
-	2. [Removing a library](#removing-a-library)
+	2. [Update scenarios](#update-scenarios)
 	3. [Updating to an upstream version](#updating-to-an-upstream-version)
 1. [Publishing your changes](#publishing-your-changes)
 	1. [Checking status](#checking-status)
@@ -25,10 +25,10 @@ This document covers the installation and usage of *mbed CLI*.
 	1. [Toolchain selection](#toolchain-selection)
 	2. [Compiling your program](#compiling-your-program)
 	3. [Compiling static libraries](#compiling-static-libraries)
-	4. [Compiling tests](#compiling-tests)
-	5. [Automating toolchain and target selection](#automating-toolchain-and-target-selection)
-	6. [Customizing the build](#customizing-the-build)
-	7. [Inspecting configuration](#inspecting-configuration)
+  4. [Compile configuration system](#compile-configuration-system)
+  5. [Customizing the build](#customizing-the-build)
+  6. [Automating toolchain and target selection](#automating-toolchain-and-target-selection)
+1. [Testing](#Testing)
 1. [Exporting to desktop IDEs](#exporting-to-desktop-ides)
 1. [Known limitations](#known-limitations)
 
@@ -204,11 +204,11 @@ $ mbed remove text-lcd
 
 ### Updating programs and libraries
 
-__Synchronizing library references__
+#### Synchronizing library references
 
 Before triggering an update you might want to synchronize any changes that you've made to the program structure by running ``mbed sync``, which will update the necessary library references and get rid of the invalid ones.
 
-__Updated scenarios__
+#### Update scenarios
 
 There are two main scenarios when updating:
 * Update to a *moving* revision, e.g. the tip of a branch
