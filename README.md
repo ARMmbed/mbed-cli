@@ -34,13 +34,13 @@ This document covers the installation and usage of *mbed CLI*.
 
 ## Installation
 
-*mbed CLI* was tested and runs equally well on Windows, Linux and Mac OSX. We're keen to learn about your experience with *mbed CLI* on other operating systems at the [mbed CLI development page](https://github.com/ARMmbed/mbed-cli).
+*mbed CLI* is supported on Windows, Linux and Mac OSX. We're keen to learn about your experience with *mbed CLI* on other operating systems at the [mbed CLI development page](https://github.com/ARMmbed/mbed-cli).
 
 ### Requirements
 
 * **Python** - mbed CLI* is a Python script, so you'll need Python installed in order to use it. *mbed CLI* was tested with [version 2.7 of Python](https://www.python.org/download/releases/2.7/).
 
-* **Git and Mercurial** - mbed CLI* supports both Git and Mercurial repositories, you'll need to install both:
+* **Git and Mercurial** - mbed CLI* supports both Git and Mercurial repositories, so you'll need to install both:
     * [Git](https://git-scm.com/).
     * [Mercurial](https://www.mercurial-scm.org/).
 
@@ -76,7 +76,7 @@ To uninstall *mbed CLI*, simply run:
 
 ### Working context 
 
-Similar to Git, Mercurial and many other command-line tools, *mbed CLI* uses the current directory as a working context. Meaning that before calling any *mbed CLI* command, you should first change to a working directory of choice. For example:
+*mbed CLI* uses the current directory as a working context, in a similar way to Git, Mercurial and many other command-line tools. This means that before calling any *mbed CLI* command, you should first change to a working directory of choice. For example:
 ```
 $ cd mbed-example-program
 $ cd mbed-os
@@ -148,8 +148,8 @@ You can create plain (empty) programs, without either mbed OS or mbed library  b
 Use `mbed import` to clone an existing program and all its dependencies to your machine:
 
 ```
-$ mbed import https://github.com/ARMmbed/mbed-blinky-morpheus/
-$ cd mbed-blinky-morpheus
+$ mbed import https://github.com/ARMmbed/mbed-blinky/
+$ cd mbed-blinky
 ```
 
 *mbed CLI* also supports programs based on the mbed library, which are automatically detected and do not require additional options.
@@ -226,9 +226,9 @@ To update your program to another upstream version, go to the root folder of the
 $ mbed update [branch|tag|revison]
 ```
 
-This fetches new revisions from the remote repository, updates the program to the specified branch, tag or revision. If non of these is specified then it updates the latest revision in the current branch. These series of actions are performed recursively against all dependencies and sub-dependencies in the program tree.
+This fetches new revisions from the remote repository, updates the program to the specified branch, tag or revision. If none of these is specified then it updates the latest revision in the current branch. These series of actions are performed recursively against all dependencies and sub-dependencies in the program tree.
 
-You can use change the working directory to a library folder and use `mbed update` to update that library and its dependencies to a different revision than the one referenced in the parent program or library. This allows you to experiment with different versions of libraries/dependencies in the program tree without having to change the parent program or library.
+You can change the working directory to a library folder and use `mbed update` to update that library and its dependencies to a different revision than the one referenced in the parent program or library. This allows you to experiment with different versions of libraries/dependencies in the program tree without having to change the parent program or library.
 
 <span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: This command will fail if there are changes in your program or library that will be overwritten as a result of running `update`. This is by design: *mbed CLI* does not run operations that would result in overwriting local changes that are not yet committed. If you get an error, take care of your local changes (commit or use one of the options below), then re-run `update`.</span>
 
