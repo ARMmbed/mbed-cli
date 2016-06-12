@@ -35,7 +35,7 @@ import argparse
 
 
 # Application version
-ver = '0.6.5'
+ver = '0.6.8'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
@@ -1856,7 +1856,7 @@ def status_(ignore=False):
     dict(name='--build', help='Build directory. Default: .build/'),
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
     dict(name=['-S', '--supported'], dest='supported', action='store_true', help='Shows supported matrix of targets and toolchains'),
-    help='Compile this program using the mbed build tools',
+    help='Compile code using the mbed build tools',
     description=("Compile this program using the mbed build tools."))
 def compile(toolchain=None, mcu=None, source=False, build=False, compile_library=False, compile_config=False, config_prefix=None, compile_tests=False, clean=False, supported=False):
     # Gather remaining arguments
@@ -1939,7 +1939,8 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
     dict(name='--build', help='Build directory. Default: .build/'),
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
     dict(name='--test-spec', dest="test_spec", help="Destination path for the test spec file used when running tests (only override if a test spec file that can be used by the Greentea automated test tool. The default is placed in the build directory"),
-    help='Find, build, and run tests in a program and its libraries')
+    help='Find, build and run tests',
+    description=("Find, build, and run tests in a program and libraries"))
 def test_(toolchain=None, mcu=None, list_compile=False, list_run=False, compile_only=False, run_only=False, tests_by_name=None, source=False, build=False, clean=False, test_spec=None):
     # Gather remaining arguments
     args = remainder
