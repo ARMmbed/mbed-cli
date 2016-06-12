@@ -1930,8 +1930,8 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
 @subcommand('test',
     dict(name=['-t', '--toolchain'], help='Compile toolchain. Example: ARM, uARM, GCC_ARM, IAR'),
     dict(name=['-m', '--mcu'], help='Compile target. Example: K64F, NUCLEO_F401RE, NRF51822...'),
-    dict(name='--list-compile', dest='list_compile', action='store_true', help='List all tests that can be built'),
-    dict(name='--list-run', dest='list_run', action='store_true', help='List all built tests that can be ran'),
+    dict(name='--compile-list', dest='compile_list', action='store_true', help='List all tests that can be built'),
+    dict(name='--run-list', dest='run_list', action='store_true', help='List all built tests that can be ran'),
     dict(name='--compile', dest='compile_only', action='store_true', help='Only compile tests'),
     dict(name='--run', dest='run_only', action='store_true', help='Only run tests'),
     dict(name=['-n', '--tests-by-name'], dest='tests_by_name', help='Limit the tests to a list (ex. test1,test2,test3)'),
@@ -1941,7 +1941,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
     dict(name='--test-spec', dest="test_spec", help="Destination path for the test spec file used when running tests (only override if a test spec file that can be used by the Greentea automated test tool. The default is placed in the build directory"),
     help='Find, build and run tests',
     description=("Find, build, and run tests in a program and libraries"))
-def test_(toolchain=None, mcu=None, list_compile=False, list_run=False, compile_only=False, run_only=False, tests_by_name=None, source=False, build=False, clean=False, test_spec=None):
+def test_(toolchain=None, mcu=None, compile_list=False, run_list=False, compile_only=False, run_only=False, tests_by_name=None, source=False, build=False, clean=False, test_spec=None):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
@@ -1971,7 +1971,7 @@ def test_(toolchain=None, mcu=None, list_compile=False, list_run=False, compile_
         test_spec = os.path.join(build, 'test_spec.json')
 
         # Determine if building and running tests
-        build_and_run_tests = not list_compile and not list_run and not compile_only and not run_only
+        build_and_run_tests = not compile_list and not run_list and not compile_only and not run_only
 
         if compile_only or build_and_run_tests:
             cmd = ['python', '-u', os.path.join(tools_dir, 'test.py')]
@@ -1999,7 +1999,7 @@ def test_(toolchain=None, mcu=None, list_compile=False, list_run=False, compile_
             except ProcessException:
                 error('Failed to run test runner')
 
-        if list_compile:
+        if compile_list:
             cmd = ['python', '-u', os.path.join(tools_dir, 'test.py'), '--list']
             cmd += (['-n', tests_by_name] if tests_by_name else [])
             cmd += (['-v'] if very_verbose else [])
@@ -2009,7 +2009,7 @@ def test_(toolchain=None, mcu=None, list_compile=False, list_run=False, compile_
             except ProcessException:
                 error('Failed to run buildable tests listing script')
 
-        if list_run:
+        if run_list:
             cmd = ['mbedgt', '--test-spec', test_spec, '--list']
             cmd += (['-n', tests_by_name] if tests_by_name else [])
             cmd += (['-V'] if verbose else [])
