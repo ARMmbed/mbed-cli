@@ -1938,7 +1938,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
     dict(name='--build', help='Build directory. Default: .build/'),
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
-    dict(name='--test-spec', dest="test_spec", help="Destination path for the test spec file used when running tests (only override if a test spec file that can be used by the Greentea automated test tool. The default is placed in the build directory"),
+    dict(name='--test-spec', dest="test_spec", help="Path used for the test spec file used when building and running tests (the default path is the build directory)"),
     help='Find, build and run tests',
     description=("Find, build, and run tests in a program and libraries"))
 def test_(toolchain=None, mcu=None, compile_list=False, run_list=False, compile_only=False, run_only=False, tests_by_name=None, source=False, build=False, clean=False, test_spec=None):

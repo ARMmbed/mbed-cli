@@ -30,6 +30,10 @@ This document covers the installation and usage of *mbed CLI*.
   6. [Automating toolchain and target selection](#automating-toolchain-and-target-selection)
 1. [Exporting to desktop IDEs](#exporting-to-desktop-ides)
 1. [Testing](#testing)
+  1. [Finding available tests](#finding-available-tests)
+  2. [Change the test action](#change-the-test-action)
+  3. [Limiting the test scope](#limiting-the-test-scope)
+  4. [Test directory structure](#test-directory-structure)
 1. [Known limitations](#known-limitations)
 
 ## Installation
@@ -388,10 +392,10 @@ Image: .build/K64F/GCC_ARM/mbed-os-program.bin
 
 The arguments to *compile* are:
 
-* `-m <MCU>` to select a target for the compilation. At the moment, the only supported value for `mcu` is `K64F` (for the FRDM_K64F board).
-* `-t <TOOLCHAIN>` to select a toolchain, where `toolchain` can be either ARM (armcc compiler) or GCC_ARM (GNU ARM Embedded).
-* `--source <SOURCE>` to select the source directory. Default is `.` (the current dir). You can specify multiple source locations, even outside the program tree.
-* `--build <BUILD>` to select the build directory. Default: `.build/ inside your program
+* `-m <MCU>` to select a target
+* `-t <TOOLCHAIN>` to select a toolchain, where `toolchain` can be either `ARM` (armcc compiler), `GCC_ARM` (GNU ARM Embedded), or `IAR` (IAR Embedded Workbench for ARM)
+* `--source <SOURCE>` to select the source directory. Default is `.` (the current dir). You can specify multiple source locations, even outside the program tree
+* `--build <BUILD>` to select the build directory. Default: `.build/` inside your program
 * `--library` to compile the code as a [static .a/.ar library](#compiling-static-libraries)
 * `--config` to inspect the run-time compile configuration (see below)
 * `-S` or `--supported` shows supported matrix of targets and toolchains
@@ -504,30 +508,118 @@ A ``.uvproj`` file is created in the projectfiles/uvision folder. You can open t
 
 ### Testing
 
-mbed OS comes with a comprehensive set of test tools (see blah.blah.com), and you can use *mbed CLI* to manage and execute tests for you. Use `mbed test --list-compile` to list the tests available:
-
-#### Listing and compiling tests
-
+Use the `test` command to compile and run tests:
 
 ```
-$ mbed test --list-compile
+$ mbed test -m K64F -t GCC_ARM
+Building library mbed-build (K64F, GCC_ARM)
+Building project GCC_ARM to TESTS-unit-myclass (K64F, GCC_ARM)
+Compile: main.cpp
+Link: TESTS-unit-myclass
+Elf2Bin: TESTS-unit-myclass
++-----------+-------+-------+------+
+| Module    | .text | .data | .bss |
++-----------+-------+-------+------+
+| Fill      |   74  |   0   | 2092 |
+| Misc      | 47039 |  204  | 4272 |
+| Subtotals | 47113 |  204  | 6364 |
++-----------+-------+-------+------+
+Static RAM memory (data + bss): 6568
+Heap: 65540
+Stack: 32768
+Total RAM memory (data + bss + heap + stack): 104876
+Total Flash memory (text + data + misc): 48357
+Image: .build\tests\K64F\GCC_ARM\TESTS\mbedmicro-rtos-mbed\mutex\TESTS-unit-myclass.bin
+...[SNIP]...
+mbedgt: test suite report:
++--------------+---------------+---------------------------------+--------+--------------------+-------------+
+| target       | platform_name | test suite                      | result | elapsed_time (sec) | copy_method |
++--------------+---------------+---------------------------------+--------+--------------------+-------------+
+| K64F-GCC_ARM | K64F          | TESTS-unit-myclass | OK     | 21.09              | shell       |
++--------------+---------------+---------------------------------+--------+--------------------+-------------+
+mbedgt: test suite results: 1 OK
+mbedgt: test case report:
++--------------+---------------+---------------------------------+---------------------------------+--------+--------+--------+--------------------+
+| target       | platform_name | test suite         | test case           | passed | failed | result | elapsed_time (sec) |
++--------------+---------------+---------------------------------+---------------------------------+--------+--------+--------+--------------------+
+| K64F-GCC_ARM | K64F          | TESTS-unit-myclass | TESTS-unit-myclass1 | 1      | 0      | OK     | 5.00               |
+| K64F-GCC_ARM | K64F          | TESTS-unit-myclass | TESTS-unit-myclass2 | 1      | 0      | OK     | 5.00               |
+| K64F-GCC_ARM | K64F          | TESTS-unit-myclass | TESTS-unit-myclass3 | 1      | 0      | OK     | 5.00               |
++--------------+---------------+---------------------------------+---------------------------------+--------+--------+--------+--------------------+
+mbedgt: test case results: 3 OK
+mbedgt: completed in 21.28 sec
+```
+
+The arguments to `test` are:
+
+* `-m <MCU>` to select a target for the compilation.
+* `-t <TOOLCHAIN>` to select a toolchain, where `toolchain` can be either `ARM` (armcc compiler), `GCC_ARM` (GNU ARM Embedded), or `IAR` (IAR Embedded Workbench for ARM)
+* `--compile-list` to list all the tests that can be built
+* `--run-list` to list all the tests that can be ran (they must be built first)
+* `--compile` to only compile the tests
+* `--run` to only run the tests
+* `-n <TESTS_BY_NAME>` to limit the tests built or ran to a comma separated list (ex. test1,test2,test3)
+* `--source <SOURCE>` to select the source directory. Default is `.` (the current dir). You can specify multiple source locations, even outside the program tree.
+* `--build <BUILD>` to select the build directory. Default: `.build/ inside your program
+* `-c or --clean` to clean the build directory before compiling
+* `--test-spec <TEST_SPEC>` to set the path for the test spec file used when building and running tests (the default path is the build directory)
+* `-v` or `--verbose` for verbose diagnostic output
+* `-vv` or `--very_verbose` for very verbose diagnostic output
+
+The compiled binaries and test artifacts can be found in the `.build/tests/<TARGET>/<TOOLCHAIN>` directory of your program.
+
+#### Finding available tests
+
+You can find the tests that are available for **building** by using the `--compile-list` option:
+
+```
+$ mbed test --compile-list
 Test Case:
-    Name: mbed-os-core-mbed-rtos-TESTS-mbed-rtos-signals
-    Path: ./mbed-os/core/mbed-rtos/TESTS/mbed-rtos/signals
+    Name: TESTS-functional-test1
+    Path: .\TESTS\functional\test1
 Test Case:
-    Name: mbed-os-core-mbed-rtos-TESTS-mbed-rtos-basic
-    Path: ./mbed-os/core/mbed-rtos/TESTS/mbed-rtos/basic
+    Name: TESTS-functional-test2
+    Path: .\TESTS\functional\test2
 Test Case:
-    Name: mbed-os-TESTS-integration-basic
-    Path: ./mbed-os/TESTS/integration/basic
-...
+    Name: TESTS-functional-test3
+    Path: .\TESTS\functional\test3
 ```
 
-Tests are compiled by adding the argument ```--compile``` in the above compile command:
+You can find the tests that are available for **running** by using the `--run-list` option:
 
 ```
-$ mbed test --compile -t ARM -m K64F
+$ mbed test --run-list
+mbedgt: test specification file '.\.build/tests\K64F\ARM\test_spec.json' (specified with --test-spec option)
+mbedgt: using '.\.build/tests\K64F\ARM\test_spec.json' from current directory!
+mbedgt: available tests for built 'K64F-ARM', location '.\.build/tests\K64F\ARM'
+        test 'TESTS-functional-test1'
+        test 'TESTS-functional-test2'
+        test 'TESTS-functional-test3'
 ```
+
+#### Change the test action
+
+You can specify to only **build** the tests by using the `--compile` option:
+
+```
+$ mbed test -m K64F -t GCC_ARM --compile
+```
+
+You can specify to only **run** the tests by using the `--run` option:
+
+```
+$ mbed test -m K64F -t GCC_ARM --run
+```
+
+#### Limiting the test scope
+
+You can limit the scope of the tests built and ran by using the `-n` option. This takes a comma separated list of test names as an argument:
+
+```
+$ mbed test -m K64F -t GCC_ARM -n TESTS-functional-test1,TESTS-functional-test2
+```
+
+#### Test directory structure
 
 Test code exists in the following directory structure:
 
@@ -558,13 +650,9 @@ mbed-os-program
      | ....
 ```
 
-As shown above, tests exist inside ```TESTS\testgroup\testcase\``` directories. Please note that `TESTS` is a special upper case directory that is excluded from module sources while compiling. Any testing libraries can be put inside the ```frameworks``` directory. This is currently just a good convention, but in the future tests might be able to limit which libraries should and should not be included when compiling them.
+As shown above, tests exist inside ```TESTS\testgroup\testcase\``` directories. Please note that `TESTS` is a special upper case directory that is excluded from module sources while compiling.
 
-Compiled test binaries are created in ```.build/<TARGET>/<TOOLCHAIN>/TestCase1.bin```
-
-<span class="notes">**Note:** This feature does not work in application modules that contain ```main()```. This issue is being worked on in parallel. However, currently we don't have any module with ```main()``` and ```TESTS``` together. Hence it does not break any existing module.</span>
-
-#### Listing and compiling tests
+<span class="notes">**Note:** This feature does not work in applications that contain a  ```main``` function that is outside of a `TESTS` directory.</span>
 
 ## Known limitations
 
