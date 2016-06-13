@@ -1,14 +1,13 @@
-.. image:: https://travis-ci.org/ARMmbed/mbed-cli.svg
 .. image:: https://circleci.com/gh/ARMmbed/mbed-cli.svg?style=svg
 
-mbed is a command-line tool for `ARM-mbed <https://mbed.org>`_. It enables workflows with ARM mbed repositories and maintaining dependencies, code publishing and updating from remotely hosted repositories (GitHub, GitLab, mbed.org), as well as invoking mbed's own build system and export functions, and other operations.
+mbed CLI is the name of the `ARM-mbed <https://mbed.org>`_ command line tool, packaged as mbed-cli, which enables the full mbed workflow: repositories version control, maintaining dependencies, publishing code, updating from remotely hosted repositories (GitHub, GitLab and mbed.org), and invoking ARM mbed's own build system and export functions, among other operations.
 
 
 Installation
 ============
-mbed is a Python script, so you'll need Python installed in order to use it. mbed was tested with version 2.7 of Python.
+mbed CLI is a Python script, so you'll need Python installed in order to use it. mbed CLI was tested with Python 2.7.
 
-mbed supports both Git and Mercurial repositories, so you'll also need to install Mercurial and Git.
+mbed CLI supports both Git and Mercurial repositories, so you'll also need to install Mercurial and Git.
 
 Get Started
 ===========
@@ -16,4 +15,4 @@ The best way to get started is to `read the documentation on GitHub <https://git
 
 License
 =======
-mbed is licensed under Apache-2.0
+mbed CLI is licensed under Apache-2.0
