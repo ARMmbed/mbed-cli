@@ -1347,7 +1347,7 @@ cwd_dest = "program" if cwd_type == "directory" else "library"
 
 # Subparser handling
 parser = argparse.ArgumentParser(prog='mbed',
-    description="Command-line code management tool for ARM mbed OS - http://www.mbed.com\nversion %s\n\nUse 'mbed <command> -h|--help' for detailed help.\nOnline manual and guide available at www.mbed.com/cli_help" % ver,
+    description="Command-line code management tool for ARM mbed OS - http://www.mbed.com\nversion %s\n\nUse 'mbed <command> -h|--help' for detailed help.\nOnline manual and guide available at https://github.com/ARMmbed/mbed-cli" % ver,
     formatter_class=argparse.RawTextHelpFormatter)
 subparsers = parser.add_subparsers(title="Commands", metavar="           ")
 
