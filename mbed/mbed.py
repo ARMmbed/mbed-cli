@@ -1213,7 +1213,7 @@ class Program(object):
                 "The mbed build tools in this program require Python modules that are not installed.\n"
                 "This might prevent compiling code or exporting to IDEs and other toolchains.\n"
                 "The missing Python modules are: %s\n"
-                "You can install all missing modules by running \"pip install -r %s\" in \"%s\"" % (', '.join(missing), mbed_os_path, fname))
+                "You can install all missing modules by running \"pip install -r %s\" in \"%s\"" % (', '.join(missing), fname, mbed_os_path))
 
     def add_tools(self, path):
         with cd(path):
