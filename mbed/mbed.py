@@ -35,7 +35,7 @@ import argparse
 
 
 # Application version
-ver = '0.7.2'
+ver = '0.7.3'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
@@ -605,7 +605,10 @@ class Git(object):
             remote = Git.getremote()
             branch = Git.getbranch()
             if remote and branch:
-                Git.merge('%s/%s' % (remote, branch))
+                try:
+                    Git.merge('%s/%s' % (remote, branch))
+                except ProcessException:
+                    pass
             else:
                 err = "Unable to update \"%s\" in \"%s\".\n" % (os.path.basename(os.getcwd()), os.getcwd())
                 if not remote:
@@ -1898,7 +1901,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
         popen(['python', os.path.join(tools_dir, 'get_config.py')]
               + ['-t', tchain, '-m', target]
               + list(chain.from_iterable(izip(repeat('--source'), source)))
-              + (['-v'] if very_verbose else [])
+              + (['-v'] if verbose else [])
               + (list(chain.from_iterable(izip(repeat('--prefix'), config_prefix))) if config_prefix else []),
               env=env)
     elif compile_library:
@@ -1912,7 +1915,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
               + (['-c'] if clean else [])
               + list(chain.from_iterable(izip(repeat('--source'), source)))
               + ['--build', build]
-              + (['-v'] if very_verbose else [])
+              + (['-v'] if verbose else [])
               + args,
               env=env)
     else:
@@ -1926,7 +1929,7 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
               + (['-c'] if clean else [])
               + list(chain.from_iterable(izip(repeat('--source'), source)))
               + ['--build', build]
-              + (['-v'] if very_verbose else [])
+              + (['-v'] if verbose else [])
               + args,
               env=env)
 
@@ -1979,7 +1982,7 @@ def test_(toolchain=None, mcu=None, compile_list=False, run_list=False, compile_
         if compile_list:
             popen(['python', '-u', os.path.join(tools_dir, 'test.py'), '--list']
                   + (['-n', tests_by_name] if tests_by_name else [])
-                  + (['-v'] if very_verbose else [])
+                  + (['-v'] if verbose else [])
                   + args,
                   env=env)
         
@@ -1992,21 +1995,21 @@ def test_(toolchain=None, mcu=None, compile_list=False, run_list=False, compile_
                   + ['--build', build]
                   + ['--test-spec', test_spec]
                   + (['-n', tests_by_name] if tests_by_name else [])
-                  + (['-v'] if very_verbose else [])
+                  + (['-v'] if verbose else [])
                   + args,
                   env=env)
         
         if run_list:
             popen(['mbedgt', '--test-spec', test_spec, '--list']
                   + (['-n', tests_by_name] if tests_by_name else [])
-                  + (['-V'] if very_verbose else [])
+                  + (['-V'] if verbose else [])
                   + args,
                   env=env)
         
         if run_only or build_and_run_tests:
             popen(['mbedgt', '--test-spec', test_spec]
                   + (['-n', tests_by_name] if tests_by_name else [])
-                  + (['-V'] if very_verbose else [])
+                  + (['-V'] if verbose else [])
                   + args,
                   env=env)
 

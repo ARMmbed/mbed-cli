@@ -97,7 +97,7 @@ To list all *mbed CLI* commands use `mbed --help`. A detailed command-specific h
 
 ### Creating and importing programs
 
-*mbed CLI* can create and import both mbed Classic and mbed OS based programs.
+*mbed CLI* can create and import both mbed 2.0 and mbed OS 4.0 based programs.
 
 #### Creating a new program
 
