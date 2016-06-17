@@ -809,7 +809,7 @@ class Repo(object):
             if path is None:
                 error(
                     "Could not find mbed program in current path \"%s\".\n"
-                    "You can fix this by calling \"mbed new .\" or \"mbed default root .\" in the root of your program." % os.getcwd())
+                    "You can fix this by calling \"mbed new .\" or \"mbed config root .\" in the root of your program." % os.getcwd())
 
         repo.path = os.path.abspath(path)
         repo.name = os.path.basename(repo.path)
@@ -1122,7 +1122,7 @@ class Program(object):
         if self.is_cwd and print_warning:
             warning(
                 "Could not find mbed program in current path \"%s\".\n"
-                "You can fix this by calling \"mbed new .\" or \"mbed default root .\" in the root of your program." % self.path)
+                "You can fix this by calling \"mbed new .\" or \"mbed config root .\" in the root of your program." % self.path)
 
     def get_cfg(self, *args, **kwargs):
         return Cfg(self.path).get(*args, **kwargs) or Global().get_cfg(*args, **kwargs)
