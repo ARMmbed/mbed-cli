@@ -1155,9 +1155,9 @@ class Program(object):
 
     # Gets mbed tools dir (unified)
     def get_tools_dir(self):
-        mbed_os_path = self.get_os_dir()
         paths = []
         # mbed-os dir identified and tools is a sub dir
+        mbed_os_path = self.get_os_dir()
         if mbed_os_path:
             paths.append([mbed_os_path, 'tools'])
             paths.append([mbed_os_path, 'core', 'tools'])
@@ -1167,9 +1167,11 @@ class Program(object):
         # mbed Classic deployed tools
         paths.append([self.path, '.temp', 'tools'])
 
+        fl = 'make.py'
         for p in paths:
-            if os.path.isdir(os.path.join(*p)):
-                return os.path.join(*p)
+            path = os.path.join(*p)
+            if os.path.isdir(path) and os.path.isfile(os.path.join(path, fl)):
+                return os.path.join(path)
 
         return None
 
