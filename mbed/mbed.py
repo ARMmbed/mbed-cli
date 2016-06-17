@@ -1867,6 +1867,10 @@ def status_(ignore=False):
     help='Compile code using the mbed build tools',
     description=("Compile this program using the mbed build tools."))
 def compile(toolchain=None, mcu=None, source=False, build=False, compile_library=False, compile_config=False, config_prefix=None, compile_tests=False, clean=False, supported=False):
+    # Pipe --tests to mbed tests command
+    if compile_tests:
+        return test_(toolchain=toolchain, mcu=mcu, source=source, build=build, clean=clean, compile_only=True)
+
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
@@ -1892,9 +1896,6 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
     target = program.get_mcu(mcu)
     tchain = program.get_toolchain(toolchain)
     macros = program.get_macros()
-
-    if compile_tests:
-        return test_(toolchain=toolchain, mcu=mcu, source=source, build=build, compile_only=True)
 
     if compile_config:
         # Compile configuration
