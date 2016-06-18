@@ -630,20 +630,17 @@ class Git(object):
         remote = Git.getremote()
         if not remote:
             return -1
-
         # Get current branch
         branch = Git.getbranch()
         if not branch:
-            # Detached mode is okay as we don't expect the user to publish from detached state without branch
-            return 0
-
+            # Default to "master" in detached mode 
+            branch = "master"
         try:
             # Check if remote branch exists
             if not pquery([git_cmd, 'rev-parse', '%s/%s' % (remote, branch)]):
                 return 1
         except ProcessException:
             return 1
-
         # Check for outgoing commits for the same remote branch
         return 1 if pquery([git_cmd, 'log', '%s/%s..%s' % (remote, branch, branch)]) else 0
 
