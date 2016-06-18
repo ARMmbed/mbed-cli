@@ -1490,9 +1490,10 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
 
     repo = Repo.fromurl(url, path)
     if top:
-        if cwd_type != "directory":
-            error("Cannot import program in the specified location \"%s\" because it's already part of a program.\n"
-                  "Please change your working directory to a different location or use \"mbed add\" to import the URL as a library." % os.path.abspath(repo.path), 1)
+        p = Program(path)
+        if p and not p.is_cwd:
+            error("Cannot import program in the specified location \"%s\" because it's already part of a program \"%s\".\n"
+                  "Please change your working directory to a different location or use \"mbed add\" to import the URL as a library." % (os.path.abspath(repo.path), p.name), 1)
 
     protocol = Program().get_cfg('PROTOCOL', protocol)
 
