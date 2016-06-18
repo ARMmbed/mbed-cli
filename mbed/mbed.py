@@ -2143,12 +2143,17 @@ def target_(name=None, global_cfg=False):
 
 @subcommand('toolchain',
     dict(name='name', nargs='?', help='Default toolchain name. Example: ARM, uARM, GCC_ARM, IAR'),
-    help='Set or get default toolchain',
+    help='Set or get default toolchain\n\n',
     description=(
         "This is an alias to 'mbed config toolchain [--global] [name]'\n"))
 def toolchain_(name=None, global_cfg=False):
     return config_('toolchain', name, global_cfg=global_cfg)
 
+@subcommand('help',
+    help='This help screen')
+def help_():
+    parser.print_help()
+    return
 
 # Parse/run command
 if len(sys.argv) <= 1:
