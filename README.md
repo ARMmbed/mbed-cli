@@ -50,7 +50,7 @@ This document covers the installation and usage of *mbed CLI*.
 
     <span class="tips">**Note:** The directories of Git and Mercurial executables (`git` and `hg`) need to be in your system's PATH.</span>
 
-* **Command-line compiler or IDE Toolchain** - *mbed CLI* invokes the [mbed OS](https://github.com/ARMmbed/mbed-os) tools for various features - compiling, testing, exporting to industry standard toolchains. To compile your code, you would need either of these:
+* **Command-line compiler or IDE Toolchain** - *mbed CLI* invokes the [mbed OS 4.0](https://github.com/ARMmbed/mbed-os) tools for various features - compiling, testing, exporting to industry standard toolchains. To compile your code, you would need either of these:
     * Compilers: GCC ARM, ARMCC 5, IAR
     * Toolchains: Keil uVision, DS-5, IAR Workbench
 
@@ -101,7 +101,7 @@ To list all *mbed CLI* commands use `mbed --help`. A detailed command-specific h
 
 #### Creating a new program
 
-When you create a new program, *mbed CLI* automatically imports the latest [mbed OS release](https://github.com/ARMmbed/mbed-os/). This library represents a **release** of mbed OS and will pull in all the components of the OS, including its build tools and desktop IDE project generators. 
+When you create a new program, *mbed CLI* automatically imports the latest [mbed OS release](https://github.com/ARMmbed/mbed-os/). This represents a **release** of mbed OS and will pull in all the components, including its build tools and desktop IDE project generators. 
 
 With this in mind, these are the steps for creating a new program (we'll call it `mbed-os-program`):
 
@@ -140,12 +140,12 @@ mbed-os-program (mbed-os-program#189949915b9c)
 
 <span class="notes">**Note**: If you want to start from an existing folder in your workspace, you can simply use `mbed new .`, which will initialize an mbed program and also initialize a new Git or Mercurial repository in that folder. You can control which source control management is used or prevent source control management initialization via `--scm [name|none]` option.</span>
 
-*mbed CLI* is also compatible with programs based on the [mbed library](https://mbed.org/users/mbed_official/code/mbed/) and will automatically import the latest [mbed library release](https://mbed.org/users/mbed_official/code/mbed/) if `--mbedlib` option is specified e.g.
+*mbed CLI* is also compatible with mbed 2.0 programs based on the [mbed library](https://mbed.org/users/mbed_official/code/mbed/) and will automatically import the latest [mbed library release](https://mbed.org/users/mbed_official/code/mbed/) if `--mbedlib` option is specified e.g.
 ```
 $ mbed new mbed-classic-program --mbedlib
 ```
 
-You can create plain (empty) programs, without either mbed OS or mbed library  by adding the `--create-only` option.
+You can create plain (empty) programs, without either mbed OS 4.0 or mbed 2.0  by adding the `--create-only` option.
 
 
 #### Importing an existing program
@@ -157,11 +157,30 @@ $ mbed import https://github.com/ARMmbed/mbed-blinky/
 $ cd mbed-blinky
 ```
 
-*mbed CLI* also supports programs based on the mbed library, which are automatically detected and do not require additional options.
+*mbed CLI* also supports programs based on the mbed 2.0, which are automatically detected and do not require additional options.
 
 ```
 $ mbed import https://developer.mbed.org/teams/mbed/code/mbed_blinky/
-¢ cd mbed_blinky
+$ cd mbed_blinky
+```
+
+
+#### Importing from git/hg clone
+
+If you have manually cloned a git repository into your workspace and you want to add all missing libraries, then you can use the `deploy` command:
+
+```
+$ mbed deploy
+[mbed] Creating new program "test-prog" (git)
+[mbed] Adding library "mbed-os" from "https://github.com/ARMmbed/mbed-os/" at latest revision in the current branch
+[mbed] Adding library "mbed-os/core" from "https://github.com/mbedmicro/mbed/" at rev #b4bb088876cb72bda7006e423423aba4895d380c
+...
+```
+
+Don't forget to set the current directory as a root of your program:
+
+```
+$ mbed new .
 ```
 
 
