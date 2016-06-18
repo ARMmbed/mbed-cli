@@ -1239,15 +1239,21 @@ class Program(object):
         return mbed_tools_path
 
     def get_mcu(self, mcu=None):
-        target = mcu if mcu else self.get_cfg('TARGET')
+        target_cfg = self.get_cfg('TARGET')
+        target = mcu if mcu else target_cfg
         if target is None:
             error('Please specify compile target using the -m switch or set default target using command "target"', 1)
+        elif not target_cfg:
+            self.set_cfg('TARGET', target)
         return target
 
     def get_toolchain(self, toolchain=None):
-        tchain = toolchain if toolchain else self.get_cfg('TOOLCHAIN')
+        toolchain_cfg = self.get_cfg('TOOLCHAIN')
+        tchain = toolchain if toolchain else toolchain_cfg
         if tchain is None:
             error('Please specify compile toolchain using the -t switch or set default toolchain using command "toolchain"', 1)
+        elif not toolchain_cfg:
+            self.set_cfg('TOOLCHAIN', tchain)
         return tchain
 
     def get_macros(self):
