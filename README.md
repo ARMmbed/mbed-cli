@@ -363,7 +363,7 @@ Furthermore, let's assume that you make changes to `mbed-mesh-api`. `publish` de
 
 #### Forking workflow
 
-Git enables asymmetric workflow where the publish/push repository might be different than the original ("origin") one. This allows new revisions to land in a fork repository, while still maintaining association with the original repository.
+Git enables asymmetric workflow where the publish/push repository might be different than the original ("origin") one. This allows new revisions to land in a fork repository, while maintaining association with the original repository.
 
 To achieve this, first import an mbed OS program or mbed OS itself and then associate the push remote with your fork, e.g:
 
@@ -371,9 +371,9 @@ To achieve this, first import an mbed OS program or mbed OS itself and then asso
 $ git remote set-url --push origin https://github.com/screamerbg/repo-fork
 ```
 
-Every time you commit and push or use `mbed publish`, the new revisions will be pushed against you fork. You can fetch from the original repository using `mbed update` or `git pull`. If you explicitly want to fetch/pull from your fork, then you can use `git pull https://github.com/screamerbg/repo-fork [branch]`
+Each time you `git` commit+push or use `mbed publish`, the new revisions will be pushed against you fork. You can fetch from the original repository using `mbed update` or `git pull`. If you explicitly want to fetch/pull from your fork, then you can use `git pull https://github.com/screamerbg/repo-fork [branch]`
 
-Through the workflow explained above, mbed CLI will keep references to the original ("origin") repository to which you might want to send pull request to), and will record references with the revision hashes that you push to your fork. Until your pull request is accepted, all recorded reference will be invalid, but once accepted all revision hashes from your fork will become part the original repository, thus all references will become valid.
+Through the workflow explained above, mbed CLI will maintain association to the original ("origin") repository to which you might want to send pull request to), and will record references with the revision hashes that you push to your fork. Until your pull request is accepted, all recorded references will be invalid, but once the PR is accepted all revision hashes from your fork will become part the original repository, thus all references will become valid.
 
 
 ### Compiling code
