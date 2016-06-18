@@ -274,7 +274,9 @@ __I want a clean update (and discard uncommitted changes)__
 
 Run `mbed update [branch] --clean`
 
-<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: Specifying a branch to `mbed update` would only checkout that branch and won't automatically merge/fast-forward to the remote/upstream branch. You can run `mbed update` to merge (fast-forward) your local branch with the latest remote branch. On git you can do `git pull`.</span>
+Specifying a branch to `mbed update` would only checkout that branch and won't automatically merge/fast-forward to the remote/upstream branch. You can run `mbed update` to merge (fast-forward) your local branch with the latest remote branch. On git you can do `git pull`
+
+<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: The `--clean` option tells *mbed CLI* to update that program or library and its dependencies, and discard all local changes. WARNING: This action cannot be undone. Use with caution.</span>
 
 **Case 2: I want to update a program or a library to a specific revision or a tag**
  
@@ -286,7 +288,6 @@ __I want a clean update (discard changes)__
 
 Run `mbed update <tag_name|revision> --clean`
 
-The `--clean` option tells *mbed CLI* to update that program or library and its dependencies, and discard all local changes.
 
 __When you have unpublished local libraries__
 
@@ -359,6 +360,20 @@ mbed-os-program (189949915b9c)
 ```
 
 Furthermore, let's assume that you make changes to `mbed-mesh-api`. `publish` detects the change on the leaf `mbed-mesh-api` dependency and asks you to commit it. Then it detects that `mbed-os` depends on `mbed-mesh-api`, updates mbed-os' dependency on `mbed-mesh-api` to its latest version (by updating the `mbed-mesh-api.lib` file inside `mbed-os/net/`) and asks you to commit it. This propagates up to `mbed-os` and finally to your program `mbed-os-program`.
+
+#### Forking workflow
+
+Git enables asymmetric workflow where the publish/push repository might be different than the original ("origin") one. This allows new revisions to land in a fork repository, while still maintaining association with the original repository.
+
+To achieve this, first import an mbed OS program or mbed OS itself and then associate the push remote with your fork, e.g:
+
+```
+$ git remote set-url --push origin https://github.com/screamerbg/repo-fork
+```
+
+Every time you commit and push or use `mbed publish`, the new revisions will be pushed against you fork. You can fetch from the original repository using `mbed update` or `git pull`. If you explicitly want to fetch/pull from your fork, then you can use `git pull https://github.com/screamerbg/repo-fork [branch]`
+
+Through the workflow explained above, mbed CLI will keep references to the original ("origin") repository to which you might want to send pull request to), and will record references with the revision hashes that you push to your fork. Until your pull request is accepted, all recorded reference will be invalid, but once accepted all revision hashes from your fork will become part the original repository, thus all references will become valid.
 
 
 ### Compiling code
