@@ -2022,30 +2022,46 @@ def test_(toolchain=None, mcu=None, compile_list=False, run_list=False, compile_
 
 # Export command
 @subcommand('export',
-    dict(name=['-i', '--ide'], help='IDE to create project files for. Example: UVISION,DS5,IAR', required=True),
+    dict(name=['-i', '--ide'], help='IDE to create project files for. Example: UVISION4, UVISION5, GCC_ARM, IAR, COIDE', required=True),
     dict(name=['-m', '--mcu'], help='Export for target MCU. Example: K64F, NUCLEO_F401RE, NRF51822...'),
+    dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
+    dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
+    dict(name=['-S', '--supported'], dest='supported', action='store_true', help='Shows supported matrix of targets and toolchains'),
     help='Generate an IDE project',
     description=(
         "Generate IDE project files for the current program."))
-def export(ide=None, mcu=None):
+def export(ide=None, mcu=None, source=False, clean=False, supported=False):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
     program = Program(os.getcwd(), True)
+    # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
+    orig_path = os.getcwd()
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
         tools_dir = program.get_tools()
-        target = program.get_mcu(mcu)
-        macros = program.get_macros()
-
         env = os.environ.copy()
         env['PYTHONPATH'] = os.path.abspath(program.path)
 
+    if supported:
         popen(['python', '-u', os.path.join(tools_dir, 'project.py')]
-              + list(chain.from_iterable(izip(repeat('-D'), macros)))
-              + ['-i', ide, '-m', target, '--source=%s' % program.path]
-              + args,
+              + (['-S'] if supported else []) + (['-v'] if very_verbose else []),
               env=env)
+        return
+
+    target = program.get_mcu(mcu)
+    macros = program.get_macros()
+
+    if not source or len(source) == 0:
+        source = [os.path.relpath(program.path, orig_path)]
+
+    popen(['python', '-u', os.path.join(tools_dir, 'project.py')]
+          + list(chain.from_iterable(izip(repeat('-D'), macros)))
+          + ['-i', ide.lower(), '-m', target]
+          + (['-c'] if clean else [])
+          + list(chain.from_iterable(izip(repeat('--source'), source)))
+          + args,
+          env=env)
 
 
 # Test command
