@@ -1099,6 +1099,7 @@ class Program(object):
     name = None
     is_cwd = False
     is_repo = False
+    is_classic = False
 
     def __init__(self, path=None, print_warning=False):
         path = os.path.abspath(path or os.getcwd())
@@ -1117,6 +1118,7 @@ class Program(object):
                 break
 
         self.name = os.path.basename(self.path)
+        self.is_classic = os.path.isfile(os.path.join(self.path, 'mbed.bld'))
 
         # is_cwd flag indicates that current dir is assumed to be root, not root repo
         if self.is_cwd and print_warning:
@@ -1179,9 +1181,7 @@ class Program(object):
     def post_action(self):
         mbed_tools_path = self.get_tools_dir()
 
-        if not mbed_tools_path:
-            if not os.path.exists(os.path.join(self.path, '.temp')):
-                os.mkdir(os.path.join(self.path, '.temp'))
+        if not mbed_tools_path and self.is_classic:
             self.add_tools(os.path.join(self.path, '.temp'))
             mbed_tools_path = self.get_tools_dir()
 
@@ -1221,11 +1221,13 @@ class Program(object):
                 "You can install all missing modules by running \"pip install -r %s\" in \"%s\"" % (', '.join(missing), fname, mbed_os_path))
 
     def add_tools(self, path):
+        if not os.path.exists(path):
+            os.mkdir(path)
         with cd(path):
             tools_dir = 'tools'
             if not os.path.exists(tools_dir):
                 try:
-                    action("Couldn't find build tools in your program. Downloading the mbed SDK tools...")
+                    action("Couldn't find build tools in your program. Downloading the mbed 2.0 SDK tools...")
                     repo = Repo.fromurl(mbed_sdk_tools_url)
                     repo.clone(mbed_sdk_tools_url, tools_dir)
                 except Exception:
