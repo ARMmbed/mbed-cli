@@ -35,7 +35,7 @@ import argparse
 
 
 # Application version
-ver = '0.7.11'
+ver = '0.7.13'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
@@ -1174,6 +1174,16 @@ class Program(object):
 
         return None
 
+    def get_env(self):
+        env = os.environ.copy()
+        env['PYTHONPATH'] = os.path.abspath(self.path)
+        compilers = ['ARM', 'GCC_ARM', 'IAR']
+        for c in compilers:
+            if self.get_cfg(c+'_PATH'):
+                env[c+'_PATH'] = self.get_cfg(c+'_PATH')
+
+        return env
+
     # Routines after cloning mbed-os
     def post_action(self):
         mbed_tools_path = self.get_tools_dir()
@@ -1888,8 +1898,9 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
 
     with cd(program.path):
         tools_dir = os.path.abspath(program.get_tools())
-        env = os.environ.copy()
-        env['PYTHONPATH'] = os.path.abspath(program.path)
+
+    # Prepare environment variables
+    env = program.get_env()
 
     if not source or len(source) == 0:
         source = [os.path.relpath(program.path, orig_path)]
@@ -1972,10 +1983,10 @@ def test_(toolchain=None, mcu=None, compile_list=False, run_list=False, compile_
     tools_dir = program.get_tools()
     build_and_run_tests = not compile_list and not run_list and not compile_only and not run_only
     relative_orig_path = os.path.relpath(orig_path, program.path)
-    
-    env = os.environ.copy()
-    env['PYTHONPATH'] = os.path.abspath(program.path)
-    
+
+    # Prepare environment variables
+    env = program.get_env()
+
     with cd(program.path):
         # Setup the source path if not specified
         if not source or len(source) == 0:
@@ -2043,8 +2054,9 @@ def export(ide=None, mcu=None, source=False, clean=False, supported=False):
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
         tools_dir = program.get_tools()
-        env = os.environ.copy()
-        env['PYTHONPATH'] = os.path.abspath(program.path)
+
+    # Prepare environment variables
+    env = program.get_env()
 
     if supported:
         popen(['python', '-u', os.path.join(tools_dir, 'project.py')]
@@ -2082,13 +2094,12 @@ def detect():
     with cd(program.path):
         tools_dir = program.get_tools()
 
-        # Prepare environment variables
-        env = os.environ.copy()
-        env['PYTHONPATH'] = os.path.abspath(program.path)
+    # Prepare environment variables
+    env = program.get_env()
 
-        popen(['python', '-u', os.path.join(tools_dir, 'detect_targets.py')]
-              + args,
-              env=env)
+    popen(['python', '-u', os.path.join(tools_dir, 'detect_targets.py')]
+          + args,
+          env=env)
 
 
 # Generic config command
