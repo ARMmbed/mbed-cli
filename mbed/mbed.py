@@ -35,7 +35,7 @@ import argparse
 
 
 # Application version
-ver = '0.7.3'
+ver = '0.7.13'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
@@ -630,20 +630,17 @@ class Git(object):
         remote = Git.getremote()
         if not remote:
             return -1
-
         # Get current branch
         branch = Git.getbranch()
         if not branch:
-            # Detached mode is okay as we don't expect the user to publish from detached state without branch
-            return 0
-
+            # Default to "master" in detached mode 
+            branch = "master"
         try:
             # Check if remote branch exists
             if not pquery([git_cmd, 'rev-parse', '%s/%s' % (remote, branch)]):
                 return 1
         except ProcessException:
             return 1
-
         # Check for outgoing commits for the same remote branch
         return 1 if pquery([git_cmd, 'log', '%s/%s..%s' % (remote, branch, branch)]) else 0
 
@@ -809,7 +806,7 @@ class Repo(object):
             if path is None:
                 error(
                     "Could not find mbed program in current path \"%s\".\n"
-                    "You can fix this by calling \"mbed new .\" or \"mbed default root .\" in the root of your program." % os.getcwd())
+                    "You can fix this by calling \"mbed new .\" or \"mbed config root .\" in the root of your program." % os.getcwd())
 
         repo.path = os.path.abspath(path)
         repo.name = os.path.basename(repo.path)
@@ -1099,6 +1096,7 @@ class Program(object):
     name = None
     is_cwd = False
     is_repo = False
+    is_classic = False
 
     def __init__(self, path=None, print_warning=False):
         path = os.path.abspath(path or os.getcwd())
@@ -1117,12 +1115,13 @@ class Program(object):
                 break
 
         self.name = os.path.basename(self.path)
+        self.is_classic = os.path.isfile(os.path.join(self.path, 'mbed.bld'))
 
         # is_cwd flag indicates that current dir is assumed to be root, not root repo
         if self.is_cwd and print_warning:
             warning(
                 "Could not find mbed program in current path \"%s\".\n"
-                "You can fix this by calling \"mbed new .\" or \"mbed default root .\" in the root of your program." % self.path)
+                "You can fix this by calling \"mbed new .\" or \"mbed config root .\" in the root of your program." % self.path)
 
     def get_cfg(self, *args, **kwargs):
         return Cfg(self.path).get(*args, **kwargs) or Global().get_cfg(*args, **kwargs)
@@ -1155,9 +1154,9 @@ class Program(object):
 
     # Gets mbed tools dir (unified)
     def get_tools_dir(self):
-        mbed_os_path = self.get_os_dir()
         paths = []
         # mbed-os dir identified and tools is a sub dir
+        mbed_os_path = self.get_os_dir()
         if mbed_os_path:
             paths.append([mbed_os_path, 'tools'])
             paths.append([mbed_os_path, 'core', 'tools'])
@@ -1167,19 +1166,29 @@ class Program(object):
         # mbed Classic deployed tools
         paths.append([self.path, '.temp', 'tools'])
 
+        fl = 'make.py'
         for p in paths:
-            if os.path.isdir(os.path.join(*p)):
-                return os.path.join(*p)
+            path = os.path.join(*p)
+            if os.path.isdir(path) and os.path.isfile(os.path.join(path, fl)):
+                return os.path.join(path)
 
         return None
+
+    def get_env(self):
+        env = os.environ.copy()
+        env['PYTHONPATH'] = os.path.abspath(self.path)
+        compilers = ['ARM', 'GCC_ARM', 'IAR']
+        for c in compilers:
+            if self.get_cfg(c+'_PATH'):
+                env[c+'_PATH'] = self.get_cfg(c+'_PATH')
+
+        return env
 
     # Routines after cloning mbed-os
     def post_action(self):
         mbed_tools_path = self.get_tools_dir()
 
-        if not mbed_tools_path:
-            if not os.path.exists(os.path.join(self.path, '.temp')):
-                os.mkdir(os.path.join(self.path, '.temp'))
+        if not mbed_tools_path and self.is_classic:
             self.add_tools(os.path.join(self.path, '.temp'))
             mbed_tools_path = self.get_tools_dir()
 
@@ -1219,11 +1228,13 @@ class Program(object):
                 "You can install all missing modules by running \"pip install -r %s\" in \"%s\"" % (', '.join(missing), fname, mbed_os_path))
 
     def add_tools(self, path):
+        if not os.path.exists(path):
+            os.mkdir(path)
         with cd(path):
             tools_dir = 'tools'
             if not os.path.exists(tools_dir):
                 try:
-                    action("Couldn't find build tools in your program. Downloading the mbed SDK tools...")
+                    action("Couldn't find build tools in your program. Downloading the mbed 2.0 SDK tools...")
                     repo = Repo.fromurl(mbed_sdk_tools_url)
                     repo.clone(mbed_sdk_tools_url, tools_dir)
                 except Exception:
@@ -1238,15 +1249,21 @@ class Program(object):
         return mbed_tools_path
 
     def get_mcu(self, mcu=None):
-        target = mcu if mcu else self.get_cfg('TARGET')
+        target_cfg = self.get_cfg('TARGET')
+        target = mcu if mcu else target_cfg
         if target is None:
             error('Please specify compile target using the -m switch or set default target using command "target"', 1)
+        elif not target_cfg:
+            self.set_cfg('TARGET', target)
         return target
 
     def get_toolchain(self, toolchain=None):
-        tchain = toolchain if toolchain else self.get_cfg('TOOLCHAIN')
+        toolchain_cfg = self.get_cfg('TOOLCHAIN')
+        tchain = toolchain if toolchain else toolchain_cfg
         if tchain is None:
             error('Please specify compile toolchain using the -t switch or set default toolchain using command "toolchain"', 1)
+        elif not toolchain_cfg:
+            self.set_cfg('TOOLCHAIN', tchain)
         return tchain
 
     def get_macros(self):
@@ -1488,9 +1505,10 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
 
     repo = Repo.fromurl(url, path)
     if top:
-        if cwd_type != "directory":
-            error("Cannot import program in the specified location \"%s\" because it's already part of a program.\n"
-                  "Please change your working directory to a different location or use \"mbed add\" to import the URL as a library." % os.path.abspath(repo.path), 1)
+        p = Program(path)
+        if p and not p.is_cwd:
+            error("Cannot import program in the specified location \"%s\" because it's already part of a program \"%s\".\n"
+                  "Please change your working directory to a different location or use \"mbed add\" to import the URL as a library." % (os.path.abspath(repo.path), p.name), 1)
 
     protocol = Program().get_cfg('PROTOCOL', protocol)
 
@@ -1867,6 +1885,10 @@ def status_(ignore=False):
     help='Compile code using the mbed build tools',
     description=("Compile this program using the mbed build tools."))
 def compile(toolchain=None, mcu=None, source=False, build=False, compile_library=False, compile_config=False, config_prefix=None, compile_tests=False, clean=False, supported=False):
+    # Pipe --tests to mbed tests command
+    if compile_tests:
+        return test_(toolchain=toolchain, mcu=mcu, source=source, build=build, clean=clean, compile_only=True)
+
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
@@ -1876,8 +1898,9 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
 
     with cd(program.path):
         tools_dir = os.path.abspath(program.get_tools())
-        env = os.environ.copy()
-        env['PYTHONPATH'] = os.path.abspath(program.path)
+
+    # Prepare environment variables
+    env = program.get_env()
 
     if not source or len(source) == 0:
         source = [os.path.relpath(program.path, orig_path)]
@@ -1892,9 +1915,6 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
     target = program.get_mcu(mcu)
     tchain = program.get_toolchain(toolchain)
     macros = program.get_macros()
-
-    if compile_tests:
-        return test_(toolchain=toolchain, mcu=mcu, source=source, build=build, compile_only=True)
 
     if compile_config:
         # Compile configuration
@@ -1963,10 +1983,10 @@ def test_(toolchain=None, mcu=None, compile_list=False, run_list=False, compile_
     tools_dir = program.get_tools()
     build_and_run_tests = not compile_list and not run_list and not compile_only and not run_only
     relative_orig_path = os.path.relpath(orig_path, program.path)
-    
-    env = os.environ.copy()
-    env['PYTHONPATH'] = os.path.abspath(program.path)
-    
+
+    # Prepare environment variables
+    env = program.get_env()
+
     with cd(program.path):
         # Setup the source path if not specified
         if not source or len(source) == 0:
@@ -2016,30 +2036,47 @@ def test_(toolchain=None, mcu=None, compile_list=False, run_list=False, compile_
 
 # Export command
 @subcommand('export',
-    dict(name=['-i', '--ide'], help='IDE to create project files for. Example: UVISION,DS5,IAR', required=True),
+    dict(name=['-i', '--ide'], help='IDE to create project files for. Example: UVISION4, UVISION5, GCC_ARM, IAR, COIDE', required=True),
     dict(name=['-m', '--mcu'], help='Export for target MCU. Example: K64F, NUCLEO_F401RE, NRF51822...'),
+    dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
+    dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
+    dict(name=['-S', '--supported'], dest='supported', action='store_true', help='Shows supported matrix of targets and toolchains'),
     help='Generate an IDE project',
     description=(
         "Generate IDE project files for the current program."))
-def export(ide=None, mcu=None):
+def export(ide=None, mcu=None, source=False, clean=False, supported=False):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
     program = Program(os.getcwd(), True)
+    # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
+    orig_path = os.getcwd()
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
         tools_dir = program.get_tools()
-        target = program.get_mcu(mcu)
-        macros = program.get_macros()
 
-        env = os.environ.copy()
-        env['PYTHONPATH'] = os.path.abspath(program.path)
+    # Prepare environment variables
+    env = program.get_env()
 
+    if supported:
         popen(['python', '-u', os.path.join(tools_dir, 'project.py')]
-              + list(chain.from_iterable(izip(repeat('-D'), macros)))
-              + ['-i', ide, '-m', target, '--source=%s' % program.path]
-              + args,
+              + (['-S'] if supported else []) + (['-v'] if very_verbose else []),
               env=env)
+        return
+
+    target = program.get_mcu(mcu)
+    macros = program.get_macros()
+
+    if not source or len(source) == 0:
+        source = [os.path.relpath(program.path, orig_path)]
+
+    popen(['python', '-u', os.path.join(tools_dir, 'project.py')]
+          + list(chain.from_iterable(izip(repeat('-D'), macros)))
+          + ['-i', ide.lower(), '-m', target]
+          + (['-c'] if clean else [])
+          + list(chain.from_iterable(izip(repeat('--source'), source)))
+          + args,
+          env=env)
 
 
 # Test command
@@ -2057,13 +2094,12 @@ def detect():
     with cd(program.path):
         tools_dir = program.get_tools()
 
-        # Prepare environment variables
-        env = os.environ.copy()
-        env['PYTHONPATH'] = os.path.abspath(program.path)
+    # Prepare environment variables
+    env = program.get_env()
 
-        popen(['python', '-u', os.path.join(tools_dir, 'detect_targets.py')]
-              + args,
-              env=env)
+    popen(['python', '-u', os.path.join(tools_dir, 'detect_targets.py')]
+          + args,
+          env=env)
 
 
 # Generic config command
@@ -2121,12 +2157,17 @@ def target_(name=None, global_cfg=False):
 
 @subcommand('toolchain',
     dict(name='name', nargs='?', help='Default toolchain name. Example: ARM, uARM, GCC_ARM, IAR'),
-    help='Set or get default toolchain',
+    help='Set or get default toolchain\n\n',
     description=(
         "This is an alias to 'mbed config toolchain [--global] [name]'\n"))
 def toolchain_(name=None, global_cfg=False):
     return config_('toolchain', name, global_cfg=global_cfg)
 
+@subcommand('help',
+    help='This help screen')
+def help_():
+    parser.print_help()
+    return
 
 # Parse/run command
 if len(sys.argv) <= 1:

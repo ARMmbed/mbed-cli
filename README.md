@@ -50,7 +50,7 @@ This document covers the installation and usage of *mbed CLI*.
 
     <span class="tips">**Note:** The directories of Git and Mercurial executables (`git` and `hg`) need to be in your system's PATH.</span>
 
-* **Command-line compiler or IDE Toolchain** - *mbed CLI* invokes the [mbed OS](https://github.com/ARMmbed/mbed-os) tools for various features - compiling, testing, exporting to industry standard toolchains. To compile your code, you would need either of these:
+* **Command-line compiler or IDE Toolchain** - *mbed CLI* invokes the [mbed OS 4.0](https://github.com/ARMmbed/mbed-os) tools for various features - compiling, testing, exporting to industry standard toolchains. To compile your code, you would need either of these:
     * Compilers: GCC ARM, ARMCC 5, IAR
     * Toolchains: Keil uVision, DS-5, IAR Workbench
 
@@ -101,7 +101,7 @@ To list all *mbed CLI* commands use `mbed --help`. A detailed command-specific h
 
 #### Creating a new program
 
-When you create a new program, *mbed CLI* automatically imports the latest [mbed OS release](https://github.com/ARMmbed/mbed-os/). This library represents a **release** of mbed OS and will pull in all the components of the OS, including its build tools and desktop IDE project generators. 
+When you create a new program, *mbed CLI* automatically imports the latest [mbed OS release](https://github.com/ARMmbed/mbed-os/). This represents a **release** of mbed OS and will pull in all the components, including its build tools and desktop IDE project generators. 
 
 With this in mind, these are the steps for creating a new program (we'll call it `mbed-os-program`):
 
@@ -140,12 +140,12 @@ mbed-os-program (mbed-os-program#189949915b9c)
 
 <span class="notes">**Note**: If you want to start from an existing folder in your workspace, you can simply use `mbed new .`, which will initialize an mbed program and also initialize a new Git or Mercurial repository in that folder. You can control which source control management is used or prevent source control management initialization via `--scm [name|none]` option.</span>
 
-*mbed CLI* is also compatible with programs based on the [mbed library](https://mbed.org/users/mbed_official/code/mbed/) and will automatically import the latest [mbed library release](https://mbed.org/users/mbed_official/code/mbed/) if `--mbedlib` option is specified e.g.
+*mbed CLI* is also compatible with mbed 2.0 programs based on the [mbed library](https://mbed.org/users/mbed_official/code/mbed/) and will automatically import the latest [mbed library release](https://mbed.org/users/mbed_official/code/mbed/) if `--mbedlib` option is specified e.g.
 ```
 $ mbed new mbed-classic-program --mbedlib
 ```
 
-You can create plain (empty) programs, without either mbed OS or mbed library  by adding the `--create-only` option.
+You can create plain (empty) programs, without either mbed OS 4.0 or mbed 2.0  by adding the `--create-only` option.
 
 
 #### Importing an existing program
@@ -157,11 +157,30 @@ $ mbed import https://github.com/ARMmbed/mbed-blinky/
 $ cd mbed-blinky
 ```
 
-*mbed CLI* also supports programs based on the mbed library, which are automatically detected and do not require additional options.
+*mbed CLI* also supports programs based on the mbed 2.0, which are automatically detected and do not require additional options.
 
 ```
 $ mbed import https://developer.mbed.org/teams/mbed/code/mbed_blinky/
-¢ cd mbed_blinky
+$ cd mbed_blinky
+```
+
+
+#### Importing from git/hg clone
+
+If you have manually cloned a git repository into your workspace and you want to add all missing libraries, then you can use the `deploy` command:
+
+```
+$ mbed deploy
+[mbed] Creating new program "test-prog" (git)
+[mbed] Adding library "mbed-os" from "https://github.com/ARMmbed/mbed-os/" at latest revision in the current branch
+[mbed] Adding library "mbed-os/core" from "https://github.com/mbedmicro/mbed/" at rev #b4bb088876cb72bda7006e423423aba4895d380c
+...
+```
+
+Don't forget to set the current directory as a root of your program:
+
+```
+$ mbed new .
 ```
 
 
@@ -255,7 +274,9 @@ __I want a clean update (and discard uncommitted changes)__
 
 Run `mbed update [branch] --clean`
 
-<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: Specifying a branch to `mbed update` would only checkout that branch and won't automatically merge/fast-forward to the remote/upstream branch. You can run `mbed update` to merge (fast-forward) your local branch with the latest remote branch. On git you can do `git pull`.</span>
+Specifying a branch to `mbed update` would only checkout that branch and won't automatically merge/fast-forward to the remote/upstream branch. You can run `mbed update` to merge (fast-forward) your local branch with the latest remote branch. On git you can do `git pull`
+
+<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: The `--clean` option tells *mbed CLI* to update that program or library and its dependencies, and discard all local changes. WARNING: This action cannot be undone. Use with caution.</span>
 
 **Case 2: I want to update a program or a library to a specific revision or a tag**
  
@@ -267,7 +288,6 @@ __I want a clean update (discard changes)__
 
 Run `mbed update <tag_name|revision> --clean`
 
-The `--clean` option tells *mbed CLI* to update that program or library and its dependencies, and discard all local changes.
 
 __When you have unpublished local libraries__
 
@@ -340,6 +360,20 @@ mbed-os-program (189949915b9c)
 ```
 
 Furthermore, let's assume that you make changes to `mbed-mesh-api`. `publish` detects the change on the leaf `mbed-mesh-api` dependency and asks you to commit it. Then it detects that `mbed-os` depends on `mbed-mesh-api`, updates mbed-os' dependency on `mbed-mesh-api` to its latest version (by updating the `mbed-mesh-api.lib` file inside `mbed-os/net/`) and asks you to commit it. This propagates up to `mbed-os` and finally to your program `mbed-os-program`.
+
+#### Forking workflow
+
+Git enables asymmetric workflow where the publish/push repository might be different than the original ("origin") one. This allows new revisions to land in a fork repository, while maintaining association with the original repository.
+
+To achieve this, first import an mbed OS program or mbed OS itself and then associate the push remote with your fork, e.g:
+
+```
+$ git remote set-url --push origin https://github.com/screamerbg/repo-fork
+```
+
+Each time you `git` commit+push or use `mbed publish`, the new revisions will be pushed against you fork. You can fetch from the original repository using `mbed update` or `git pull`. If you explicitly want to fetch/pull from your fork, then you can use `git pull https://github.com/screamerbg/repo-fork [branch]`
+
+Through the workflow explained above, mbed CLI will maintain association to the original ("origin") repository to which you might want to send pull request to), and will record references with the revision hashes that you push to your fork. Until your pull request is accepted, all recorded references will be invalid, but once the PR is accepted all revision hashes from your fork will become part the original repository, thus all references will become valid.
 
 
 ### Compiling code
