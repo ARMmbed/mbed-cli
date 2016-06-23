@@ -1877,7 +1877,7 @@ def status_(ignore=False):
     dict(name='--library', dest='compile_library', action='store_true', help='Compile the current %s as a static library.' % cwd_type),
     dict(name='--config', dest='compile_config', action='store_true', help='Show run-time compile configuration'),
     dict(name='--prefix', dest='config_prefix', action='append', help='Restrict listing to parameters that have this prefix'),
-    dict(name='--tests', dest='compile_tests', action='store_true', help='Compile tests in TESTS directory.'),
+    dict(name='--tests', dest='compile_tests', action='store_true', help='An alias to \'mbed test --compile\''),
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
     dict(name='--build', help='Build directory. Default: .build/'),
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
