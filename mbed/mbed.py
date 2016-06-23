@@ -317,7 +317,7 @@ class Bld(object):
                 error(e[1], e[0])
             Bld.seturl(url+'/'+rev)
 
-    def update(rev=None, clean=False, is_local=False):
+    def update(rev=None, clean=False, clean_files=False, is_local=False):
         return Bld.checkout(rev, clean)
 
     def untracked():
@@ -398,14 +398,19 @@ class Hg(object):
         log("Discarding local changes in \"%s\"" % os.path.basename(os.getcwd()))
         popen([hg_cmd, 'update', '-C'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
-    def checkout(rev, clean=False):
+    def checkout(rev, clean=False, clean_files=False):
         log("Checkout \"%s\" in %s to %s" % (rev, os.path.basename(os.getcwd()), rev))
+        if clean_files:
+            files = pquery([hg_cmd, 'status', '--no-status', '-ui']).splitlines()
+            for f in files:
+                log("Remove untracked file \"%s\"" % f)
+                os.remove(f)
         popen([hg_cmd, 'update'] + (['-C'] if clean else []) + (['-r', rev] if rev else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
-    def update(rev=None, clean=False, is_local=False):
+    def update(rev=None, clean=False, clean_files=False, is_local=False):
         if not is_local:
             Hg.fetch()
-        Hg.checkout(rev, clean)
+        Hg.checkout(rev, clean, clean_files)
 
     def status():
         return pquery([hg_cmd, 'status'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
@@ -414,8 +419,7 @@ class Hg(object):
         return pquery([hg_cmd, 'status', '-q'])
 
     def untracked():
-        result = pquery([hg_cmd, 'status', '-u'])
-        return re.sub(r'^\? ', '', result).splitlines()
+        return pquery([hg_cmd, 'status', '--no-status', '-u']).splitlines()
 
     def outgoing():
         try:
@@ -571,11 +575,11 @@ class Git(object):
         log("Fetching revisions from remote repository to \"%s\"" % os.path.basename(os.getcwd()))
         popen([git_cmd, 'fetch', '--all'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
-    def discard():
+    def discard(clean_files=False):
         log("Discarding local changes in \"%s\"" % os.path.basename(os.getcwd()))
         pquery([git_cmd, 'reset', 'HEAD'] + ([] if very_verbose else ['-q'])) # unmarks files for commit
         pquery([git_cmd, 'checkout', '.'] + ([] if very_verbose else ['-q'])) # undo  modified files
-        pquery([git_cmd, 'clean', '-fdq'] + ([] if very_verbose else ['-q'])) # cleans up untracked files and folders
+        pquery([git_cmd, 'clean', '-fd'] + (['-x'] if clean_files else []) + (['-q'] if very_verbose else ['-q'])) # cleans up untracked files and folders
 
     def merge(dest):
         log("Merging \"%s\" with \"%s\"" % (os.path.basename(os.getcwd()), dest))
@@ -594,9 +598,9 @@ class Git(object):
                 popen([git_cmd, 'checkout', branch] + ([] if very_verbose else ['-q']))
                 break
 
-    def update(rev=None, clean=False, is_local=False):
+    def update(rev=None, clean=False, clean_files=False, is_local=False):
         if clean:
-            Git.discard()
+            Git.discard(clean_files)
         if not is_local:
             Git.fetch()
         if rev:
@@ -1050,21 +1054,21 @@ class Repo(object):
                 warning("Unable to cache \"%s\" to \"%s\"" % (self.path, cpath))
         return False
 
-    def can_update(self, clean, force):
+    def can_update(self, clean, clean_deps):
         err = None
-        if (self.is_local or self.url is None) and not force:
+        if (self.is_local or self.url is None) and not clean_deps:
             err = (
                 "Preserving local library \"%s\" in \"%s\".\nPlease publish this library to a remote URL to be able to restore it at any time."
                 "You can use --ignore switch to ignore all local libraries and update only the published ones.\n"
-                "You can also use --force switch to remove all local libraries. WARNING: This action cannot be undone." % (self.name, self.path))
+                "You can also use --clean-deps switch to remove all local libraries. WARNING: This action cannot be undone." % (self.name, self.path))
         elif not clean and self.dirty():
             err = (
                 "Uncommitted changes in \"%s\" in \"%s\".\nPlease discard or stash them first and then retry update.\n"
                 "You can also use --clean switch to discard all uncommitted changes. WARNING: This action cannot be undone." % (self.name, self.path))
-        elif not force and self.outgoing():
+        elif not clean_deps and self.outgoing():
             err = (
                 "Unpublished changes in \"%s\" in \"%s\".\nPlease publish them first using the \"publish\" command.\n"
-                "You can also use --force to discard all local commits and replace the library with the one included in this revision. WARNING: This action cannot be undone." % (self.name, self.path))
+                "You can also use --clean-deps to discard all local commits and replace the library with the one included in this revision. WARNING: This action cannot be undone." % (self.name, self.path))
 
         return (False, err) if err else (True, "OK")
 
@@ -1670,8 +1674,9 @@ def publish(all=None, top=True):
 # Update command
 @subcommand('update',
     dict(name='rev', nargs='?', help='Revision, tag or branch'),
-    dict(name=['-C', '--clean'], action='store_true', help='Perform a clean update and discard all local changes. WARNING: This action cannot be undone. Use with caution.'),
-    dict(name=['-F', '--force'], action='store_true', help='Enforce the original layout and will remove any local libraries and also libraries containing uncommitted or unpublished changes. WARNING: This action cannot be undone. Use with caution.'),
+    dict(name=['-C', '--clean'], action='store_true', help='Perform a clean update and discard all modified or untracked files. WARNING: This action cannot be undone. Use with caution.'),
+    dict(name='--clean-files', action='store_true', help='Remove any local ignored files. Requires \'--clean\'. WARNING: This will wipe all local uncommitted, untracked and ignored files. Use with extreme caution.'),
+    dict(name='--clean-deps', action='store_true', help='Remove any local libraries and also libraries containing uncommitted or unpublished changes. Requires \'--clean\'. WARNING: This action cannot be undone. Use with caution.'),
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to unpublished libraries, unpublished or uncommitted changes, and attempt to update from associated remote repository URLs.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
@@ -1680,7 +1685,7 @@ def publish(all=None, top=True):
         "Updates this %s and its dependencies to specified branch, tag or revision.\n"
         "Alternatively fetches from associated remote repository URL and updates to the\n"
         "latest revision in the current branch." % cwd_type))
-def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=None, protocol=None):
+def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=False, top=True, depth=None, protocol=None):
     if top and clean:
         sync()
 
@@ -1705,7 +1710,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
             repo.revtype(rev, True)))
 
         try:
-            repo.update(rev, clean, repo.is_local)
+            repo.update(rev, clean, clean_files, repo.is_local)
         except ProcessException as e:
             err = "Unable to update \"%s\" to %s" % (repo.name, repo.revtype(rev, True))
             if depth:
@@ -1726,7 +1731,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
             gc = False
             with cd(lib.path):
                 lib_repo = Repo.fromrepo(lib.path)
-                gc, msg = lib_repo.can_update(clean, force)
+                gc, msg = lib_repo.can_update(clean, clean_deps)
             if gc:
                 action("Removing library \"%s\" (obsolete)" % (relpath(cwd_root, lib.path)))
                 rmtree_readonly(lib.path)
@@ -1747,7 +1752,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
             if lib.url != lib_repo.url: # Repository URL has changed
                 gc = False
                 with cd(lib.path):
-                    gc, msg = lib_repo.can_update(clean, force)
+                    gc, msg = lib_repo.can_update(clean, clean_deps)
                 if gc:
                     action("Removing library \"%s\" (changed URL). Will add from new URL." % (relpath(cwd_root, lib.path)))
                     rmtree_readonly(lib.path)
@@ -1765,10 +1770,12 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
             repo.ignore(relpath(repo.path, lib.path))
         else:
             with cd(lib.path):
-                update(lib.rev, clean, force, ignore=ignore, top=False)
+                update(lib.rev, clean=clean, clean_files=clean_files, clean_deps=clean_deps, ignore=ignore, top=False)
 
     if top:
-        Program(repo.path).post_action()
+        program = Program(repo.path)
+        program.set_root()
+        program.post_action()
 
 
 # Synch command

@@ -295,19 +295,21 @@ Run `mbed update <tag_name|revision> --clean`
 
 __When you have unpublished local libraries__
 
-There are two additional options that define how unpublished local libraries are handled:
+There are 3 additional options that define how unpublished local libraries are handled:
+
+`mbed update --clean-deps` - update the current program or library and its dependencies, and discard all local unpublished repositories. Use this with caution as your local unpublished repositories cannot be restored unless you have a backup copy.
+
+`mbed update --clean-files` - update the current program or library and its dependencies, discard local uncommitted changes and remove any untracked or ignored files. Use this with caution as your local unpublished repositories cannot be restored unless you have a backup copy.
 
 `mbed update --ignore` - update the current program or library and its dependencies, and ignore any local unpublished libraries (they won't be deleted or modified, just ignored).
-
-`mbed update --force` - update the current program or library and its dependencies, and discard all local unpublished repositories. Use this with caution as your local unpublished repositories cannot be restored unless you have a backup copy.
 
 __Combining update options__
 
 You can combine the options above for the following scenarios:
 
-`mbed update --clean --ignore` - update the current program or library and its dependencies, but ignore any local repositories. mbed-cli will update whatever it can from public repositories.
+`mbed update --clean --clean-deps --clean-files` - update the current program or library and its dependencies, remove all local unpublished libraries, discard local uncommitted changes, and remove all untracked or ignored files. This wipes every single change that you made in the source tree and restores the stock layout.
 
-`mbed update --clean --force` - update the current program or library and all its dependencies, and restore my source tree to stock layout. This wipes every change that you made in the source tree that didn't belong to the original commit, including uncommitted changes and unpublished local libraries.
+`mbed update --clean --ignore` - update the current program or library and its dependencies, but ignore any local repositories. mbed CLI will update whatever it can from the public repositories.
 
 Use these with caution as your uncommitted changes and unpublished libraries cannot be restored.
 
