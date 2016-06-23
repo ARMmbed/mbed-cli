@@ -35,7 +35,7 @@ import argparse
 
 
 # Application version
-ver = '0.7.13'
+ver = '0.7.14'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
@@ -1253,8 +1253,6 @@ class Program(object):
         target = mcu if mcu else target_cfg
         if target is None:
             error('Please specify compile target using the -m switch or set default target using command "target"', 1)
-        elif not target_cfg:
-            self.set_cfg('TARGET', target)
         return target
 
     def get_toolchain(self, toolchain=None):
@@ -1262,9 +1260,13 @@ class Program(object):
         tchain = toolchain if toolchain else toolchain_cfg
         if tchain is None:
             error('Please specify compile toolchain using the -t switch or set default toolchain using command "toolchain"', 1)
-        elif not toolchain_cfg:
-            self.set_cfg('TOOLCHAIN', tchain)
         return tchain
+
+    def set_defaults(self, target=None, toolchain=None):
+        if target and not self.get_cfg('TARGET'):
+            self.set_cfg('TARGET', target)
+        if toolchain and not self.get_cfg('TOOLCHAIN'):
+            self.set_cfg('TOOLCHAIN', toolchain)
 
     def get_macros(self):
         macros = []
@@ -1272,7 +1274,6 @@ class Program(object):
             with open('MACROS.txt') as f:
                 macros = f.read().splitlines()
         return macros
-
 
 # Global class, used for global config
 class Global(object):
@@ -1953,6 +1954,8 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
               + args,
               env=env)
 
+    program.set_defaults(target=target, toolchain=tchain)
+
 
 # Test command
 @subcommand('test',
@@ -2033,6 +2036,8 @@ def test_(toolchain=None, mcu=None, compile_list=False, run_list=False, compile_
                   + args,
                   env=env)
 
+    program.set_defaults(target=target, toolchain=tchain)
+
 
 # Export command
 @subcommand('export',
@@ -2077,6 +2082,8 @@ def export(ide=None, mcu=None, source=False, clean=False, supported=False):
           + list(chain.from_iterable(izip(repeat('--source'), source)))
           + args,
           env=env)
+
+    program.set_defaults(target=target)
 
 
 # Test command
