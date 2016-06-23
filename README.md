@@ -58,15 +58,17 @@ This document covers the installation and usage of *mbed CLI*.
 
 You can get the latest stable version of *mbed CLI* via PyPI by running:
 
-    ``$ pip install mbed-cli``
+```
+$ pip install mbed-cli
+```
 
 Alternatively you get the development version of *mbed CLI* by cloning the development repository [https://github.com/ARMmbed/mbed-cli](https://github.com/ARMmbed/mbed-cli):
 
-  ``$ git clone https://github.com/ARMmbed/mbed-cli``
+  `$ git clone https://github.com/ARMmbed/mbed-cli`
 
   Once cloned you can install *mbed CLI* as a python package:
 
-  ``$ python setup.py install`` (on Linux/Mac, you may need to run with ``sudo`` as well)
+  `$ python setup.py install` (on Linux/Mac, you may need to run with `sudo` as well)
 
 <span class="tips">**Note:** *mbed CLI* is compatible with [Virtual Python Environment (virtualenv)](https://pypi.python.org/pypi/virtualenv). You can read more about isolated Python virtual environments [here](http://docs.python-guide.org/en/latest/).</span>
 
@@ -74,7 +76,9 @@ Alternatively you get the development version of *mbed CLI* by cloning the devel
 
 To uninstall *mbed CLI*, simply run:
 
-``pip uninstall mbed-cli``
+```
+pip uninstall mbed-cli
+```
 
 ## Using mbed CLI
 
@@ -382,8 +386,8 @@ Through the workflow explained above, mbed CLI will maintain association to the 
 
 After importing a program or creating a new one, you need to tell *mbed CLI* where to find the toolchains that you want to use for compiling your source tree. *mbed CLI* gets this information from a file named `mbed_settings.py`, which is automatically created at the top of your cloned repository (if it doesn't already exist). As a rule, since `mbed_settings.py` contains local settings (possibly relevant only to a single OS on a single machine), it should not be versioned. In this file:
 
-* If you want to use the [ARM Compiler toolchain](https://developer.arm.com/products/software-development-tools/compilers/arm-compiler-5/downloads), set ``ARM_PATH`` to the *base* directory of your ARMCC installation (example: c:\software\armcc5.06). The recommended version of the ARMCC toolchain is 5.06 (5.05 will very likely work too).
-* If you want to use the [GCC ARM Embedded toolchain](https://launchpad.net/gcc-arm-embedded), set ``GCC_ARM_PATH`` to the *binary* directory of your GCC ARM installation (example: c:\software\GNUToolsARMEmbedded\4.82013q4\bin). Use versions 4.8 or 4.9 of GCC ARM Embedded, but version 5.0 or any version above might be incompatible with the tools.
+* If you want to use the [ARM Compiler toolchain](https://developer.arm.com/products/software-development-tools/compilers/arm-compiler-5/downloads), set `ARM_PATH` to the *base* directory of your ARMCC installation (example: c:\software\armcc5.06). The recommended version of the ARMCC toolchain is 5.06 (5.05 will very likely work too).
+* If you want to use the [GCC ARM Embedded toolchain](https://launchpad.net/gcc-arm-embedded), set `GCC_ARM_PATH` to the *binary* directory of your GCC ARM installation (example: c:\software\GNUToolsARMEmbedded\4.82013q4\bin). Use versions 4.8 or 4.9 of GCC ARM Embedded, but version 5.0 or any version above might be incompatible with the tools.
 
 #### Compiling your program
 
@@ -511,7 +515,7 @@ ___Macros___
 
 You can specify macros in your command line using the -D option. For example:
 
-``$ mbed compile -t GCC_ARM -m K64F -c -DUVISOR_PRESENT``
+`$ mbed compile -t GCC_ARM -m K64F -c -DUVISOR_PRESENT`
 
 ___Compiling in debug mode___
 
@@ -526,7 +530,7 @@ $ mbed compile -t GCC_ARM -m K64F -o debug-info
 
 #### Automating toolchain and target selection
 
-Using ``mbed target <target>`` and ``mbed toolchain <toolchain>`` you can set the default target and toolchain for your program, meaning you won't have to specify these every time you compile or generate IDE project files.
+Using `mbed target <target>` and `mbed toolchain <toolchain>` you can set the default target and toolchain for your program, meaning you won't have to specify these every time you compile or generate IDE project files.
 
 ### Exporting to desktop IDEs
 
@@ -538,7 +542,7 @@ For example, to export to uVision run:
 $ mbed export -i uvision -m K64F
 ```
 
-A ``.uvproj`` file is created in the projectfiles/uvision folder. You can open the project file with uVision.
+A `.uvproj` file is created in the projectfiles/uvision folder. You can open the project file with uVision.
 
 ### Testing
 
@@ -659,7 +663,7 @@ Test code exists in the following directory structure:
 
 ```
 mbed-os-program
- |- main.cpp            # Optional main.cpp with ```main()``` if it is an application module.
+ |- main.cpp            # Optional main.cpp with main() if it is an application module.
  |- pqr.lib             # Required libs
  |- xyz.lib
  |- mbed-os
