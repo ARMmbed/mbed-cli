@@ -1371,6 +1371,7 @@ parser = argparse.ArgumentParser(prog='mbed',
     description="Command-line code management tool for ARM mbed OS - http://www.mbed.com\nversion %s\n\nUse 'mbed <command> -h|--help' for detailed help.\nOnline manual and guide available at https://github.com/ARMmbed/mbed-cli" % ver,
     formatter_class=argparse.RawTextHelpFormatter)
 subparsers = parser.add_subparsers(title="Commands", metavar="           ")
+parser.add_argument("--version", action="store_true", dest="version", help="print version number and exit")
 
 # Process handling
 def subcommand(name, *args, **kwargs):
@@ -2173,12 +2174,15 @@ def toolchain_(name=None, global_cfg=False):
 @subcommand('help',
     help='This help screen')
 def help_():
-    parser.print_help()
-    return
+    return parser.print_help()
 
 # Parse/run command
 if len(sys.argv) <= 1:
-    parser.print_help()
+    help_()
+    sys.exit(1)
+
+if '--version' in sys.argv:
+    print ver
     sys.exit(1)
 
 pargs, remainder = parser.parse_known_args()
