@@ -35,7 +35,7 @@ import argparse
 
 
 # Application version
-ver = '0.7.14'
+ver = '0.7.17'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
@@ -387,8 +387,8 @@ class Hg(object):
     def commit():
         popen([hg_cmd, 'commit'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
-    def publish(all=None):
-        popen([hg_cmd, 'push'] + (['--new-branch'] if all else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
+    def publish(all_refs=None):
+        popen([hg_cmd, 'push'] + (['--new-branch'] if all_refs else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def fetch():
         log("Fetching revisions from remote repository to \"%s\"" % os.path.basename(os.getcwd()))
@@ -556,8 +556,8 @@ class Git(object):
     def commit():
         popen([git_cmd, 'commit', '-a'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
-    def publish(all=None):
-        if all:
+    def publish(all_refs=None):
+        if all_refs:
             popen([git_cmd, 'push', '--all'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
         else:
             remote = Git.getremote()
@@ -637,7 +637,7 @@ class Git(object):
         # Get current branch
         branch = Git.getbranch()
         if not branch:
-            # Default to "master" in detached mode 
+            # Default to "master" in detached mode
             branch = "master"
         try:
             # Check if remote branch exists
@@ -1630,7 +1630,7 @@ def deploy(ignore=False, depth=None, protocol=None, top=True):
 
 # Publish command
 @subcommand('publish',
-    dict(name=['-A', '--all'], action='store_true', help='Publish all branches, including new ones. Default: push only the current branch.'),
+    dict(name=['-A', '--all'], dest='all_refs', action='store_true', help='Publish all branches, including new ones. Default: push only the current branch.'),
     help='Publish program or library',
     description=(
         "Publishes this %s and all dependencies to their associated remote\nrepository URLs.\n"
@@ -1638,7 +1638,7 @@ def deploy(ignore=False, depth=None, protocol=None, top=True):
         "and unpublished revisions and encourages to commit/push them.\n"
         "Online guide about collaboration is available at:\n"
         "www.mbed.com/collab_guide" % cwd_type))
-def publish(all=None, top=True):
+def publish(all_refs=None, top=True):
     if top:
         action("Checking for local modifications...")
 
@@ -1652,7 +1652,7 @@ def publish(all=None, top=True):
         if lib.check_repo():
             with cd(lib.path):
                 progress()
-                publish(False, all)
+                publish(False, all_refs)
 
     sync(recursive=False)
 
@@ -1665,7 +1665,7 @@ def publish(all=None, top=True):
         outgoing = repo.outgoing()
         if outgoing > 0:
             action("Pushing local repository \"%s\" to remote \"%s\"" % (repo.name, repo.url))
-            repo.publish(all)
+            repo.publish(all_refs)
     except ProcessException as e:
         if e[0] != 1:
             raise e
@@ -1840,14 +1840,14 @@ def sync(recursive=True, keep_refs=False, top=True):
 
 # List command
 @subcommand('ls',
-    dict(name=['-a', '--all'], action='store_true', help='List repository URL and revision pairs'),
+    dict(name=['-a', '--all'], dest='detailed', action='store_true', help='List repository URL and revision pairs'),
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to missing libraries.'),
     help='View dependency tree',
     description=(
         "View the dependency tree in this %s." % cwd_type))
-def list_(all=False, prefix='', p_path=None, ignore=False):
+def list_(detailed=False, prefix='', p_path=None, ignore=False):
     repo = Repo.fromrepo()
-    print prefix + (relpath(p_path, repo.path) if p_path else repo.name), '(%s)' % ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if all else str(repo.rev)[:12]) or 'no revision')
+    print prefix + (relpath(p_path, repo.path) if p_path else repo.name), '(%s)' % ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if detailed else str(repo.rev)[:12]) or 'no revision')
 
     for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.path)):
         if prefix:
@@ -1858,7 +1858,7 @@ def list_(all=False, prefix='', p_path=None, ignore=False):
 
         if lib.check_repo(ignore):
             with cd(lib.path):
-                list_(all, nprefix, repo.path, ignore=ignore)
+                list_(detailed, nprefix, repo.path, ignore=ignore)
 
 
 # Command status for cross-SCM status of repositories
@@ -1893,7 +1893,7 @@ def status_(ignore=False):
     dict(name=['-S', '--supported'], dest='supported', action='store_true', help='Shows supported matrix of targets and toolchains'),
     help='Compile code using the mbed build tools',
     description=("Compile this program using the mbed build tools."))
-def compile(toolchain=None, mcu=None, source=False, build=False, compile_library=False, compile_config=False, config_prefix=None, compile_tests=False, clean=False, supported=False):
+def compile_(toolchain=None, mcu=None, source=False, build=False, compile_library=False, compile_config=False, config_prefix=None, compile_tests=False, clean=False, supported=False):
     # Pipe --tests to mbed tests command
     if compile_tests:
         return test_(toolchain=toolchain, mcu=mcu, source=source, build=build, clean=clean, compile_only=True)
@@ -1985,15 +1985,12 @@ def test_(toolchain=None, mcu=None, compile_list=False, run_list=False, compile_
     args = remainder
     # Find the root of the program
     program = Program(os.getcwd(), True)
-    # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
-    orig_path = os.getcwd()
 
     target = program.get_mcu(mcu)
     tchain = program.get_toolchain(toolchain)
     macros = program.get_macros()
     tools_dir = program.get_tools()
     build_and_run_tests = not compile_list and not run_list and not compile_only and not run_only
-    relative_orig_path = os.path.relpath(orig_path, program.path)
 
     # Prepare environment variables
     env = program.get_env()
@@ -2006,17 +2003,17 @@ def test_(toolchain=None, mcu=None, compile_list=False, run_list=False, compile_
         # Setup the build path if not specified
         if not build:
             build = os.path.join(program.path, '.build/tests', target, tchain)
-            
+
         # Create the path to the test spec file
         test_spec = os.path.join(build, 'test_spec.json')
-            
+
         if compile_list:
             popen(['python', '-u', os.path.join(tools_dir, 'test.py'), '--list']
                   + (['-n', tests_by_name] if tests_by_name else [])
                   + (['-v'] if verbose else [])
                   + args,
                   env=env)
-        
+
         if compile_only or build_and_run_tests:
             popen(['python', '-u', os.path.join(tools_dir, 'test.py')]
                   + list(chain.from_iterable(izip(repeat('-D'), macros)))
@@ -2029,14 +2026,14 @@ def test_(toolchain=None, mcu=None, compile_list=False, run_list=False, compile_
                   + (['-v'] if verbose else [])
                   + args,
                   env=env)
-        
+
         if run_list:
             popen(['mbedgt', '--test-spec', test_spec, '--list']
                   + (['-n', tests_by_name] if tests_by_name else [])
                   + (['-V'] if verbose else [])
                   + args,
                   env=env)
-        
+
         if run_only or build_and_run_tests:
             popen(['mbedgt', '--test-spec', test_spec]
                   + (['-n', tests_by_name] if tests_by_name else [])
