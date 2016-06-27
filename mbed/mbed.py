@@ -1907,10 +1907,11 @@ def status_(ignore=False):
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
     dict(name='--build', help='Build directory. Default: .build/'),
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
+    dict(name=['-N', '--artifact-name'], help='Name of the built program or library'),
     dict(name=['-S', '--supported'], dest='supported', action='store_true', help='Shows supported matrix of targets and toolchains'),
     help='Compile code using the mbed build tools',
     description=("Compile this program using the mbed build tools."))
-def compile_(toolchain=None, mcu=None, source=False, build=False, compile_library=False, compile_config=False, config_prefix=None, clean=False, supported=False):
+def compile_(toolchain=None, mcu=None, source=False, build=False, compile_library=False, compile_config=False, config_prefix=None, clean=False, artifact_name=None, supported=False):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
@@ -1957,6 +1958,7 @@ def compile_(toolchain=None, mcu=None, source=False, build=False, compile_librar
               + (['-c'] if clean else [])
               + list(chain.from_iterable(izip(repeat('--source'), source)))
               + ['--build', build]
+              + (['--artifact-name', artifact_name] if artifact_name else [])
               + (['-v'] if verbose else [])
               + args,
               env=env)
@@ -1971,6 +1973,7 @@ def compile_(toolchain=None, mcu=None, source=False, build=False, compile_librar
               + (['-c'] if clean else [])
               + list(chain.from_iterable(izip(repeat('--source'), source)))
               + ['--build', build]
+              + (['--artifact-name', artifact_name] if artifact_name else [])
               + (['-v'] if verbose else [])
               + args,
               env=env)
