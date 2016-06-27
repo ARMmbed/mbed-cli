@@ -1886,18 +1886,13 @@ def status_(ignore=False):
     dict(name='--library', dest='compile_library', action='store_true', help='Compile the current %s as a static library.' % cwd_type),
     dict(name='--config', dest='compile_config', action='store_true', help='Show run-time compile configuration'),
     dict(name='--prefix', dest='config_prefix', action='append', help='Restrict listing to parameters that have this prefix'),
-    dict(name='--tests', dest='compile_tests', action='store_true', help='An alias to \'mbed test --compile\''),
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
     dict(name='--build', help='Build directory. Default: .build/'),
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
     dict(name=['-S', '--supported'], dest='supported', action='store_true', help='Shows supported matrix of targets and toolchains'),
     help='Compile code using the mbed build tools',
     description=("Compile this program using the mbed build tools."))
-def compile_(toolchain=None, mcu=None, source=False, build=False, compile_library=False, compile_config=False, config_prefix=None, compile_tests=False, clean=False, supported=False):
-    # Pipe --tests to mbed tests command
-    if compile_tests:
-        return test_(toolchain=toolchain, mcu=mcu, source=source, build=build, clean=clean, compile_only=True)
-
+def compile_(toolchain=None, mcu=None, source=False, build=False, compile_library=False, compile_config=False, config_prefix=None, clean=False, supported=False):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
