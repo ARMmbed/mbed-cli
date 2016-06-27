@@ -405,28 +405,23 @@ Compile: main.cpp
 Compile: configuration_store.c
 Link: mbed-os-program
 Elf2Bin: mbed-os-program
-+-----------------------------------+-------+-------+------+
-| Module                            | .text | .data | .bss |
-+-----------------------------------+-------+-------+------+
-| Fill                              |  176  |   0   | 2410 |
-| Misc                              | 10030 |  112  | 196  |
-| frameworks/greentea-client        |  940  |   28  |  44  |
-| frameworks/utest                  |  3139 |   0   | 732  |
-| core/hal                          | 21059 |   16  | 1128 |
-| core/rtos                         |  6337 |   24  | 2542 |
-| net/C027Interface                 |  6968 |   4   |  24  |
-| net/LWIPInterface                 |   96  |   0   |  48  |
-| net/atmel-rf-driver               |  332  |   0   | 216  |
-| net/mbed-client                   |   64  |   0   |  12  |
-| net/mbed-client-classic           |   64  |   0   |  12  |
-| net/nanostack-hal-mbed-cmsis-rtos |  100  |   0   |  56  |
-| Subtotals                         | 49305 |  184  | 7420 |
-+-----------------------------------+-------+-------+------+
-Static RAM memory (data + bss): 7604
-Heap: 65540
-Stack: 32768
-Total RAM memory (data + bss + heap + stack): 105912
-Total Flash memory (text + data + misc): 50529
++----------------------------+-------+-------+------+
+| Module                     | .text | .data | .bss |
++----------------------------+-------+-------+------+
+| Fill                       |   170 |     0 | 2294 |
+| Misc                       | 36282 |  2220 | 2152 |
+| core/hal                   | 15396 |    16 |  568 |
+| core/rtos                  |  6751 |    24 | 2662 |
+| features/FEATURE_IPV4      |    96 |     0 |   48 |
+| frameworks/greentea-client |   912 |    28 |   44 |
+| frameworks/utest           |  3079 |     0 |  732 |
+| Subtotals                  | 62686 |  2288 | 8500 |
++----------------------------+-------+-------+------+
+Allocated Heap: 65540 bytes
+Allocated Stack: 32768 bytes
+Total Static RAM memory (data + bss): 10788 bytes
+Total RAM memory (data + bss + heap + stack): 109096 bytes
+Total Flash memory (text + data + misc): 66014 bytes
 Image: .build/K64F/GCC_ARM/mbed-os-program.bin
 ```
 
@@ -564,11 +559,11 @@ Elf2Bin: TESTS-unit-myclass
 | Misc      | 47039 |  204  | 4272 |
 | Subtotals | 47113 |  204  | 6364 |
 +-----------+-------+-------+------+
-Static RAM memory (data + bss): 6568
-Heap: 65540
-Stack: 32768
-Total RAM memory (data + bss + heap + stack): 104876
-Total Flash memory (text + data + misc): 48357
+Allocated Heap: 65540 bytes
+Allocated Stack: 32768 bytes
+Total Static RAM memory (data + bss): 6568 bytes
+Total RAM memory (data + bss + heap + stack): 104876 bytes
+Total Flash memory (text + data + misc): 48357 bytes
 Image: .build\tests\K64F\GCC_ARM\TESTS\mbedmicro-rtos-mbed\mutex\TESTS-unit-myclass.bin
 ...[SNIP]...
 mbedgt: test suite report:
