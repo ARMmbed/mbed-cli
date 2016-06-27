@@ -103,7 +103,7 @@ regex_hg_url = r'^(file|ssh|https?)://([^/:]+)/([^/]+)/?([^/]+?)?$'
 
 # mbed url is subset of hg. mbed doesn't support ssh transport
 regex_mbed_url = r'^(https?)://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+)/?$'
-regex_build_url = r'^(https?://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+))/builds/?([\w\-]{12,40}|tip)?/?$'
+regex_build_url = r'^(https?://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+))/builds/?([\w\-]{6,40}|tip)?/?$'
 
 # base url for all mbed related repos (used as sort of index)
 mbed_base_url = 'https://github.com/ARMmbed'
@@ -783,6 +783,8 @@ class Repo(object):
             repo.path = os.path.abspath(path or os.path.join(os.getcwd(), repo.name))
             repo.url = formaturl(m_repo_url.group(1))
             repo.rev = m_repo_url.group(3)
+            if repo.rev and not re.match(r'^([a-fA-F0-9]{6,40})$', repo.rev):
+                error('Invalid revision (%s)' % repo.rev, -1)
         else:
             error('Invalid repository (%s)' % url.strip(), -1)
 
@@ -870,7 +872,7 @@ class Repo(object):
     def revtype(cls, rev, ret_rev=False):
         if rev is None or len(rev) == 0:
             return 'latest' + (' revision in the current branch' if ret_rev else '')
-        elif re.match(r'^([a-zA-Z0-9]{12,40})$', rev) or re.match(r'^([0-9]+)$', rev):
+        elif re.match(r'^([a-fA-F0-9]{6,40})$', rev) or re.match(r'^([0-9]+)$', rev):
             return 'rev' + (' #'+rev[0:12] if ret_rev else '')
         else:
             return 'branch' + (' '+rev if ret_rev else '')
