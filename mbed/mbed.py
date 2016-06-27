@@ -35,7 +35,7 @@ import argparse
 
 
 # Application version
-ver = '0.7.13'
+ver = '0.7.17'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
@@ -317,7 +317,7 @@ class Bld(object):
                 error(e[1], e[0])
             Bld.seturl(url+'/'+rev)
 
-    def update(rev=None, clean=False, is_local=False):
+    def update(rev=None, clean=False, clean_files=False, is_local=False):
         return Bld.checkout(rev, clean)
 
     def untracked():
@@ -387,8 +387,8 @@ class Hg(object):
     def commit():
         popen([hg_cmd, 'commit'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
-    def publish(all=None):
-        popen([hg_cmd, 'push'] + (['--new-branch'] if all else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
+    def publish(all_refs=None):
+        popen([hg_cmd, 'push'] + (['--new-branch'] if all_refs else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def fetch():
         log("Fetching revisions from remote repository to \"%s\"" % os.path.basename(os.getcwd()))
@@ -398,14 +398,19 @@ class Hg(object):
         log("Discarding local changes in \"%s\"" % os.path.basename(os.getcwd()))
         popen([hg_cmd, 'update', '-C'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
-    def checkout(rev, clean=False):
+    def checkout(rev, clean=False, clean_files=False):
         log("Checkout \"%s\" in %s to %s" % (rev, os.path.basename(os.getcwd()), rev))
+        if clean_files:
+            files = pquery([hg_cmd, 'status', '--no-status', '-ui']).splitlines()
+            for f in files:
+                log("Remove untracked file \"%s\"" % f)
+                os.remove(f)
         popen([hg_cmd, 'update'] + (['-C'] if clean else []) + (['-r', rev] if rev else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
-    def update(rev=None, clean=False, is_local=False):
+    def update(rev=None, clean=False, clean_files=False, is_local=False):
         if not is_local:
             Hg.fetch()
-        Hg.checkout(rev, clean)
+        Hg.checkout(rev, clean, clean_files)
 
     def status():
         return pquery([hg_cmd, 'status'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
@@ -414,8 +419,7 @@ class Hg(object):
         return pquery([hg_cmd, 'status', '-q'])
 
     def untracked():
-        result = pquery([hg_cmd, 'status', '-u'])
-        return re.sub(r'^\? ', '', result).splitlines()
+        return pquery([hg_cmd, 'status', '--no-status', '-u']).splitlines()
 
     def outgoing():
         try:
@@ -552,8 +556,8 @@ class Git(object):
     def commit():
         popen([git_cmd, 'commit', '-a'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
-    def publish(all=None):
-        if all:
+    def publish(all_refs=None):
+        if all_refs:
             popen([git_cmd, 'push', '--all'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
         else:
             remote = Git.getremote()
@@ -571,11 +575,11 @@ class Git(object):
         log("Fetching revisions from remote repository to \"%s\"" % os.path.basename(os.getcwd()))
         popen([git_cmd, 'fetch', '--all'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
-    def discard():
+    def discard(clean_files=False):
         log("Discarding local changes in \"%s\"" % os.path.basename(os.getcwd()))
         pquery([git_cmd, 'reset', 'HEAD'] + ([] if very_verbose else ['-q'])) # unmarks files for commit
         pquery([git_cmd, 'checkout', '.'] + ([] if very_verbose else ['-q'])) # undo  modified files
-        pquery([git_cmd, 'clean', '-fdq'] + ([] if very_verbose else ['-q'])) # cleans up untracked files and folders
+        pquery([git_cmd, 'clean', '-fd'] + (['-x'] if clean_files else []) + (['-q'] if very_verbose else ['-q'])) # cleans up untracked files and folders
 
     def merge(dest):
         log("Merging \"%s\" with \"%s\"" % (os.path.basename(os.getcwd()), dest))
@@ -594,9 +598,9 @@ class Git(object):
                 popen([git_cmd, 'checkout', branch] + ([] if very_verbose else ['-q']))
                 break
 
-    def update(rev=None, clean=False, is_local=False):
+    def update(rev=None, clean=False, clean_files=False, is_local=False):
         if clean:
-            Git.discard()
+            Git.discard(clean_files)
         if not is_local:
             Git.fetch()
         if rev:
@@ -633,7 +637,7 @@ class Git(object):
         # Get current branch
         branch = Git.getbranch()
         if not branch:
-            # Default to "master" in detached mode 
+            # Default to "master" in detached mode
             branch = "master"
         try:
             # Check if remote branch exists
@@ -1050,21 +1054,21 @@ class Repo(object):
                 warning("Unable to cache \"%s\" to \"%s\"" % (self.path, cpath))
         return False
 
-    def can_update(self, clean, force):
+    def can_update(self, clean, clean_deps):
         err = None
-        if (self.is_local or self.url is None) and not force:
+        if (self.is_local or self.url is None) and not clean_deps:
             err = (
                 "Preserving local library \"%s\" in \"%s\".\nPlease publish this library to a remote URL to be able to restore it at any time."
                 "You can use --ignore switch to ignore all local libraries and update only the published ones.\n"
-                "You can also use --force switch to remove all local libraries. WARNING: This action cannot be undone." % (self.name, self.path))
+                "You can also use --clean-deps switch to remove all local libraries. WARNING: This action cannot be undone." % (self.name, self.path))
         elif not clean and self.dirty():
             err = (
                 "Uncommitted changes in \"%s\" in \"%s\".\nPlease discard or stash them first and then retry update.\n"
                 "You can also use --clean switch to discard all uncommitted changes. WARNING: This action cannot be undone." % (self.name, self.path))
-        elif not force and self.outgoing():
+        elif not clean_deps and self.outgoing():
             err = (
                 "Unpublished changes in \"%s\" in \"%s\".\nPlease publish them first using the \"publish\" command.\n"
-                "You can also use --force to discard all local commits and replace the library with the one included in this revision. WARNING: This action cannot be undone." % (self.name, self.path))
+                "You can also use --clean-deps to discard all local commits and replace the library with the one included in this revision. WARNING: This action cannot be undone." % (self.name, self.path))
 
         return (False, err) if err else (True, "OK")
 
@@ -1253,8 +1257,6 @@ class Program(object):
         target = mcu if mcu else target_cfg
         if target is None:
             error('Please specify compile target using the -m switch or set default target using command "target"', 1)
-        elif not target_cfg:
-            self.set_cfg('TARGET', target)
         return target
 
     def get_toolchain(self, toolchain=None):
@@ -1262,9 +1264,13 @@ class Program(object):
         tchain = toolchain if toolchain else toolchain_cfg
         if tchain is None:
             error('Please specify compile toolchain using the -t switch or set default toolchain using command "toolchain"', 1)
-        elif not toolchain_cfg:
-            self.set_cfg('TOOLCHAIN', tchain)
         return tchain
+
+    def set_defaults(self, target=None, toolchain=None):
+        if target and not self.get_cfg('TARGET'):
+            self.set_cfg('TARGET', target)
+        if toolchain and not self.get_cfg('TOOLCHAIN'):
+            self.set_cfg('TOOLCHAIN', toolchain)
 
     def get_macros(self):
         macros = []
@@ -1272,7 +1278,6 @@ class Program(object):
             with open('MACROS.txt') as f:
                 macros = f.read().splitlines()
         return macros
-
 
 # Global class, used for global config
 class Global(object):
@@ -1370,6 +1375,7 @@ parser = argparse.ArgumentParser(prog='mbed',
     description="Command-line code management tool for ARM mbed OS - http://www.mbed.com\nversion %s\n\nUse 'mbed <command> -h|--help' for detailed help.\nOnline manual and guide available at https://github.com/ARMmbed/mbed-cli" % ver,
     formatter_class=argparse.RawTextHelpFormatter)
 subparsers = parser.add_subparsers(title="Commands", metavar="           ")
+parser.add_argument("--version", action="store_true", dest="version", help="print version number and exit")
 
 # Process handling
 def subcommand(name, *args, **kwargs):
@@ -1624,7 +1630,7 @@ def deploy(ignore=False, depth=None, protocol=None, top=True):
 
 # Publish command
 @subcommand('publish',
-    dict(name=['-A', '--all'], action='store_true', help='Publish all branches, including new ones. Default: push only the current branch.'),
+    dict(name=['-A', '--all'], dest='all_refs', action='store_true', help='Publish all branches, including new ones. Default: push only the current branch.'),
     help='Publish program or library',
     description=(
         "Publishes this %s and all dependencies to their associated remote\nrepository URLs.\n"
@@ -1632,7 +1638,7 @@ def deploy(ignore=False, depth=None, protocol=None, top=True):
         "and unpublished revisions and encourages to commit/push them.\n"
         "Online guide about collaboration is available at:\n"
         "www.mbed.com/collab_guide" % cwd_type))
-def publish(all=None, top=True):
+def publish(all_refs=None, top=True):
     if top:
         action("Checking for local modifications...")
 
@@ -1646,7 +1652,7 @@ def publish(all=None, top=True):
         if lib.check_repo():
             with cd(lib.path):
                 progress()
-                publish(False, all)
+                publish(False, all_refs)
 
     sync(recursive=False)
 
@@ -1659,7 +1665,7 @@ def publish(all=None, top=True):
         outgoing = repo.outgoing()
         if outgoing > 0:
             action("Pushing local repository \"%s\" to remote \"%s\"" % (repo.name, repo.url))
-            repo.publish(all)
+            repo.publish(all_refs)
     except ProcessException as e:
         if e[0] != 1:
             raise e
@@ -1668,8 +1674,9 @@ def publish(all=None, top=True):
 # Update command
 @subcommand('update',
     dict(name='rev', nargs='?', help='Revision, tag or branch'),
-    dict(name=['-C', '--clean'], action='store_true', help='Perform a clean update and discard all local changes. WARNING: This action cannot be undone. Use with caution.'),
-    dict(name=['-F', '--force'], action='store_true', help='Enforce the original layout and will remove any local libraries and also libraries containing uncommitted or unpublished changes. WARNING: This action cannot be undone. Use with caution.'),
+    dict(name=['-C', '--clean'], action='store_true', help='Perform a clean update and discard all modified or untracked files. WARNING: This action cannot be undone. Use with caution.'),
+    dict(name='--clean-files', action='store_true', help='Remove any local ignored files. Requires \'--clean\'. WARNING: This will wipe all local uncommitted, untracked and ignored files. Use with extreme caution.'),
+    dict(name='--clean-deps', action='store_true', help='Remove any local libraries and also libraries containing uncommitted or unpublished changes. Requires \'--clean\'. WARNING: This action cannot be undone. Use with caution.'),
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to unpublished libraries, unpublished or uncommitted changes, and attempt to update from associated remote repository URLs.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
@@ -1678,7 +1685,7 @@ def publish(all=None, top=True):
         "Updates this %s and its dependencies to specified branch, tag or revision.\n"
         "Alternatively fetches from associated remote repository URL and updates to the\n"
         "latest revision in the current branch." % cwd_type))
-def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=None, protocol=None):
+def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=False, top=True, depth=None, protocol=None):
     if top and clean:
         sync()
 
@@ -1703,7 +1710,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
             repo.revtype(rev, True)))
 
         try:
-            repo.update(rev, clean, repo.is_local)
+            repo.update(rev, clean, clean_files, repo.is_local)
         except ProcessException as e:
             err = "Unable to update \"%s\" to %s" % (repo.name, repo.revtype(rev, True))
             if depth:
@@ -1724,7 +1731,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
             gc = False
             with cd(lib.path):
                 lib_repo = Repo.fromrepo(lib.path)
-                gc, msg = lib_repo.can_update(clean, force)
+                gc, msg = lib_repo.can_update(clean, clean_deps)
             if gc:
                 action("Removing library \"%s\" (obsolete)" % (relpath(cwd_root, lib.path)))
                 rmtree_readonly(lib.path)
@@ -1745,7 +1752,7 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
             if lib.url != lib_repo.url: # Repository URL has changed
                 gc = False
                 with cd(lib.path):
-                    gc, msg = lib_repo.can_update(clean, force)
+                    gc, msg = lib_repo.can_update(clean, clean_deps)
                 if gc:
                     action("Removing library \"%s\" (changed URL). Will add from new URL." % (relpath(cwd_root, lib.path)))
                     rmtree_readonly(lib.path)
@@ -1763,10 +1770,12 @@ def update(rev=None, clean=False, force=False, ignore=False, top=True, depth=Non
             repo.ignore(relpath(repo.path, lib.path))
         else:
             with cd(lib.path):
-                update(lib.rev, clean, force, ignore=ignore, top=False)
+                update(lib.rev, clean=clean, clean_files=clean_files, clean_deps=clean_deps, ignore=ignore, top=False)
 
     if top:
-        Program(repo.path).post_action()
+        program = Program(repo.path)
+        program.set_root()
+        program.post_action()
 
 
 # Synch command
@@ -1831,14 +1840,14 @@ def sync(recursive=True, keep_refs=False, top=True):
 
 # List command
 @subcommand('ls',
-    dict(name=['-a', '--all'], action='store_true', help='List repository URL and revision pairs'),
+    dict(name=['-a', '--all'], dest='detailed', action='store_true', help='List repository URL and revision pairs'),
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to missing libraries.'),
     help='View dependency tree',
     description=(
         "View the dependency tree in this %s." % cwd_type))
-def list_(all=False, prefix='', p_path=None, ignore=False):
+def list_(detailed=False, prefix='', p_path=None, ignore=False):
     repo = Repo.fromrepo()
-    print prefix + (relpath(p_path, repo.path) if p_path else repo.name), '(%s)' % ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if all else str(repo.rev)[:12]) or 'no revision')
+    print prefix + (relpath(p_path, repo.path) if p_path else repo.name), '(%s)' % ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if detailed else str(repo.rev)[:12]) or 'no revision')
 
     for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.path)):
         if prefix:
@@ -1849,7 +1858,7 @@ def list_(all=False, prefix='', p_path=None, ignore=False):
 
         if lib.check_repo(ignore):
             with cd(lib.path):
-                list_(all, nprefix, repo.path, ignore=ignore)
+                list_(detailed, nprefix, repo.path, ignore=ignore)
 
 
 # Command status for cross-SCM status of repositories
@@ -1877,14 +1886,14 @@ def status_(ignore=False):
     dict(name='--library', dest='compile_library', action='store_true', help='Compile the current %s as a static library.' % cwd_type),
     dict(name='--config', dest='compile_config', action='store_true', help='Show run-time compile configuration'),
     dict(name='--prefix', dest='config_prefix', action='append', help='Restrict listing to parameters that have this prefix'),
-    dict(name='--tests', dest='compile_tests', action='store_true', help='Compile tests in TESTS directory.'),
+    dict(name='--tests', dest='compile_tests', action='store_true', help='An alias to \'mbed test --compile\''),
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
     dict(name='--build', help='Build directory. Default: .build/'),
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
     dict(name=['-S', '--supported'], dest='supported', action='store_true', help='Shows supported matrix of targets and toolchains'),
     help='Compile code using the mbed build tools',
     description=("Compile this program using the mbed build tools."))
-def compile(toolchain=None, mcu=None, source=False, build=False, compile_library=False, compile_config=False, config_prefix=None, compile_tests=False, clean=False, supported=False):
+def compile_(toolchain=None, mcu=None, source=False, build=False, compile_library=False, compile_config=False, config_prefix=None, compile_tests=False, clean=False, supported=False):
     # Pipe --tests to mbed tests command
     if compile_tests:
         return test_(toolchain=toolchain, mcu=mcu, source=source, build=build, clean=clean, compile_only=True)
@@ -1953,6 +1962,8 @@ def compile(toolchain=None, mcu=None, source=False, build=False, compile_library
               + args,
               env=env)
 
+    program.set_defaults(target=target, toolchain=tchain)
+
 
 # Test command
 @subcommand('test',
@@ -1974,15 +1985,12 @@ def test_(toolchain=None, mcu=None, compile_list=False, run_list=False, compile_
     args = remainder
     # Find the root of the program
     program = Program(os.getcwd(), True)
-    # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
-    orig_path = os.getcwd()
 
     target = program.get_mcu(mcu)
     tchain = program.get_toolchain(toolchain)
     macros = program.get_macros()
     tools_dir = program.get_tools()
     build_and_run_tests = not compile_list and not run_list and not compile_only and not run_only
-    relative_orig_path = os.path.relpath(orig_path, program.path)
 
     # Prepare environment variables
     env = program.get_env()
@@ -1995,17 +2003,17 @@ def test_(toolchain=None, mcu=None, compile_list=False, run_list=False, compile_
         # Setup the build path if not specified
         if not build:
             build = os.path.join(program.path, '.build/tests', target, tchain)
-            
+
         # Create the path to the test spec file
         test_spec = os.path.join(build, 'test_spec.json')
-            
+
         if compile_list:
             popen(['python', '-u', os.path.join(tools_dir, 'test.py'), '--list']
                   + (['-n', tests_by_name] if tests_by_name else [])
                   + (['-v'] if verbose else [])
                   + args,
                   env=env)
-        
+
         if compile_only or build_and_run_tests:
             popen(['python', '-u', os.path.join(tools_dir, 'test.py')]
                   + list(chain.from_iterable(izip(repeat('-D'), macros)))
@@ -2018,20 +2026,22 @@ def test_(toolchain=None, mcu=None, compile_list=False, run_list=False, compile_
                   + (['-v'] if verbose else [])
                   + args,
                   env=env)
-        
+
         if run_list:
             popen(['mbedgt', '--test-spec', test_spec, '--list']
                   + (['-n', tests_by_name] if tests_by_name else [])
                   + (['-V'] if verbose else [])
                   + args,
                   env=env)
-        
+
         if run_only or build_and_run_tests:
             popen(['mbedgt', '--test-spec', test_spec]
                   + (['-n', tests_by_name] if tests_by_name else [])
                   + (['-V'] if verbose else [])
                   + args,
                   env=env)
+
+    program.set_defaults(target=target, toolchain=tchain)
 
 
 # Export command
@@ -2077,6 +2087,8 @@ def export(ide=None, mcu=None, source=False, clean=False, supported=False):
           + list(chain.from_iterable(izip(repeat('--source'), source)))
           + args,
           env=env)
+
+    program.set_defaults(target=target)
 
 
 # Test command
@@ -2166,12 +2178,15 @@ def toolchain_(name=None, global_cfg=False):
 @subcommand('help',
     help='This help screen')
 def help_():
-    parser.print_help()
-    return
+    return parser.print_help()
 
 # Parse/run command
 if len(sys.argv) <= 1:
-    parser.print_help()
+    help_()
+    sys.exit(1)
+
+if '--version' in sys.argv:
+    print ver
     sys.exit(1)
 
 pargs, remainder = parser.parse_known_args()
