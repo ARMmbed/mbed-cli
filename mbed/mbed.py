@@ -1184,7 +1184,7 @@ class Program(object):
         compilers = ['ARM', 'GCC_ARM', 'IAR']
         for c in compilers:
             if self.get_cfg(c+'_PATH'):
-                env[c+'_PATH'] = self.get_cfg(c+'_PATH')
+                env['MBED_'+c+'_PATH'] = self.get_cfg(c+'_PATH')
 
         return env
 
