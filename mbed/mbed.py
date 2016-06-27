@@ -871,7 +871,7 @@ class Repo(object):
         if rev is None or len(rev) == 0:
             return 'latest' + (' revision in the current branch' if ret_rev else '')
         elif re.match(r'^([a-zA-Z0-9]{12,40})$', rev) or re.match(r'^([0-9]+)$', rev):
-            return 'rev' + (' #'+rev if ret_rev else '')
+            return 'rev' + (' #'+rev[0:12] if ret_rev else '')
         else:
             return 'branch' + (' '+rev if ret_rev else '')
 
