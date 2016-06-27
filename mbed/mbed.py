@@ -384,8 +384,8 @@ class Hg(object):
         except ProcessException:
             pass
 
-    def commit():
-        popen([hg_cmd, 'commit'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
+    def commit(msg=None):
+        popen([hg_cmd, 'commit'] + (['-m', msg] if msg else [])  + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def publish(all_refs=None):
         popen([hg_cmd, 'push'] + (['--new-branch'] if all_refs else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
@@ -553,8 +553,8 @@ class Git(object):
         except ProcessException:
             pass
 
-    def commit():
-        popen([git_cmd, 'commit', '-a'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
+    def commit(msg=None):
+        popen([git_cmd, 'commit', '-a'] + (['-m', msg] if msg else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def publish(all_refs=None):
         if all_refs:
@@ -1631,6 +1631,7 @@ def deploy(ignore=False, depth=None, protocol=None, top=True):
 # Publish command
 @subcommand('publish',
     dict(name=['-A', '--all'], dest='all_refs', action='store_true', help='Publish all branches, including new ones. Default: push only the current branch.'),
+    dict(name=['-M', '--message'], dest='msg', type=str, nargs='?', help='Commit message. Default: prompts for commit message.'),
     help='Publish program or library',
     description=(
         "Publishes this %s and all dependencies to their associated remote\nrepository URLs.\n"
@@ -1638,7 +1639,7 @@ def deploy(ignore=False, depth=None, protocol=None, top=True):
         "and unpublished revisions and encourages to commit/push them.\n"
         "Online guide about collaboration is available at:\n"
         "www.mbed.com/collab_guide" % cwd_type))
-def publish(all_refs=None, top=True):
+def publish(all_refs=None, msg=None, top=True):
     if top:
         action("Checking for local modifications...")
 
@@ -1652,14 +1653,17 @@ def publish(all_refs=None, top=True):
         if lib.check_repo():
             with cd(lib.path):
                 progress()
-                publish(False, all_refs)
+                publish(all_refs, msg=msg, top=False)
 
     sync(recursive=False)
 
     if repo.dirty():
         action("Uncommitted changes in %s \"%s\" in \"%s\"" % (repo.pathtype(repo.path), repo.name, repo.path))
-        raw_input('Press enter to commit and publish: ')
-        repo.commit()
+        if msg:
+            repo.commit(msg)
+        else:
+            raw_input('Press enter to commit and publish: ')
+            repo.commit()
 
     try:
         outgoing = repo.outgoing()
