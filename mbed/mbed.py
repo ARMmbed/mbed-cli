@@ -1170,12 +1170,27 @@ class Program(object):
         # mbed Classic deployed tools
         paths.append([self.path, '.temp', 'tools'])
 
-        fl = 'make.py'
+        return self._find_file_paths(paths, 'make.py')
+
+    def get_requirements(self):
+        paths = []
+        mbed_os_path = self.get_os_dir()
+        if mbed_os_path:
+            paths.append([mbed_os_path])
+        # mbed-os not identified but tools found under cwd/tools
+        paths.append([self.path, 'core'])
+        # mbed Classic deployed tools
+        paths.append([self.path, '.temp', 'tools'])
+        # current dir
+        paths.append([self.path])
+
+        return self._find_file_paths(paths, 'requirements.txt')
+
+    def _find_file_paths(self, paths, fl):
         for p in paths:
             path = os.path.join(*p)
             if os.path.isdir(path) and os.path.isfile(os.path.join(path, fl)):
                 return os.path.join(path)
-
         return None
 
     def get_env(self):
@@ -1204,16 +1219,13 @@ class Program(object):
                 os.path.isfile(os.path.join(mbed_tools_path, 'default_settings.py'))):
             shutil.copy(os.path.join(mbed_tools_path, 'default_settings.py'), os.path.join(self.path, 'mbed_settings.py'))
 
-        mbed_os_path = self.get_os_dir()
-        if not mbed_os_path:
-            return False
-
+        req_path = self.get_requirements() or self.path
+        req_file = 'requirements.txt'
         missing = []
-        fname = 'requirements.txt'
         try:
-            import pip
-            installed_packages = [package.project_name.lower() for package in pip.get_installed_distributions()]
-            with open(os.path.join(mbed_os_path, fname), 'r') as f:
+            with open(os.path.join(os.path.join(req_path, req_file)), 'r') as f:
+                import pip
+                installed_packages = [package.project_name.lower() for package in pip.get_installed_distributions()]
                 for line in f.read().splitlines():
                     pkg = re.sub(r'^([\w-]+).*$', r'\1', line).lower()
                     if not pkg in installed_packages:
@@ -1229,7 +1241,7 @@ class Program(object):
                 "The mbed build tools in this program require Python modules that are not installed.\n"
                 "This might prevent compiling code or exporting to IDEs and other toolchains.\n"
                 "The missing Python modules are: %s\n"
-                "You can install all missing modules by running \"pip install -r %s\" in \"%s\"" % (', '.join(missing), fname, mbed_os_path))
+                "You can install all missing modules by running \"pip install -r %s\" in \"%s\"" % (', '.join(missing), req_file, req_path))
 
     def add_tools(self, path):
         if not os.path.exists(path):
