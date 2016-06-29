@@ -50,7 +50,7 @@ This document covers the installation and usage of *mbed CLI*.
 
     <span class="tips">**Note:** The directories of Git and Mercurial executables (`git` and `hg`) need to be in your system's PATH.</span>
 
-* **Command-line compiler or IDE Toolchain** - *mbed CLI* invokes the [mbed OS 4.0](https://github.com/ARMmbed/mbed-os) tools for various features - compiling, testing, exporting to industry standard toolchains. To compile your code, you would need either of these:
+* **Command-line compiler or IDE Toolchain** - *mbed CLI* invokes the [mbed OS 5.0](https://github.com/ARMmbed/mbed-os) tools for various features - compiling, testing, exporting to industry standard toolchains. To compile your code, you would need either of these:
     * Compilers: GCC ARM, ARMCC 5, IAR
     * Toolchains: Keil uVision, DS-5, IAR Workbench
 
@@ -101,7 +101,7 @@ To list all *mbed CLI* commands use `mbed --help`. A detailed command-specific h
 
 ### Creating and importing programs
 
-*mbed CLI* can create and import both mbed 2.0 and mbed OS 4.0 based programs.
+*mbed CLI* can create and import both mbed 2.0 and mbed OS 5.0 based programs.
 
 #### Creating a new program
 
@@ -149,7 +149,7 @@ mbed-os-program (mbed-os-program#189949915b9c)
 $ mbed new mbed-classic-program --mbedlib
 ```
 
-You can create plain (empty) programs, without either mbed OS 4.0 or mbed 2.0  by adding the `--create-only` option.
+You can create plain (empty) programs, without either mbed OS 5.0 or mbed 2.0  by adding the `--create-only` option.
 
 
 #### Importing an existing program
