@@ -63,6 +63,8 @@ You can get the latest stable version of *mbed CLI* via PyPI by running:
 $ pip install mbed-cli
 ```
 
+On Linux/Mac, you may need to run with `sudo`.
+
 Alternatively you get the development version of *mbed CLI* by cloning the development repository [https://github.com/ARMmbed/mbed-cli](https://github.com/ARMmbed/mbed-cli):
 
   `$ git clone https://github.com/ARMmbed/mbed-cli`
