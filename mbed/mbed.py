@@ -688,7 +688,10 @@ class Git(object):
 
     # Gets current branch or returns empty string if detached
     def getbranch():
-        branch = pquery([git_cmd, 'rev-parse', '--symbolic-full-name', '--abbrev-ref', 'HEAD']).strip()
+        try:
+            branch = pquery([git_cmd, 'rev-parse', '--symbolic-full-name', '--abbrev-ref', 'HEAD']).strip()
+        except ProcessException:
+            branch = "master"
         return branch if branch != "HEAD" else ""
 
     # Finds refs (local or remote branches). Will match rev if specified
