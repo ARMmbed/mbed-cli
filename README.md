@@ -121,25 +121,22 @@ Use `mbed ls` to list all imported libraries to your program.
 $ cd mbed-os-program
 $ mbed ls -a
 mbed-os-program (mbed-os-program#189949915b9c)
-`- mbed-os (https://github.com/ARMmbed/mbed-os#e39199afa2da)
-   |- frameworks/greentea-client (https://github.com/ARMmbed/greentea-client#571cfef17dd0)
-   |- frameworks/unity (https://github.com/ARMmbed/unity#7483099b9df1)
-   |- core (https://github.com/mbedmicro/mbed#d1ec4beabef3)
-   |- mbedtls (https://developer.mbed.org/teams/sandbox/code/mbedtls#bef26f687287)
-   |- net/C027Interface/C027_Support (https://developer.mbed.org/teams/NetworkSocketAPI/code/C027_Support#b5614db52fc4)
-   |- net/atmel-rf-driver (https://github.com/ARMmbed/atmel-rf-driver#6c13f9085976)
-   |- net/coap-service (https://github.com/ARMmbed/coap-service#eae41d1df943)
-   |- net/mbed-client (https://github.com/ARMmbed/mbed-client#5dc62d168aa4)
-   |- net/mbed-client-c (https://github.com/ARMmbed/mbed-client-c#ce64d6a0bdef)
-   |- net/mbed-client-classic (https://github.com/ARMmbed/mbed-client-classic#abda3cef87f0)
-   |- net/mbed-client-mbed-tls (https://github.com/ARMmbed/mbed-client-mbed-tls#8c436e5d1109)
-   |- net/mbed-client-randlib (https://github.com/ARMmbed/mbed-client-randlib#80f5c491dd4d)
-   |- net/mbed-mesh-api (https://github.com/ARMmbed/mbed-mesh-api#8187d3d275cc)
-   |- net/mbed-trace (https://github.com/ARMmbed/mbed-trace#07ce2714915d)
-   |- net/nanostack-hal-mbed-cmsis-rtos (https://github.com/ARMmbed/nanostack-hal-mbed-cmsis-rtos#023fd8906ce7)
-   |- net/nanostack-libservice (https://github.com/ARMmbed/nanostack-libservice#f61c845e0c59)
-   |- net/sal-stack-nanostack-eventloop (https://github.com/ARMmbed/sal-stack-nanostack-eventloop#c163be9183b0)
-   `- net/sal-stack-nanostack (https://github.com/ARMmbed/sal-stack-nanostack#cd18b5a50df4)
+`- mbed-os (0d5eb2b8cee8)
+   |- core (737a7809f9e7)
+   |- features\FEATURE_CLIENT\coap-service (7a11be1ccb07)
+   |- features\FEATURE_CLIENT\mbed-client (a6a46726f027)
+   |- features\FEATURE_CLIENT\mbed-client-c (086b9c97f65b)
+   |- features\FEATURE_CLIENT\mbed-client-classic (c8ccada6b9ff)
+   |- features\FEATURE_CLIENT\mbed-client-mbed-tls (b14e7b3303c8)
+   |- features\FEATURE_CLIENT\mbed-client-randlib (80f5c491dd4d)
+   |- features\FEATURE_IPV6\mbed-mesh-api (0e92921f3dce)
+   |- features\FEATURE_IPV6\mbed-trace (e419c488f4f8)
+   |- features\FEATURE_IPV6\nanostack-hal-mbed-cmsis-rtos (36968fc133c7)
+   |- features\FEATURE_IPV6\nanostack-libservice (f61c845e0c59)
+   |- features\FEATURE_IPV6\sal-stack-nanostack-eventloop (c163be9183b0)
+   |- features\FEATURE_IPV6\sal-stack-nanostack-private (5d3365ce7df3)
+   |- frameworks\greentea-client (d0cbb41ae793)
+   `- frameworks\unity (14fd303f30f9)
 ```
 
 <span class="notes">**Note**: If you want to start from an existing folder in your workspace, you can simply use `mbed new .`, which will initialize an mbed program and also initialize a new Git or Mercurial repository in that folder. You can control which source control management is used or prevent source control management initialization via `--scm [name|none]` option.</span>
@@ -393,7 +390,7 @@ After importing a program or creating a new one, you need to tell *mbed CLI* whe
 
 #### Compiling your program
 
-Use the `compile` command to compile your code:
+Use the `mbed compile` command to compile your code:
 
 ```
 $ mbed compile -t ARM -m K64F
@@ -543,7 +540,7 @@ A `.uvproj` file is created in the projectfiles/uvision folder. You can open the
 
 ### Testing
 
-Use the `test` command to compile and run tests:
+Use the `mbed test` command to compile and run tests:
 
 ```
 $ mbed test -m K64F -t GCC_ARM
