@@ -35,7 +35,7 @@ import argparse
 
 
 # Application version
-ver = '0.7.17'
+ver = '0.8.0'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
@@ -103,7 +103,7 @@ regex_hg_url = r'^(file|ssh|https?)://([^/:]+)/([^/]+)/?([^/]+?)?$'
 
 # mbed url is subset of hg. mbed doesn't support ssh transport
 regex_mbed_url = r'^(https?)://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+)/?$'
-regex_build_url = r'^(https?://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+))/builds/?([\w\-]{12,40}|tip)?/?$'
+regex_build_url = r'^(https?://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+))/builds/?([\w\-]{6,40}|tip)?/?$'
 
 # base url for all mbed related repos (used as sort of index)
 mbed_base_url = 'https://github.com/ARMmbed'
@@ -384,8 +384,8 @@ class Hg(object):
         except ProcessException:
             pass
 
-    def commit():
-        popen([hg_cmd, 'commit'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
+    def commit(msg=None):
+        popen([hg_cmd, 'commit'] + (['-m', msg] if msg else [])  + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def publish(all_refs=None):
         popen([hg_cmd, 'push'] + (['--new-branch'] if all_refs else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
@@ -553,8 +553,8 @@ class Git(object):
         except ProcessException:
             pass
 
-    def commit():
-        popen([git_cmd, 'commit', '-a'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
+    def commit(msg=None):
+        popen([git_cmd, 'commit', '-a'] + (['-m', msg] if msg else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def publish(all_refs=None):
         if all_refs:
@@ -783,6 +783,8 @@ class Repo(object):
             repo.path = os.path.abspath(path or os.path.join(os.getcwd(), repo.name))
             repo.url = formaturl(m_repo_url.group(1))
             repo.rev = m_repo_url.group(3)
+            if repo.rev and not re.match(r'^([a-fA-F0-9]{6,40})$', repo.rev):
+                error('Invalid revision (%s)' % repo.rev, -1)
         else:
             error('Invalid repository (%s)' % url.strip(), -1)
 
@@ -870,8 +872,8 @@ class Repo(object):
     def revtype(cls, rev, ret_rev=False):
         if rev is None or len(rev) == 0:
             return 'latest' + (' revision in the current branch' if ret_rev else '')
-        elif re.match(r'^([a-zA-Z0-9]{12,40})$', rev) or re.match(r'^([0-9]+)$', rev):
-            return 'rev' + (' #'+rev if ret_rev else '')
+        elif re.match(r'^([a-fA-F0-9]{6,40})$', rev) or re.match(r'^([0-9]+)$', rev):
+            return 'rev' + (' #'+rev[0:12] if ret_rev else '')
         else:
             return 'branch' + (' '+rev if ret_rev else '')
 
@@ -1170,12 +1172,27 @@ class Program(object):
         # mbed Classic deployed tools
         paths.append([self.path, '.temp', 'tools'])
 
-        fl = 'make.py'
+        return self._find_file_paths(paths, 'make.py')
+
+    def get_requirements(self):
+        paths = []
+        mbed_os_path = self.get_os_dir()
+        if mbed_os_path:
+            paths.append([mbed_os_path])
+        # mbed-os not identified but tools found under cwd/tools
+        paths.append([self.path, 'core'])
+        # mbed Classic deployed tools
+        paths.append([self.path, '.temp', 'tools'])
+        # current dir
+        paths.append([self.path])
+
+        return self._find_file_paths(paths, 'requirements.txt')
+
+    def _find_file_paths(self, paths, fl):
         for p in paths:
             path = os.path.join(*p)
             if os.path.isdir(path) and os.path.isfile(os.path.join(path, fl)):
                 return os.path.join(path)
-
         return None
 
     def get_env(self):
@@ -1184,7 +1201,7 @@ class Program(object):
         compilers = ['ARM', 'GCC_ARM', 'IAR']
         for c in compilers:
             if self.get_cfg(c+'_PATH'):
-                env[c+'_PATH'] = self.get_cfg(c+'_PATH')
+                env['MBED_'+c+'_PATH'] = self.get_cfg(c+'_PATH')
 
         return env
 
@@ -1204,16 +1221,13 @@ class Program(object):
                 os.path.isfile(os.path.join(mbed_tools_path, 'default_settings.py'))):
             shutil.copy(os.path.join(mbed_tools_path, 'default_settings.py'), os.path.join(self.path, 'mbed_settings.py'))
 
-        mbed_os_path = self.get_os_dir()
-        if not mbed_os_path:
-            return False
-
+        req_path = self.get_requirements() or self.path
+        req_file = 'requirements.txt'
         missing = []
-        fname = 'requirements.txt'
         try:
-            import pip
-            installed_packages = [package.project_name.lower() for package in pip.get_installed_distributions()]
-            with open(os.path.join(mbed_os_path, fname), 'r') as f:
+            with open(os.path.join(os.path.join(req_path, req_file)), 'r') as f:
+                import pip
+                installed_packages = [package.project_name.lower() for package in pip.get_installed_distributions()]
                 for line in f.read().splitlines():
                     pkg = re.sub(r'^([\w-]+).*$', r'\1', line).lower()
                     if not pkg in installed_packages:
@@ -1229,7 +1243,7 @@ class Program(object):
                 "The mbed build tools in this program require Python modules that are not installed.\n"
                 "This might prevent compiling code or exporting to IDEs and other toolchains.\n"
                 "The missing Python modules are: %s\n"
-                "You can install all missing modules by running \"pip install -r %s\" in \"%s\"" % (', '.join(missing), fname, mbed_os_path))
+                "You can install all missing modules by running \"pip install -r %s\" in \"%s\"" % (', '.join(missing), req_file, req_path))
 
     def add_tools(self, path):
         if not os.path.exists(path):
@@ -1631,6 +1645,7 @@ def deploy(ignore=False, depth=None, protocol=None, top=True):
 # Publish command
 @subcommand('publish',
     dict(name=['-A', '--all'], dest='all_refs', action='store_true', help='Publish all branches, including new ones. Default: push only the current branch.'),
+    dict(name=['-M', '--message'], dest='msg', type=str, nargs='?', help='Commit message. Default: prompts for commit message.'),
     help='Publish program or library',
     description=(
         "Publishes this %s and all dependencies to their associated remote\nrepository URLs.\n"
@@ -1638,7 +1653,7 @@ def deploy(ignore=False, depth=None, protocol=None, top=True):
         "and unpublished revisions and encourages to commit/push them.\n"
         "Online guide about collaboration is available at:\n"
         "www.mbed.com/collab_guide" % cwd_type))
-def publish(all_refs=None, top=True):
+def publish(all_refs=None, msg=None, top=True):
     if top:
         action("Checking for local modifications...")
 
@@ -1652,14 +1667,17 @@ def publish(all_refs=None, top=True):
         if lib.check_repo():
             with cd(lib.path):
                 progress()
-                publish(False, all_refs)
+                publish(all_refs, msg=msg, top=False)
 
     sync(recursive=False)
 
     if repo.dirty():
         action("Uncommitted changes in %s \"%s\" in \"%s\"" % (repo.pathtype(repo.path), repo.name, repo.path))
-        raw_input('Press enter to commit and publish: ')
-        repo.commit()
+        if msg:
+            repo.commit(msg)
+        else:
+            raw_input('Press enter to commit and publish: ')
+            repo.commit()
 
     try:
         outgoing = repo.outgoing()
@@ -1886,18 +1904,14 @@ def status_(ignore=False):
     dict(name='--library', dest='compile_library', action='store_true', help='Compile the current %s as a static library.' % cwd_type),
     dict(name='--config', dest='compile_config', action='store_true', help='Show run-time compile configuration'),
     dict(name='--prefix', dest='config_prefix', action='append', help='Restrict listing to parameters that have this prefix'),
-    dict(name='--tests', dest='compile_tests', action='store_true', help='An alias to \'mbed test --compile\''),
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
     dict(name='--build', help='Build directory. Default: .build/'),
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
+    dict(name=['-N', '--artifact-name'], help='Name of the built program or library'),
     dict(name=['-S', '--supported'], dest='supported', action='store_true', help='Shows supported matrix of targets and toolchains'),
     help='Compile code using the mbed build tools',
     description=("Compile this program using the mbed build tools."))
-def compile_(toolchain=None, mcu=None, source=False, build=False, compile_library=False, compile_config=False, config_prefix=None, compile_tests=False, clean=False, supported=False):
-    # Pipe --tests to mbed tests command
-    if compile_tests:
-        return test_(toolchain=toolchain, mcu=mcu, source=source, build=build, clean=clean, compile_only=True)
-
+def compile_(toolchain=None, mcu=None, source=False, build=False, compile_library=False, compile_config=False, config_prefix=None, clean=False, artifact_name=None, supported=False):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
@@ -1944,6 +1958,7 @@ def compile_(toolchain=None, mcu=None, source=False, build=False, compile_librar
               + (['-c'] if clean else [])
               + list(chain.from_iterable(izip(repeat('--source'), source)))
               + ['--build', build]
+              + (['--artifact-name', artifact_name] if artifact_name else [])
               + (['-v'] if verbose else [])
               + args,
               env=env)
@@ -1958,6 +1973,7 @@ def compile_(toolchain=None, mcu=None, source=False, build=False, compile_librar
               + (['-c'] if clean else [])
               + list(chain.from_iterable(izip(repeat('--source'), source)))
               + ['--build', build]
+              + (['--artifact-name', artifact_name] if artifact_name else [])
               + (['-v'] if verbose else [])
               + args,
               env=env)
