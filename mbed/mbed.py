@@ -35,7 +35,7 @@ import argparse
 
 
 # Application version
-ver = '0.8.0'
+ver = '0.8.1'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
@@ -688,7 +688,10 @@ class Git(object):
 
     # Gets current branch or returns empty string if detached
     def getbranch():
-        branch = pquery([git_cmd, 'rev-parse', '--symbolic-full-name', '--abbrev-ref', 'HEAD']).strip()
+        try:
+            branch = pquery([git_cmd, 'rev-parse', '--symbolic-full-name', '--abbrev-ref', 'HEAD']).strip()
+        except ProcessException:
+            branch = "master"
         return branch if branch != "HEAD" else ""
 
     # Finds refs (local or remote branches). Will match rev if specified
@@ -1023,10 +1026,12 @@ class Repo(object):
                     #print self.name, 'unmodified'
                     return
 
-        action("Updating reference \"%s\" -> \"%s\"" % (relpath(cwd_root, self.path) if cwd_root != self.path else self.name, self.fullurl))
-
+        ref = (formaturl(self.url, 'https').rstrip('/') + '/' +
+              (('' if self.is_build else '#') +
+                self.rev if self.rev else ''))
+        action("Updating reference \"%s\" -> \"%s\"" % (relpath(cwd_root, self.path) if cwd_root != self.path else self.name, ref))
         with open(self.lib, 'wb') as f:
-            f.write(self.fullurl + '\n')
+            f.write(ref + '\n')
 
     def rm_untracked(self):
         untracked = self.scm.untracked()
@@ -1365,8 +1370,8 @@ def formaturl(url, format="default"):
                 url = 'ssh://%s/%s.git' % (m.group(2), m.group(3))
             elif format == "http":
                 url = 'http://%s/%s' % (m.group(2), m.group(3))
-            else:
-                url = 'https://%s/%s' % (m.group(2), m.group(3)) # https is default
+            elif format == "https":
+                url = 'https://%s/%s' % (m.group(2), m.group(3))
         else:
             m = re.match(regex_hg_url, url)
             if m:
@@ -1374,8 +1379,8 @@ def formaturl(url, format="default"):
                     url = 'ssh://%s/%s' % (m.group(2), m.group(3))
                 elif format == "http":
                     url = 'http://%s/%s' % (m.group(2), m.group(3))
-                else:
-                    url = 'https://%s/%s' % (m.group(2), m.group(3)) # https is default
+                elif format == "https":
+                    url = 'https://%s/%s' % (m.group(2), m.group(3))
     return url
 
 
@@ -2177,18 +2182,27 @@ def config_(var, value=None, global_cfg=False, unset=False):
 @subcommand('target',
     dict(name='name', nargs='?', help='Default target name. Example: K64F, NUCLEO_F401RE, NRF51822...'),
     dict(name=['-G', '--global'], dest='global_cfg', action='store_true', help='Use global settings, not local'),
+    dict(name=['-S', '--supported'], dest='supported', action='store_true', help='Shows supported matrix of targets and toolchains'),
     help='Set or get default target',
     description=(
-        "This is an alias to 'mbed config target [--global] [name]'\n"))
-def target_(name=None, global_cfg=False):
+        "Set or get default toolchain\n"
+        "This is an alias to 'mbed config [--global] target [name]'\n"))
+def target_(name=None, global_cfg=False, supported=False):
+    if supported:
+        return compile_(supported=supported)
     return config_('target', name, global_cfg=global_cfg)
 
 @subcommand('toolchain',
     dict(name='name', nargs='?', help='Default toolchain name. Example: ARM, uARM, GCC_ARM, IAR'),
+    dict(name=['-G', '--global'], dest='global_cfg', action='store_true', help='Use global settings, not local'),
+    dict(name=['-S', '--supported'], dest='supported', action='store_true', help='Shows supported matrix of targets and toolchains'),
     help='Set or get default toolchain\n\n',
     description=(
-        "This is an alias to 'mbed config toolchain [--global] [name]'\n"))
-def toolchain_(name=None, global_cfg=False):
+        "Set or get default toolchain\n"
+        "This is an alias to 'mbed config [--global] toolchain [name]'\n"))
+def toolchain_(name=None, global_cfg=False, supported=False):
+    if supported:
+        return compile_(supported=supported)
     return config_('toolchain', name, global_cfg=global_cfg)
 
 @subcommand('help',
