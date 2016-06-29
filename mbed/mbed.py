@@ -132,12 +132,12 @@ def action(msg):
 
 def warning(msg):
     for line in msg.splitlines():
-        sys.stderr.write("[mbed WARNING] %s\n" % line)
+        sys.stderr.write("[mbed] WARNING: %s\n" % line)
     sys.stderr.write("---\n")
 
 def error(msg, code=-1):
     for line in msg.splitlines():
-        sys.stderr.write("[mbed ERROR] %s\n" % line)
+        sys.stderr.write("[mbed] ERROR: %s\n" % line)
     sys.stderr.write("---\n")
     sys.exit(code)
 
@@ -2225,7 +2225,8 @@ except OSError as e:
     else:
         error('OS Error: %s' % e[1], e[0])
 except KeyboardInterrupt as e:
-    error('User aborted!', 255)
+    log('User aborted!', -1)
+    sys.exit(255)
 except Exception as e:
     if very_verbose:
         traceback.print_exc(file=sys.stdout)
