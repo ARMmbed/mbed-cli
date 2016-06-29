@@ -714,8 +714,8 @@ Here is a list of currently implemented configuration settings:
  * `toolchain` - Defines default toolchain for `compile` and `test` can be set through `mbed toolchain`. Default: none.
  * `ARM_PATH`, `GCC_ARM_PATH`, `IAR_PATH` - defines default path to ARM Compiler, GCC ARM and IAR Workbench toolchains. Default: none.
  * `protocol` - Defines the default protocol used for importing/cloning of programs and libraries. Possible values are `https`, `http` and `ssh`. Use `ssh` if you have generated and registered SSH keys (Public Key Authentication) with a service like GitHub, GitLab, Bitbucket, etc. Read more about SSH keys [here](https://help.github.com/articles/generating-an-ssh-key/) Default: `https`.
- * `depth` - Defines *clone* depth for importing/cloning and applies only to *Git* repositories. Note that while this option may improve cloning speed, it may also prevent you from correctly checking out a dependency tree when the reference revision hash older than the clone depth. Google `shallow clone` if you'd like to know more about using shallow clones. Default: none.
- * `cache` (EXPERIMENTAL) - Defines local path that will be used to store minimalistic copies of the imported/cloned repositories and attempt to use them to minimize traffic and speed up future importing. Note that this is an experimental feature and should be used for stable and production-ready repositories only. Default: none (disabled).
+ * `depth` - Defines *clone* depth for importing/cloning and applies only to *Git* repositories. Note that while this option may improve cloning speed, it may also prevent you from correctly checking out a dependency tree when the reference revision hash is older than the clone depth. Read more about shallow clones [here](https://git-scm.com/docs/git-clone). Default: none.
+ * `cache` (EXPERIMENTAL) - Defines local path that will be used to store minimalistic copies of the imported/cloned repositories and attempt to use them to minimize traffic and speed up future importing. This feature is still under development, so this should not be used within a production environment. Default: none (disabled).
 
 ## Known limitations
 
