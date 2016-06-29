@@ -1023,10 +1023,12 @@ class Repo(object):
                     #print self.name, 'unmodified'
                     return
 
-        action("Updating reference \"%s\" -> \"%s\"" % (relpath(cwd_root, self.path) if cwd_root != self.path else self.name, self.fullurl))
-
+        ref = (formaturl(self.url, 'https').rstrip('/') + '/' +
+              (('' if self.is_build else '#') +
+                self.rev if self.rev else ''))
+        action("Updating reference \"%s\" -> \"%s\"" % (relpath(cwd_root, self.path) if cwd_root != self.path else self.name, ref))
         with open(self.lib, 'wb') as f:
-            f.write(self.fullurl + '\n')
+            f.write(ref + '\n')
 
     def rm_untracked(self):
         untracked = self.scm.untracked()
@@ -1365,8 +1367,8 @@ def formaturl(url, format="default"):
                 url = 'ssh://%s/%s.git' % (m.group(2), m.group(3))
             elif format == "http":
                 url = 'http://%s/%s' % (m.group(2), m.group(3))
-            else:
-                url = 'https://%s/%s' % (m.group(2), m.group(3)) # https is default
+            elif format == "https":
+                url = 'https://%s/%s' % (m.group(2), m.group(3))
         else:
             m = re.match(regex_hg_url, url)
             if m:
@@ -1374,8 +1376,8 @@ def formaturl(url, format="default"):
                     url = 'ssh://%s/%s' % (m.group(2), m.group(3))
                 elif format == "http":
                     url = 'http://%s/%s' % (m.group(2), m.group(3))
-                else:
-                    url = 'https://%s/%s' % (m.group(2), m.group(3)) # https is default
+                elif format == "https":
+                    url = 'https://%s/%s' % (m.group(2), m.group(3))
     return url
 
 
