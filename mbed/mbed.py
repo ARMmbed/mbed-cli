@@ -2177,18 +2177,27 @@ def config_(var, value=None, global_cfg=False, unset=False):
 @subcommand('target',
     dict(name='name', nargs='?', help='Default target name. Example: K64F, NUCLEO_F401RE, NRF51822...'),
     dict(name=['-G', '--global'], dest='global_cfg', action='store_true', help='Use global settings, not local'),
+    dict(name=['-S', '--supported'], dest='supported', action='store_true', help='Shows supported matrix of targets and toolchains'),
     help='Set or get default target',
     description=(
-        "This is an alias to 'mbed config target [--global] [name]'\n"))
-def target_(name=None, global_cfg=False):
+        "Set or get default toolchain\n"
+        "This is an alias to 'mbed config [--global] target [name]'\n"))
+def target_(name=None, global_cfg=False, supported=False):
+    if supported:
+        return compile_(supported=supported)
     return config_('target', name, global_cfg=global_cfg)
 
 @subcommand('toolchain',
     dict(name='name', nargs='?', help='Default toolchain name. Example: ARM, uARM, GCC_ARM, IAR'),
+    dict(name=['-G', '--global'], dest='global_cfg', action='store_true', help='Use global settings, not local'),
+    dict(name=['-S', '--supported'], dest='supported', action='store_true', help='Shows supported matrix of targets and toolchains'),
     help='Set or get default toolchain\n\n',
     description=(
-        "This is an alias to 'mbed config toolchain [--global] [name]'\n"))
-def toolchain_(name=None, global_cfg=False):
+        "Set or get default toolchain\n"
+        "This is an alias to 'mbed config [--global] toolchain [name]'\n"))
+def toolchain_(name=None, global_cfg=False, supported=False):
+    if supported:
+        return compile_(supported=supported)
     return config_('toolchain', name, global_cfg=global_cfg)
 
 @subcommand('help',
