@@ -34,6 +34,7 @@ This document covers the installation and usage of *mbed CLI*.
   2. [Change the test action](#change-the-test-action)
   3. [Limiting the test scope](#limiting-the-test-scope)
   4. [Test directory structure](#test-directory-structure)
+1. [mbed CLI configuration](#mbed-cli-configuration)
 1. [Known limitations](#known-limitations)
 
 ## Installation
@@ -61,6 +62,8 @@ You can get the latest stable version of *mbed CLI* via PyPI by running:
 ```
 $ pip install mbed-cli
 ```
+
+On Linux/Mac, you may need to run with `sudo`.
 
 Alternatively you get the development version of *mbed CLI* by cloning the development repository [https://github.com/ARMmbed/mbed-cli](https://github.com/ARMmbed/mbed-cli):
 
@@ -685,6 +688,31 @@ mbed-os-program
 As shown above, tests exist inside ```TESTS\testgroup\testcase\``` directories. Please note that `TESTS` is a special upper case directory that is excluded from module sources while compiling.
 
 <span class="notes">**Note:** This feature does not work in applications that contain a  ```main``` function that is outside of a `TESTS` directory.</span>
+
+## mbed CLI configuration
+
+Many options in *mbed CLI* can be streamlined with global and local configuration.
+
+The *mbed CLI* configuration syntax is:
+```
+mbed config [--global] <var> [value] [--unset]
+```
+
+The **global** configuration (via `--global` option) defines the default behavior of *mbed CLI* across programs unless overridden by *local* settings.
+
+The **local** configuration (without `--global`) is per mbed program and allows overriding of global or default *mbed CLI* settings within the scope of a program or library and its dependencies.
+
+If **no value** is specified then *mbed CLI* will print the currently set value for this settings from either local or global scope.
+
+The `--unset` option allows removing of a setting.
+
+Here is a list of currently implemented configuration settings:
+ * `target` - Define default target for `compile`, `test` and `export`, and is an alias to `mbed target`. Default: none.
+ * `toolchain` - Defines default toolchain for `compile` and `test` can be set through `mbed toolchain`. Default: none.
+ * `ARM_PATH`, `GCC_ARM_PATH`, `IAR_PATH` - defines default path to ARM Compiler, GCC ARM and IAR Workbench toolchains. Default: none.
+ * `protocol` - Defines the default protocol used for importing/cloning of programs and libraries. Possible values are `https`, `http` and `ssh`. Use `ssh` if you have generated and registered SSH keys (Public Key Authentication) with a service like GitHub, GitLab, Bitbucket, etc. Read more about SSH keys [here](https://help.github.com/articles/generating-an-ssh-key/) Default: `https`.
+ * `depth` - Defines *clone* depth for importing/cloning and applies only to *Git* repositories. Note that while this option may improve cloning speed, it may also prevent you from correctly checking out a dependency tree when the reference revision hash is older than the clone depth. Read more about shallow clones [here](https://git-scm.com/docs/git-clone). Default: none.
+ * `cache` (EXPERIMENTAL) - Defines local path that will be used to store minimalistic copies of the imported/cloned repositories and attempt to use them to minimize traffic and speed up future importing. This feature is still under development, so this should not be used within a production environment. Default: none (disabled).
 
 ## Known limitations
 
