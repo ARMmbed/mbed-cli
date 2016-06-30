@@ -1,6 +1,10 @@
 test:
     override:
         - py.test test
+        - cd ../tests && mbed new new-test
+        - cd ../tests && mbed import https://github.com/ARMmbed/mbed-Client-example-temp git-test
+        - cd ../tests && mbed import https://developer.mbed.org/teams/Morpheus/code/mbed-Client-Morpheus-hg hg-test
+        - cd ../tests && mbed import https://developer.mbed.org/users/samux/code/USBSerial_HelloWorld bld-test
 
 dependencies:
     pre:
@@ -8,3 +12,4 @@ dependencies:
         - git config --global user.email "test@test.com"
         - git config --global user.name "Tester"
         - echo -e "[ui]\nusername = Tester <test@test.com>\n" > ~/.hgrc
+        - cd ../ && mkdir tests
