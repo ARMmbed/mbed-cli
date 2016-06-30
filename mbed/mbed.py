@@ -1185,6 +1185,7 @@ class Program(object):
         mbed_os_path = self.get_os_dir()
         if mbed_os_path:
             paths.append([mbed_os_path])
+            paths.append([mbed_os_path, 'core'])
         # mbed-os not identified but tools found under cwd/tools
         paths.append([self.path, 'core'])
         # mbed Classic deployed tools
