@@ -35,7 +35,7 @@ import argparse
 
 
 # Application version
-ver = '0.8.1'
+ver = '0.8.2'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
@@ -94,7 +94,7 @@ ignores = [
 # reference to local (unpublished) repo - dir#rev
 regex_local_ref = r'^([\w.+-][\w./+-]*?)/?(?:#(.*))?$'
 # reference to repo - url#rev
-regex_url_ref = r'^(.*/([\w+-]+)(?:\.\w+)?)/?(?:#(.*))?$'
+regex_url_ref = r'^(.*/([\w.+-]+)(?:\.\w+)?)/?(?:#(.*))?$'
 
 # git url (no #rev)
 regex_git_url = r'^(git@|git\://|ssh\://|https?\://)([^/:]+)[:/](.+?)(\.git|\/?)$'
@@ -103,6 +103,7 @@ regex_hg_url = r'^(file|ssh|https?)://([^/:]+)/([^/]+)/?([^/]+?)?$'
 
 # mbed url is subset of hg. mbed doesn't support ssh transport
 regex_mbed_url = r'^(https?)://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+)/?$'
+# mbed sdk builds url
 regex_build_url = r'^(https?://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+))/builds/?([\w\-]{6,40}|tip)?/?$'
 
 # base url for all mbed related repos (used as sort of index)
@@ -1184,6 +1185,7 @@ class Program(object):
         mbed_os_path = self.get_os_dir()
         if mbed_os_path:
             paths.append([mbed_os_path])
+            paths.append([mbed_os_path, 'core'])
         # mbed-os not identified but tools found under cwd/tools
         paths.append([self.path, 'core'])
         # mbed Classic deployed tools
