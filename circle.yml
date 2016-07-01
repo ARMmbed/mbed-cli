@@ -8,6 +8,7 @@ test:
         - cd ../tests/new-test && mbed ls
         - cd ../tests/new-test/mbed-os/core && pip install -r requirements.txt
         - cd ../tests/new-test && mbed compile --source=. --source=mbed-os/TESTS/integration/basic -j 0
+        - cd ../tests/new-test && mbed test --compile -n tests-integration-threaded_blinky -j 0
         - cd ../tests && mbed import https://github.com/ARMmbed/mbed-Client-example-temp git-test
         - cd ../tests/git-test && mbed update 2d9404a4f88db7de0e5a9ea2acdbca1aeacab9c4 --clean
         - cd ../tests/git-test && mbed update master --clean
