@@ -35,7 +35,7 @@ import argparse
 
 
 # Application version
-ver = '0.8.2'
+ver = '0.8.3'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
@@ -1458,10 +1458,11 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
     p_path = Repo.findparent(d_path) or d_path
     if program and library:
         error("Cannot use both --program and --library options.", 1)
-    elif not program and not library:
-        d_type = 'library' if os.path.abspath(p_path) != os.path.abspath(d_path) else 'program'
-    else:
+    elif program or library:
         d_type = 'library' if library else 'program'
+    else:
+        p = Program(d_path)
+        d_type = 'library' if p and not p.is_cwd and os.path.abspath(p_path) != os.path.abspath(d_path) else 'program'
 
     if scm and scm != 'none':
         if os.path.isdir(d_path) and Repo.isrepo(d_path):
