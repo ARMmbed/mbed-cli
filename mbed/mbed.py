@@ -1774,7 +1774,8 @@ def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=Fa
     for lib in repo.libs:
         if os.path.isdir(lib.path) and Repo.isrepo(lib.path):
             lib_repo = Repo.fromrepo(lib.path)
-            if lib.url != lib_repo.url: # Repository URL has changed
+            if (not lib.is_local and not lib_repo.is_local and
+                formaturl(lib.url, 'https') != formaturl(lib_repo.url, 'https')): # Repository URL has changed
                 gc = False
                 with cd(lib.path):
                     gc, msg = lib_repo.can_update(clean, clean_deps)
