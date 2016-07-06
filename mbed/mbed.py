@@ -2221,7 +2221,7 @@ if len(sys.argv) <= 1:
 
 if '--version' in sys.argv:
     print ver
-    sys.exit(1)
+    sys.exit(0)
 
 pargs, remainder = parser.parse_known_args()
 status = 1
