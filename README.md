@@ -388,7 +388,7 @@ Through the workflow explained above, mbed CLI will maintain association to the 
 
 After importing a program or creating a new one, you need to tell *mbed CLI* where to find the toolchains that you want to use for compiling your source tree. *mbed CLI* gets this information from a file named `mbed_settings.py`, which is automatically created at the top of your cloned repository (if it doesn't already exist). As a rule, since `mbed_settings.py` contains local settings (possibly relevant only to a single OS on a single machine), it should not be versioned. In this file:
 
-* If you want to use the [ARM Compiler toolchain](https://developer.arm.com/products/software-development-tools/compilers/arm-compiler-5/downloads), set `ARM_PATH` to the *base* directory of your ARMCC installation (example: c:\software\armcc5.06). The recommended version of the ARMCC toolchain is 5.06 (5.05 will very likely work too).
+* If you want to use the [ARM Compiler toolchain](https://developer.arm.com/products/software-development-tools/compilers/arm-compiler-5/downloads), set `ARM_PATH` to the *base* directory of your ARM Compiler installation (example: c:\software\armcc5.06). The recommended version of the ARM Compiler toolchain is 5.06.
 * If you want to use the [GCC ARM Embedded toolchain](https://launchpad.net/gcc-arm-embedded), set `GCC_ARM_PATH` to the *binary* directory of your GCC ARM installation (example: c:\software\GNUToolsARMEmbedded\4.82013q4\bin). Use versions 4.8 or 4.9 of GCC ARM Embedded, but version 5.0 or any version above might be incompatible with the tools.
 
 #### Compiling your program
