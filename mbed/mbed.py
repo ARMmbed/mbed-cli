@@ -2010,6 +2010,8 @@ def test_(toolchain=None, mcu=None, compile_list=False, run_list=False, compile_
     args = remainder
     # Find the root of the program
     program = Program(os.getcwd(), True)
+    # Save original working directory
+    orig_path = os.getcwd()
 
     target = program.get_mcu(mcu)
     tchain = program.get_toolchain(toolchain)
@@ -2029,8 +2031,13 @@ def test_(toolchain=None, mcu=None, compile_list=False, run_list=False, compile_
         if not build:
             build = os.path.join(program.path, '.build/tests', target, tchain)
 
-        # Create the path to the test spec file
-        test_spec = os.path.join(build, 'test_spec.json')
+        
+        if test_spec:
+            # Preserve path to given test spec
+            test_spec = os.path.relpath(os.path.join(orig_path, test_spec), program.path)
+        else:
+            # Create the path to the test spec file
+            test_spec = os.path.join(build, 'test_spec.json')
 
         if compile_list:
             popen(['python', '-u', os.path.join(tools_dir, 'test.py'), '--list']
