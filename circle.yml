@@ -1,5 +1,6 @@
 test:
     override:
+        - mbed --version
         - py.test test
         - mbed toolchain -G GCC_ARM
         - mbed target -G K64F
