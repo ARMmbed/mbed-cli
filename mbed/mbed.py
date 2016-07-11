@@ -35,7 +35,7 @@ import argparse
 
 
 # Application version
-ver = '0.8.3'
+ver = '0.8.5'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
