@@ -1305,7 +1305,10 @@ class Global(object):
     def __init__(self):
         self.path = os.path.join(os.path.expanduser("~"), '.mbed')
         if not os.path.exists(self.path):
-            os.mkdir(self.path)
+            try:
+                os.mkdir(self.path)
+            except (IOError, OSError):
+                pass
 
     def get_cfg(self, *args, **kwargs):
         return Cfg(self.path).get(*args, **kwargs)
@@ -1327,7 +1330,7 @@ class Cfg(object):
         try:
             with open(fl) as f:
                 lines = f.read().splitlines()
-        except IOError:
+        except (IOError, OSError):
             lines = []
 
         for line in lines:
@@ -1338,8 +1341,12 @@ class Cfg(object):
         if not val is None:
             lines += [var+"="+val]
 
-        with open(fl, 'w') as f:
-            f.write('\n'.join(lines) + '\n')
+        try:
+            with open(fl, 'w') as f:
+                f.write('\n'.join(lines) + '\n')
+        except (IOError, OSError):
+            warning("Unable to write config file %s" % fl)
+            pass
 
     # Gets config value
     def get(self, var, default_val=None):
@@ -1347,7 +1354,7 @@ class Cfg(object):
         try:
             with open(fl) as f:
                 lines = f.read().splitlines()
-        except IOError:
+        except (IOError, OSError):
             lines = []
 
         for line in lines:
