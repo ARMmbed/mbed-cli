@@ -1369,7 +1369,7 @@ def formaturl(url, format="default"):
         m = re.match(regex_git_url, url)
         if m:
             if format == "ssh":
-                url = 'ssh://%s/%s.git' % (m.group(2), m.group(3))
+                url = 'ssh://git@%s/%s.git' % (m.group(2), m.group(3))
             elif format == "http":
                 url = 'http://%s/%s' % (m.group(2), m.group(3))
             elif format == "https":
