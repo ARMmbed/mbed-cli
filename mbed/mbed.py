@@ -35,7 +35,7 @@ import argparse
 
 
 # Application version
-ver = '0.8.3'
+ver = '0.8.5'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
@@ -1454,15 +1454,24 @@ def subcommand(name, *args, **kwargs):
 def new(name, scm='git', program=False, library=False, mbedlib=False, create_only=False, depth=None, protocol=None):
     global cwd_root
 
-    d_path = name or os.getcwd()
-    p_path = Repo.findparent(d_path) or d_path
+    d_path = os.path.abspath(name or os.getcwd())
+    p_path = os.path.dirname(d_path)
     if program and library:
         error("Cannot use both --program and --library options.", 1)
     elif program or library:
         d_type = 'library' if library else 'program'
     else:
+        pp = Program(p_path)
+        pd = Program(d_path)
+        if pp.path == pd.path:
+            d_type = 'library' if os.path.abspath(p_path) != os.path.abspath(d_path) else 'program'
+        else:
+            d_type = 'library' if not pp.is_cwd and os.path.abspath(p_path) != os.path.abspath(d_path) else 'program'
+
+    if os.path.exists(d_path):
         p = Program(d_path)
-        d_type = 'library' if p and not p.is_cwd and os.path.abspath(p_path) != os.path.abspath(d_path) else 'program'
+        if (d_type == 'program' and not p.is_cwd) or (d_type == 'library' and Repo.isrepo(d_path)):
+            error("A %s with name \"%s\" already exists." % (d_type, os.path.basename(d_path)), 1)
 
     if scm and scm != 'none':
         if os.path.isdir(d_path) and Repo.isrepo(d_path):
@@ -1486,7 +1495,6 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
 
     action("Creating new %s \"%s\" (%s)" % (d_type, os.path.basename(d_path), scm))
     p = Program(d_path)
-
     if d_type == 'program':
         # This helps sub-commands to display relative paths to the created program
         cwd_root = os.path.abspath(d_path)
@@ -1544,7 +1552,7 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
         error("Directory \"%s\" is not empty. Please ensure that the destination folder is empty." % repo.path, 1)
 
     text = "Importing program" if top else "Adding library"
-    action("%s \"%s\" from \"%s/\"%s" % (text, relpath(cwd_root, repo.path), repo.url, ' at '+(repo.revtype(repo.rev, True))))
+    action("%s \"%s\" from \"%s\"%s" % (text, relpath(cwd_root, repo.path), formaturl(repo.url, protocol), ' at '+(repo.revtype(repo.rev, True))))
     if repo.clone(repo.url, repo.path, rev=repo.rev, depth=depth, protocol=protocol):
         with cd(repo.path):
             Program(repo.path).set_root()
