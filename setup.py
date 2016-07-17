@@ -13,22 +13,23 @@
 import os
 from setuptools import setup
 
-def read(fname):
-    return open(os.path.join(os.path.dirname(__file__), fname)).read()
+LONG_DESC = open('pypi_readme.rst').read()
+LICENSE = open('LICENSE').read()
 
 setup(
     name="mbed-cli",
-    packages=["mbed"],
     version="0.8.6",
+    description="ARM mbed command line tool for repositories version control, publishing and updating code from remotely hosted repositories (GitHub, GitLab and mbed.org), and invoking mbed OS own build system and export functions, among other operations",
+    long_description=LONG_DESC,
     url='http://github.com/ARMmbed/mbed-cli',
     author='ARM mbed',
     author_email='support@mbed.org',
-    license='Apache-2.0',
+    license=LICENSE,
+    packages=["mbed"],
     entry_points={
         'console_scripts': [
             'mbed=mbed.mbed:main',
             'mbed-cli=mbed.mbed:main',
         ]
     },
-    long_description=read('pypi_readme.rst'),
 )
