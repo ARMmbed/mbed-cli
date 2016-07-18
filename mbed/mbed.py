@@ -97,7 +97,7 @@ regex_local_ref = r'^([\w.+-][\w./+-]*?)/?(?:#(.*))?$'
 regex_url_ref = r'^(.*/([\w.+-]+)(?:\.\w+)?)/?(?:#(.*))?$'
 
 # git url (no #rev)
-regex_git_url = r'^(git@|git\://|ssh\://|https?\://)([^/:]+)[:/](.+?)(\.git|\/?)$'
+regex_git_url = r'^(git\://|ssh\://|https?\://|)(([^/:@]+)(\:([^/:@]+))?@)?([^/:]+)[:/](.+?)(\.git|\/?)$'
 # hg url (no #rev)
 regex_hg_url = r'^(file|ssh|https?)://([^/:]+)/([^/]+)/?([^/]+?)?$'
 
@@ -1376,11 +1376,11 @@ def formaturl(url, format="default"):
         m = re.match(regex_git_url, url)
         if m:
             if format == "ssh":
-                url = 'ssh://git@%s/%s.git' % (m.group(2), m.group(3))
+                url = 'ssh://%s%s/%s.git' % (m.group(2) or 'git@', m.group(6), m.group(7))
             elif format == "http":
-                url = 'http://%s/%s' % (m.group(2), m.group(3))
+                url = 'http://%s%s/%s' % (m.group(2) if m.group(5) or m.group(3) != 'git' else '', m.group(6), m.group(7))
             elif format == "https":
-                url = 'https://%s/%s' % (m.group(2), m.group(3))
+                url = 'https://%s%s/%s' % (m.group(2) if m.group(5) or m.group(3) != 'git' else '', m.group(6), m.group(7))
         else:
             m = re.match(regex_hg_url, url)
             if m:
