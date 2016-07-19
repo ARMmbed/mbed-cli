@@ -119,6 +119,9 @@ mbed_sdk_tools_url = 'https://mbed.org/users/mbed_official/code/mbed-sdk-tools'
 verbose = False
 very_verbose = False
 
+# stores current working directory for recursive operations
+cwd_root = ""
+
 
 # Logging and output
 def message(msg):
@@ -2235,11 +2238,13 @@ def toolchain_(name=None, global_cfg=False, supported=False):
 def help_():
     return parser.print_help()
 
-# Help messages adapt based on current dir
-cwd_root = os.getcwd()
 
+def main():
+    global verbose, very_verbose, remainder, cwd_root
 
-if __name__ == "__main__":
+    # Help messages adapt based on current dir
+    cwd_root = os.getcwd()
+
     # Parse/run command
     if len(sys.argv) <= 1:
         help_()
@@ -2276,3 +2281,7 @@ if __name__ == "__main__":
             traceback.print_exc(file=sys.stdout)
         error("Unknown Error: %s" % e, 255)
     sys.exit(status or 0)
+
+
+if __name__ == "__main__":
+    main()
