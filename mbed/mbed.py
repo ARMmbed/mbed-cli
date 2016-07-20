@@ -35,7 +35,7 @@ import argparse
 
 
 # Application version
-ver = '0.8.5'
+ver = '0.8.7'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
@@ -97,7 +97,7 @@ regex_local_ref = r'^([\w.+-][\w./+-]*?)/?(?:#(.*))?$'
 regex_url_ref = r'^(.*/([\w.+-]+)(?:\.\w+)?)/?(?:#(.*))?$'
 
 # git url (no #rev)
-regex_git_url = r'^(git@|git\://|ssh\://|https?\://)([^/:]+)[:/](.+?)(\.git|\/?)$'
+regex_git_url = r'^(git\://|ssh\://|https?\://|)(([^/:@]+)(\:([^/:@]+))?@)?([^/:]+)[:/](.+?)(\.git|\/?)$'
 # hg url (no #rev)
 regex_hg_url = r'^(file|ssh|https?)://([^/:]+)/([^/]+)/?([^/]+?)?$'
 
@@ -118,6 +118,9 @@ mbed_sdk_tools_url = 'https://mbed.org/users/mbed_official/code/mbed-sdk-tools'
 # verbose logging
 verbose = False
 very_verbose = False
+
+# stores current working directory for recursive operations
+cwd_root = ""
 
 
 # Logging and output
@@ -1216,7 +1219,7 @@ class Program(object):
     def post_action(self):
         mbed_tools_path = self.get_tools_dir()
 
-        if not mbed_tools_path and self.is_classic:
+        if not mbed_tools_path and (self.is_classic or os.path.exists(os.path.join(self.path, Cfg.file))):
             self.add_tools(os.path.join(self.path, '.temp'))
             mbed_tools_path = self.get_tools_dir()
 
@@ -1305,7 +1308,10 @@ class Global(object):
     def __init__(self):
         self.path = os.path.join(os.path.expanduser("~"), '.mbed')
         if not os.path.exists(self.path):
-            os.mkdir(self.path)
+            try:
+                os.mkdir(self.path)
+            except (IOError, OSError):
+                pass
 
     def get_cfg(self, *args, **kwargs):
         return Cfg(self.path).get(*args, **kwargs)
@@ -1327,7 +1333,7 @@ class Cfg(object):
         try:
             with open(fl) as f:
                 lines = f.read().splitlines()
-        except IOError:
+        except (IOError, OSError):
             lines = []
 
         for line in lines:
@@ -1338,8 +1344,12 @@ class Cfg(object):
         if not val is None:
             lines += [var+"="+val]
 
-        with open(fl, 'w') as f:
-            f.write('\n'.join(lines) + '\n')
+        try:
+            with open(fl, 'w') as f:
+                f.write('\n'.join(lines) + '\n')
+        except (IOError, OSError):
+            warning("Unable to write config file %s" % fl)
+            pass
 
     # Gets config value
     def get(self, var, default_val=None):
@@ -1347,7 +1357,7 @@ class Cfg(object):
         try:
             with open(fl) as f:
                 lines = f.read().splitlines()
-        except IOError:
+        except (IOError, OSError):
             lines = []
 
         for line in lines:
@@ -1369,11 +1379,11 @@ def formaturl(url, format="default"):
         m = re.match(regex_git_url, url)
         if m:
             if format == "ssh":
-                url = 'ssh://git@%s/%s.git' % (m.group(2), m.group(3))
+                url = 'ssh://%s%s/%s.git' % (m.group(2) or 'git@', m.group(6), m.group(7))
             elif format == "http":
-                url = 'http://%s/%s' % (m.group(2), m.group(3))
+                url = 'http://%s%s/%s' % (m.group(2) if m.group(5) or m.group(3) != 'git' else '', m.group(6), m.group(7))
             elif format == "https":
-                url = 'https://%s/%s' % (m.group(2), m.group(3))
+                url = 'https://%s%s/%s' % (m.group(2) if m.group(5) or m.group(3) != 'git' else '', m.group(6), m.group(7))
         else:
             m = re.match(regex_hg_url, url)
             if m:
@@ -1385,11 +1395,6 @@ def formaturl(url, format="default"):
                     url = 'https://%s/%s' % (m.group(2), m.group(3))
     return url
 
-
-# Help messages adapt based on current dir
-cwd_root = os.getcwd()
-cwd_type = Repo.pathtype(cwd_root)
-cwd_dest = "program" if cwd_type == "directory" else "library"
 
 # Subparser handling
 parser = argparse.ArgumentParser(prog='mbed',
@@ -1522,8 +1527,8 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
 
 # Import command
 @subcommand('import',
-    dict(name='url', help='URL of the %s' % cwd_dest),
-    dict(name='path', nargs='?', help='Destination name or path. Default: current %s.' % cwd_type),
+    dict(name='url', help='URL of the program'),
+    dict(name='path', nargs='?', help='Destination name or path. Default: current directory.'),
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to cloning and updating.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
@@ -1664,11 +1669,11 @@ def deploy(ignore=False, depth=None, protocol=None, top=True):
     dict(name=['-M', '--message'], dest='msg', type=str, nargs='?', help='Commit message. Default: prompts for commit message.'),
     help='Publish program or library',
     description=(
-        "Publishes this %s and all dependencies to their associated remote\nrepository URLs.\n"
+        "Publishes the current program or library and all dependencies to their\nassociated remote repository URLs.\n"
         "This command performs various consistency checks for local uncommitted changes\n"
         "and unpublished revisions and encourages to commit/push them.\n"
         "Online guide about collaboration is available at:\n"
-        "www.mbed.com/collab_guide" % cwd_type))
+        "www.mbed.com/collab_guide"))
 def publish(all_refs=None, msg=None, top=True):
     if top:
         action("Checking for local modifications...")
@@ -1716,12 +1721,15 @@ def publish(all_refs=None, msg=None, top=True):
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     help='Update to branch, tag, revision or latest',
     description=(
-        "Updates this %s and its dependencies to specified branch, tag or revision.\n"
+        "Updates the current program or library and its dependencies to specified\nbranch, tag or revision.\n"
         "Alternatively fetches from associated remote repository URL and updates to the\n"
-        "latest revision in the current branch." % cwd_type))
+        "latest revision in the current branch."))
 def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=False, top=True, depth=None, protocol=None):
     if top and clean:
         sync()
+
+    cwd_type = Repo.pathtype(cwd_root)
+    cwd_dest = "program" if cwd_type == "directory" else "library"
 
     repo = Repo.fromrepo()
     # A copy of repo containing the .lib layout before updating
@@ -1818,8 +1826,8 @@ def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=Fa
     help='Synchronize library references',
     description=(
         "Synchronizes all library and dependency references (.lib files) in the\n"
-        "current %s.\n"
-        "Note that this will remove all invalid library references." % cwd_type))
+        "current program or library.\n"
+        "Note that this will remove all invalid library references."))
 def sync(recursive=True, keep_refs=False, top=True):
     if top and recursive:
         action("Synchronizing dependency references...")
@@ -1868,6 +1876,7 @@ def sync(recursive=True, keep_refs=False, top=True):
                     sync(keep_refs=keep_refs, top=False)
 
     # Update the .lib reference in the parent repository
+    cwd_type = Repo.pathtype(cwd_root)
     if top and cwd_type == "library":
         repo = Repo.fromrepo()
         repo.write()
@@ -1879,7 +1888,7 @@ def sync(recursive=True, keep_refs=False, top=True):
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to missing libraries.'),
     help='View dependency tree',
     description=(
-        "View the dependency tree in this %s." % cwd_type))
+        "View the dependency tree of the current program or library."))
 def list_(detailed=False, prefix='', p_path=None, ignore=False):
     repo = Repo.fromrepo()
     print prefix + (relpath(p_path, repo.path) if p_path else repo.name), '(%s)' % ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if detailed else str(repo.rev)[:12]) or 'no revision')
@@ -1901,7 +1910,7 @@ def list_(detailed=False, prefix='', p_path=None, ignore=False):
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to missing libraries.'),
     help='Show version control status\n\n',
     description=(
-        "Show uncommitted changes in this %s and its dependencies." % cwd_type))
+        "Show uncommitted changes a program or library and its dependencies."))
 def status_(ignore=False):
     repo = Repo.fromrepo()
     if repo.dirty():
@@ -1918,7 +1927,7 @@ def status_(ignore=False):
 @subcommand('compile',
     dict(name=['-t', '--toolchain'], help='Compile toolchain. Example: ARM, uARM, GCC_ARM, IAR'),
     dict(name=['-m', '--mcu'], help='Compile target. Example: K64F, NUCLEO_F401RE, NRF51822...'),
-    dict(name='--library', dest='compile_library', action='store_true', help='Compile the current %s as a static library.' % cwd_type),
+    dict(name='--library', dest='compile_library', action='store_true', help='Compile the current program or library as a static library.'),
     dict(name='--config', dest='compile_config', action='store_true', help='Show run-time compile configuration'),
     dict(name='--prefix', dest='config_prefix', action='append', help='Restrict listing to parameters that have this prefix'),
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
@@ -2229,39 +2238,50 @@ def toolchain_(name=None, global_cfg=False, supported=False):
 def help_():
     return parser.print_help()
 
-# Parse/run command
-if len(sys.argv) <= 1:
-    help_()
-    sys.exit(1)
 
-if '--version' in sys.argv:
-    print ver
-    sys.exit(0)
+def main():
+    global verbose, very_verbose, remainder, cwd_root
 
-pargs, remainder = parser.parse_known_args()
-status = 1
+    # Help messages adapt based on current dir
+    cwd_root = os.getcwd()
 
-try:
-    very_verbose = pargs.very_verbose
-    verbose = very_verbose or pargs.verbose
-    log('Working path \"%s\" (%s)' % (os.getcwd(), cwd_type))
-    status = pargs.command(pargs)
-except ProcessException as e:
-    error(
-        "\"%s\" returned error code %d.\n"
-        "Command \"%s\" in \"%s\"" % (e[1], e[0], e[2], e[3]), e[0])
-except OSError as e:
-    if e[0] == errno.ENOENT:
+    # Parse/run command
+    if len(sys.argv) <= 1:
+        help_()
+        sys.exit(1)
+
+    if '--version' in sys.argv:
+        print ver
+        sys.exit(0)
+
+    pargs, remainder = parser.parse_known_args()
+    status = 1
+
+    try:
+        very_verbose = pargs.very_verbose
+        verbose = very_verbose or pargs.verbose
+        log('Working path \"%s\" (%s)' % (os.getcwd(), Repo.pathtype(cwd_root)))
+        status = pargs.command(pargs)
+    except ProcessException as e:
         error(
-            "Could not detect one of the command-line tools.\n"
-            "You could retry the last command with \"-v\" flag for verbose output\n", e[0])
-    else:
-        error('OS Error: %s' % e[1], e[0])
-except KeyboardInterrupt as e:
-    log('User aborted!', -1)
-    sys.exit(255)
-except Exception as e:
-    if very_verbose:
-        traceback.print_exc(file=sys.stdout)
-    error("Unknown Error: %s" % e, 255)
-sys.exit(status or 0)
+            "\"%s\" returned error code %d.\n"
+            "Command \"%s\" in \"%s\"" % (e[1], e[0], e[2], e[3]), e[0])
+    except OSError as e:
+        if e[0] == errno.ENOENT:
+            error(
+                "Could not detect one of the command-line tools.\n"
+                "You could retry the last command with \"-v\" flag for verbose output\n", e[0])
+        else:
+            error('OS Error: %s' % e[1], e[0])
+    except KeyboardInterrupt as e:
+        log('User aborted!', -1)
+        sys.exit(255)
+    except Exception as e:
+        if very_verbose:
+            traceback.print_exc(file=sys.stdout)
+        error("Unknown Error: %s" % e, 255)
+    sys.exit(status or 0)
+
+
+if __name__ == "__main__":
+    main()
