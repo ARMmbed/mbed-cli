@@ -35,7 +35,7 @@ import argparse
 
 
 # Application version
-ver = '0.8.7'
+ver = '0.8.8'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
@@ -1381,9 +1381,9 @@ def formaturl(url, format="default"):
             if format == "ssh":
                 url = 'ssh://%s%s/%s.git' % (m.group(2) or 'git@', m.group(6), m.group(7))
             elif format == "http":
-                url = 'http://%s%s/%s' % (m.group(2) if m.group(5) or m.group(3) != 'git' else '', m.group(6), m.group(7))
+                url = 'http://%s%s/%s' % (m.group(2) if (m.group(2) and (m.group(5) or m.group(3) != 'git')) else '', m.group(6), m.group(7))
             elif format == "https":
-                url = 'https://%s%s/%s' % (m.group(2) if m.group(5) or m.group(3) != 'git' else '', m.group(6), m.group(7))
+                url = 'https://%s%s/%s' % (m.group(2) if (m.group(2) and (m.group(5) or m.group(3) != 'git')) else '', m.group(6), m.group(7))
         else:
             m = re.match(regex_hg_url, url)
             if m:
