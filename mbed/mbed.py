@@ -2058,6 +2058,7 @@ def test_(toolchain=None, mcu=None, compile_list=False, run_list=False, compile_
 
         if compile_list:
             popen(['python', '-u', os.path.join(tools_dir, 'test.py'), '--list']
+                  + ['-t', tchain, '-m', target]
                   + (['-n', tests_by_name] if tests_by_name else [])
                   + (['-v'] if verbose else [])
                   + args,
