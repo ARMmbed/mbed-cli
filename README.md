@@ -35,7 +35,6 @@ This document covers the installation and usage of *mbed CLI*.
   3. [Limiting the test scope](#limiting-the-test-scope)
   4. [Test directory structure](#test-directory-structure)
 1. [mbed CLI configuration](#mbed-cli-configuration)
-1. [Known limitations](#known-limitations)
 
 ## Installation
 
@@ -713,9 +712,3 @@ Here is a list of currently implemented configuration settings:
  * `protocol` - Defines the default protocol used for importing/cloning of programs and libraries. Possible values are `https`, `http` and `ssh`. Use `ssh` if you have generated and registered SSH keys (Public Key Authentication) with a service like GitHub, GitLab, Bitbucket, etc. Read more about SSH keys [here](https://help.github.com/articles/generating-an-ssh-key/) Default: `https`.
  * `depth` - Defines *clone* depth for importing/cloning and applies only to *Git* repositories. Note that while this option may improve cloning speed, it may also prevent you from correctly checking out a dependency tree when the reference revision hash is older than the clone depth. Read more about shallow clones [here](https://git-scm.com/docs/git-clone). Default: none.
  * `cache` (EXPERIMENTAL) - Defines local path that will be used to store minimalistic copies of the imported/cloned repositories and attempt to use them to minimize traffic and speed up future importing. This feature is still under development, so this should not be used within a production environment. Default: none (disabled).
-
-## Known limitations
-
-<span class="warnings">**Warning**: At this point, *mbed CLI* is alpha quality and very much in development. Breakages are fully expected. Please open issues on this repository for any problems that you find with *mbed CLI*.</span>
-
-* *mbed CLI* does not check whether you have Mercurial or Git installed and assumes that they are available.
