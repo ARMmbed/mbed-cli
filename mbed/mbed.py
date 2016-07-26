@@ -118,6 +118,7 @@ mbed_sdk_tools_url = 'https://mbed.org/users/mbed_official/code/mbed-sdk-tools'
 # verbose logging
 verbose = False
 very_verbose = False
+install_requirements = True
 
 # stores current working directory for recursive operations
 cwd_root = ""
@@ -1218,7 +1219,7 @@ class Program(object):
                     if not pkg in installed_packages:
                         missing.append(pkg)
 
-                if len(missing):
+                if missing and install_requirements:
                     try:
                         action("Auto-installing missing Python modules...")
                         pquery(['pip', 'install', '-q', '-r', os.path.join(req_path, req_file)])
@@ -1230,7 +1231,7 @@ class Program(object):
         except (IOError, ImportError, OSError):
             pass
 
-        if len(missing):
+        if missing:
             err = (
                 "-----------------------------------------------------------------\n"
                 "The mbed OS tools in this program require the following Python modules: %s\n"
