@@ -718,3 +718,6 @@ Here is a list of currently implemented configuration settings:
  * `protocol` - defines the default protocol used for importing or cloning of programs and libraries. The possible values are `https`, `http` and `ssh`. Use `ssh` if you have generated and registered SSH keys (Public Key Authentication) with a service like GitHub, GitLab, Bitbucket, etc. Read more about SSH keys [here](https://help.github.com/articles/generating-an-ssh-key/) Default: `https`.
  * `depth` - defines the *clone* depth for importing or cloning and applies only to *Git* repositories. Note that while this option may improve cloning speed, it may also prevent you from correctly checking out a dependency tree when the reference revision hash is older than the clone depth. Read more about shallow clones [here](https://git-scm.com/docs/git-clone). Default: none.
  * `cache` (EXPERIMENTAL) - defines the local path that will be used to store minimalistic copies of the imported or cloned repositories, and attempts to use them to minimize traffic and speed up future importing. This feature is still under development, so this should not be used within a production environment. Default: none (disabled).
+ 
+## Not supported environments
+* Executing mbed CLI inside cygwin (https://github.com/ARMmbed/mbed-cli/issues/299)
