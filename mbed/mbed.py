@@ -199,7 +199,7 @@ def pquery(command, stdin=None, **kwargs):
     stdout, _ = proc.communicate(stdin)
 
     if very_verbose:
-        print str(stdout).strip()
+        log(str(stdout).strip())
 
     if proc.returncode != 0:
         raise ProcessException(proc.returncode, command[0], ' '.join(command), os.getcwd())
@@ -1149,6 +1149,9 @@ class Program(object):
     def set_cfg(self, *args, **kwargs):
         return Cfg(self.path).set(*args, **kwargs)
 
+    def list_cfg(self, *args, **kwargs):
+        return Cfg(self.path).list(*args, **kwargs)
+
     def set_root(self):
         return self.set_cfg('ROOT', '.')
 
@@ -1308,7 +1311,7 @@ class Program(object):
                 macros = f.read().splitlines()
         return macros
 
-# Global class, used for global config
+# Global class used for global config
 class Global(object):
     def __init__(self):
         self.path = os.path.join(os.path.expanduser("~"), '.mbed')
@@ -1324,7 +1327,10 @@ class Global(object):
     def set_cfg(self, *args, **kwargs):
         return Cfg(self.path).set(*args, **kwargs)
 
+    def list_cfg(self, *args, **kwargs):
+        return Cfg(self.path).list(*args, **kwargs)
 
+# Cfg classed used for handling the config backend 
 class Cfg(object):
     path = None
     file = ".mbed"
@@ -1371,6 +1377,22 @@ class Cfg(object):
                 return m.group(2)
         return default_val
 
+    # Get all config var/values pairs
+    def list(self):
+        fl = os.path.join(self.path, self.file)
+        try:
+            with open(fl) as f:
+                lines = f.read().splitlines()
+        except (IOError, OSError):
+            lines = []
+
+        vars = {}
+        for line in lines:
+            m = re.match(r'^([\w+-]+)\=(.*)?$', line)
+            if m and m.group(1) and m.group(1) != 'ROOT':
+                vars[m.group(1)] = m.group(2)
+        return vars
+
 
 def formaturl(url, format="default"):
     url = "%s" % url
@@ -1407,6 +1429,7 @@ parser = argparse.ArgumentParser(prog='mbed',
     formatter_class=argparse.RawTextHelpFormatter)
 subparsers = parser.add_subparsers(title="Commands", metavar="           ")
 parser.add_argument("--version", action="store_true", dest="version", help="print version number and exit")
+subcommands = {}
 
 # Process handling
 def subcommand(name, *args, **kwargs):
@@ -1417,6 +1440,7 @@ def subcommand(name, *args, **kwargs):
             kwargs['formatter_class'] = argparse.RawDescriptionHelpFormatter
 
         subparser = subparsers.add_parser(name, **kwargs)
+        subcommands[name] = subparser
 
         for arg in args:
             arg = dict(arg)
@@ -1899,7 +1923,7 @@ def sync(recursive=True, keep_refs=False, top=True):
         "View the dependency tree of the current program or library."))
 def list_(detailed=False, prefix='', p_path=None, ignore=False):
     repo = Repo.fromrepo()
-    print prefix + (relpath(p_path, repo.path) if p_path else repo.name), '(%s)' % ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if detailed else str(repo.rev)[:12]) or 'no revision')
+    log(prefix + (relpath(p_path, repo.path) if p_path else repo.name), '(%s)' % ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if detailed else str(repo.rev)[:12]) or 'no revision'))
 
     for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.path)):
         if prefix:
@@ -1923,7 +1947,7 @@ def status_(ignore=False):
     repo = Repo.fromrepo()
     if repo.dirty():
         action("Status for \"%s\":" % repo.name)
-        print repo.status()
+        log(repo.status())
 
     for lib in repo.libs:
         if lib.check_repo(ignore):
@@ -2178,45 +2202,72 @@ def detect():
 
 # Generic config command
 @subcommand('config',
-    dict(name='var', help='Variable name. E.g. "target", "toolchain", "protocol"'),
+    dict(name='var', nargs='?', help='Variable name. E.g. "target", "toolchain", "protocol"'),
     dict(name='value', nargs='?', help='Value. Will show the currently set default value for a variable if not specified.'),
     dict(name=['-G', '--global'], dest='global_cfg', action='store_true', help='Use global settings, not local'),
     dict(name=['-U', '--unset'], dest='unset', action='store_true', help='Unset the specified variable.'),
+    dict(name=['-L', '--list'], dest='list_config', action='store_true', help='List mbed tool configuration. Not to be confused with compile configuration, e.g. "mbed compile --config".'),
     help='Tool configuration',
     description=(
         "Gets, sets or unsets mbed tool configuration options.\n"
         "Options can be global (via the --global switch) or local (per program)\n"
         "Global options are always overridden by local/program options.\n"
         "Currently supported options: target, toolchain, protocol, depth, cache"))
-def config_(var, value=None, global_cfg=False, unset=False):
+def config_(var=None, value=None, global_cfg=False, unset=False, list_config=False):
     name = var
     var = str(var).upper()
-
-    if global_cfg:
-        # Global configuration
+    
+    if list_config:
         g = Global()
-        if unset:
-            g.set_cfg(var, None)
-            action('Unset global %s' % name)
-        elif value:
-            g.set_cfg(var, value)
-            action('%s now set as global %s' % (value, name))
+        g_vars = g.list_cfg().items()
+        action("Global config:")
+        if g_vars:
+            for v in g_vars:
+                log("%s=%s\n" % (v[0], v[1]))
         else:
-            value = g.get_cfg(var)
-            action(('%s' % value) if value else 'No global %s set' % (name))
-    else:
-        # Find the root of the program
-        program = Program(os.getcwd())
-        with cd(program.path):
-            if unset:
-                program.set_cfg(var, None)
-                action('Unset default %s in program "%s"' % (name, program.name))
-            elif value:
-                program.set_cfg(var, value)
-                action('%s now set as default %s in program "%s"' % (value, name, program.name))
+            log("No global configuration is set\n")        
+        log("\n")
+
+        p = Program(os.getcwd())
+        action("Local config (%s):" % p.path)
+        if not p.is_cwd:
+            p_vars = p.list_cfg().items()
+            if p_vars:
+                for v in p_vars:
+                    log("%s=%s\n" % (v[0], v[1]))
             else:
-                value = program.get_cfg(var)
-                action(('%s' % value) if value else 'No default %s set in program "%s"' % (name, program.name))
+                log("No local configuration is set\n")
+        else:
+            log("Couldn't find valid mbed program in %s" % p.path)
+
+    elif name:
+        if global_cfg:
+            # Global configuration
+            g = Global()
+            if unset:
+                g.set_cfg(var, None)
+                action('Unset global %s' % name)
+            elif value:
+                g.set_cfg(var, value)
+                action('%s now set as global %s' % (value, name))
+            else:
+                value = g.get_cfg(var)
+                action(('%s' % value) if value else 'No global %s set' % (name))
+        else:
+            # Find the root of the program
+            program = Program(os.getcwd())
+            with cd(program.path):
+                if unset:
+                    program.set_cfg(var, None)
+                    action('Unset default %s in program "%s"' % (name, program.name))
+                elif value:
+                    program.set_cfg(var, value)
+                    action('%s now set as default %s in program "%s"' % (value, name, program.name))
+                else:
+                    value = program.get_cfg(var)
+                    action(('%s' % value) if value else 'No default %s set in program "%s"' % (name, program.name))
+    else:
+        subcommands['config'].error("too few arguments")
 
 
 # Build system and exporters
@@ -2264,7 +2315,7 @@ def main():
         sys.exit(1)
 
     if '--version' in sys.argv:
-        print ver
+        log(ver)
         sys.exit(0)
 
     pargs, remainder = parser.parse_known_args()
