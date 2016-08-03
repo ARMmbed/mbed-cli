@@ -199,7 +199,7 @@ def pquery(command, stdin=None, **kwargs):
     stdout, _ = proc.communicate(stdin)
 
     if very_verbose:
-        log(str(stdout).strip())
+        log(str(stdout).strip()+"\n")
 
     if proc.returncode != 0:
         raise ProcessException(proc.returncode, command[0], ' '.join(command), os.getcwd())
@@ -1923,7 +1923,7 @@ def sync(recursive=True, keep_refs=False, top=True):
         "View the dependency tree of the current program or library."))
 def list_(detailed=False, prefix='', p_path=None, ignore=False):
     repo = Repo.fromrepo()
-    log(prefix + (relpath(p_path, repo.path) if p_path else repo.name), '(%s)' % ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if detailed else str(repo.rev)[:12]) or 'no revision'))
+    log("%s (%s)\n" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), (repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if detailed else str(repo.rev)[:12]) or 'no revision'))
 
     for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.path)):
         if prefix:
@@ -1947,7 +1947,7 @@ def status_(ignore=False):
     repo = Repo.fromrepo()
     if repo.dirty():
         action("Status for \"%s\":" % repo.name)
-        log(repo.status())
+        log(repo.status()+"\n")
 
     for lib in repo.libs:
         if lib.check_repo(ignore):
@@ -2238,7 +2238,7 @@ def config_(var=None, value=None, global_cfg=False, unset=False, list_config=Fal
             else:
                 log("No local configuration is set\n")
         else:
-            log("Couldn't find valid mbed program in %s" % p.path)
+            log("Couldn't find valid mbed program in %s\n" % p.path)
 
     elif name:
         if global_cfg:
@@ -2315,7 +2315,7 @@ def main():
         sys.exit(1)
 
     if '--version' in sys.argv:
-        log(ver)
+        log(ver+"\n")
         sys.exit(0)
 
     pargs, remainder = parser.parse_known_args()
