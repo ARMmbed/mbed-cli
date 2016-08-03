@@ -1705,6 +1705,9 @@ def publish(all_refs=None, msg=None, top=True):
         if outgoing > 0:
             action("Pushing local repository \"%s\" to remote \"%s\"" % (repo.name, repo.url))
             repo.publish(all_refs)
+        else:
+            if top:
+                action("Nothing to publish to the remote repository (the source tree is unmodified)")            
     except ProcessException as e:
         if e[0] != 1:
             raise e
