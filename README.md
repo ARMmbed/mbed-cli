@@ -52,7 +52,7 @@ But mbed CLI goes much further than the basic workflow. To support long-term dev
 
 ## Installation
 
-mbed CLImbed CLI is supported on Windows, Linux and Mac OS X. We're keen to learn about your experience with mbed CLI on other operating systems at the [mbed CLI development page](https://github.com/ARMmbed/mbed-cli).
+mbed CLI is supported on Windows, Linux and Mac OS X. We're keen to learn about your experience with mbed CLI on other operating systems at the [mbed CLI development page](https://github.com/ARMmbed/mbed-cli).
 
 ### Requirements
 
@@ -65,7 +65,7 @@ mbed CLImbed CLI is supported on Windows, Linux and Mac OS X. We're keen to lear
     <span class="tips">**Note:** The directories of Git and Mercurial executables (`git` and `hg`) need to be in your system's PATH.</span>
 
 * **Command-line compiler or IDE Toolchain** - mbed CLI invokes the [mbed OS 5](https://github.com/ARMmbed/mbed-os) tools for various features, like compiling, testing and exporting to industry standard toolchains. To compile your code, you will need either of these:
-    * Compilers: GCC ARM, ARMCC 5, IAR
+    * Compilers: GCC ARM, ARM Compiler 5, IAR
     * Toolchains: Keil uVision, DS-5, IAR Workbench
 
 ### Installing mbed CLI
@@ -299,7 +299,7 @@ Image: .build/K64F/GCC_ARM/mbed-os-program.bin
 The arguments for *compile* are:
 
 * `-m <MCU>` to select a target.
-* `-t <TOOLCHAIN>` to select a toolchain (of those defined in `mbed_settings.py`, see above). The value can be either `ARM` (armcc compiler), `GCC_ARM` (GNU ARM Embedded), or `IAR` (IAR Embedded Workbench for ARM).
+* `-t <TOOLCHAIN>` to select a toolchain (of those defined in `mbed_settings.py`, see above). The value can be either `ARM` (ARM Compiler 5), `GCC_ARM` (GNU ARM Embedded), or `IAR` (IAR Embedded Workbench for ARM).
 * `--source <SOURCE>` to select the source directory. The default is `.` (the current directorty). You can specify multiple source locations, even outside the program tree.
 * `--build <BUILD>` to select the build directory. Default: `.build/` inside your program.
 * `--library` to compile the code as a [static .a/.ar library](#compiling-static-libraries).
@@ -454,7 +454,7 @@ mbedgt: completed in 21.28 sec
 The arguments to `test` are:
 
 * `-m <MCU>` to select a target for the compilation.
-* `-t <TOOLCHAIN>` to select a toolchain (of those defined in `mbed_settings.py`, see above), where `toolchain` can be either `ARM` (armcc compiler), `GCC_ARM` (GNU ARM Embedded), or `IAR` (IAR Embedded Workbench for ARM).
+* `-t <TOOLCHAIN>` to select a toolchain (of those defined in `mbed_settings.py`, see above), where `toolchain` can be either `ARM` (ARM Compiler 5), `GCC_ARM` (GNU ARM Embedded), or `IAR` (IAR Embedded Workbench for ARM).
 * `--compile-list` to list all the tests that can be built. For example:
 	```
 	$ mbed test --compile-list
