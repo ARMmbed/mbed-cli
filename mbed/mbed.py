@@ -118,6 +118,7 @@ mbed_sdk_tools_url = 'https://mbed.org/users/mbed_official/code/mbed-sdk-tools'
 # verbose logging
 verbose = False
 very_verbose = False
+install_requirements = True
 
 # stores current working directory for recursive operations
 cwd_root = ""
@@ -1213,15 +1214,44 @@ class Program(object):
                 return os.path.join(path)
         return None
 
-    def get_env(self):
-        env = os.environ.copy()
-        env['PYTHONPATH'] = os.path.abspath(self.path)
-        compilers = ['ARM', 'GCC_ARM', 'IAR']
-        for c in compilers:
-            if self.get_cfg(c+'_PATH'):
-                env['MBED_'+c+'_PATH'] = self.get_cfg(c+'_PATH')
+    def check_requirements(self, show_warning=False):
+        req_path = self.get_requirements() or self.path
+        req_file = 'requirements.txt'
+        missing = []
+        try:
+            with open(os.path.join(req_path, req_file), 'r') as f:
+                import pip
+                installed_packages = [package.project_name.lower() for package in pip.get_installed_distributions(local_only=True)]
+                for line in f.read().splitlines():
+                    pkg = re.sub(r'^([\w-]+).*$', r'\1', line).lower()
+                    if not pkg in installed_packages:
+                        missing.append(pkg)
 
-        return env
+                if missing and install_requirements:
+                    try:
+                        action("Auto-installing missing Python modules...")
+                        pquery(['pip', 'install', '-q', '-r', os.path.join(req_path, req_file)])
+                        missing = []
+                    except ProcessException:
+                        warning("Unable to auto-install required Python modules.")
+                        pass
+
+        except (IOError, ImportError, OSError):
+            pass
+
+        if missing:
+            err = (
+                "-----------------------------------------------------------------\n"
+                "The mbed OS tools in this program require the following Python modules: %s\n"
+                "You can install all missing modules by running \"pip install -r %s\" in \"%s\"" % (', '.join(missing), req_file, req_path))
+            if os.name == 'posix':
+                err += "\nOn Posix systems (Linux, Mac, etc) you might have to switch to superuser account or use \"sudo\""
+
+            if show_warning:
+                warning(err)
+            else:
+                error(err, 1)
+
 
     # Routines after cloning mbed-os
     def post_action(self):
@@ -1239,29 +1269,7 @@ class Program(object):
                 os.path.isfile(os.path.join(mbed_tools_path, 'default_settings.py'))):
             shutil.copy(os.path.join(mbed_tools_path, 'default_settings.py'), os.path.join(self.path, 'mbed_settings.py'))
 
-        req_path = self.get_requirements() or self.path
-        req_file = 'requirements.txt'
-        missing = []
-        try:
-            with open(os.path.join(os.path.join(req_path, req_file)), 'r') as f:
-                import pip
-                installed_packages = [package.project_name.lower() for package in pip.get_installed_distributions()]
-                for line in f.read().splitlines():
-                    pkg = re.sub(r'^([\w-]+).*$', r'\1', line).lower()
-                    if not pkg in installed_packages:
-                        missing.append(pkg)
-        except IOError:
-            pass
-        except ImportError:
-            pass
-
-        if len(missing):
-            warning(
-                "-----------------------------------------------------------------\n"
-                "The mbed build tools in this program require Python modules that are not installed.\n"
-                "This might prevent compiling code or exporting to IDEs and other toolchains.\n"
-                "The missing Python modules are: %s\n"
-                "You can install all missing modules by running \"pip install -r %s\" in \"%s\"" % (', '.join(missing), req_file, req_path))
+        self.check_requirements(True)
 
     def add_tools(self, path):
         if not os.path.exists(path):
@@ -1281,8 +1289,18 @@ class Program(object):
     def get_tools(self):
         mbed_tools_path = self.get_tools_dir()
         if not mbed_tools_path:
-            error('The mbed tools were not found in "%s". \n Run `mbed deploy` to install dependencies and tools. ' % self.path, -1)
+            error('The mbed tools were not found in "%s". \nRun `mbed deploy` to install dependencies and tools. ' % self.path, -1)
         return mbed_tools_path
+
+    def get_env(self):
+        env = os.environ.copy()
+        env['PYTHONPATH'] = os.path.abspath(self.path)
+        compilers = ['ARM', 'GCC_ARM', 'IAR']
+        for c in compilers:
+            if self.get_cfg(c+'_PATH'):
+                env['MBED_'+c+'_PATH'] = self.get_cfg(c+'_PATH')
+
+        return env
 
     def get_target(self, target=None):
         target_cfg = self.get_cfg('TARGET')
@@ -1976,6 +1994,7 @@ def compile_(toolchain=None, target=None, options=False, compile_library=False, 
     args = remainder
     # Find the root of the program
     program = Program(os.getcwd(), True)
+    program.check_requirements()
     # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
     orig_path = os.getcwd()
 
@@ -2065,6 +2084,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
     args = remainder
     # Find the root of the program
     program = Program(os.getcwd(), True)
+    program.check_requirements()
     # Save original working directory
     orig_path = os.getcwd()
 
@@ -2150,6 +2170,7 @@ def export(ide=None, target=None, source=False, clean=False, supported=False):
     args = remainder
     # Find the root of the program
     program = Program(os.getcwd(), True)
+    program.check_requirements()
     # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
     orig_path = os.getcwd()
     # Change directories to the program root to use mbed OS tools
@@ -2193,6 +2214,7 @@ def detect():
     args = remainder
     # Find the root of the program
     program = Program(os.getcwd(), True)
+    program.check_requirements()
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
         tools_dir = program.get_tools()
