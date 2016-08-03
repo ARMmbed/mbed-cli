@@ -1957,7 +1957,7 @@ def status_(ignore=False):
 
 # Compile command which invokes the mbed OS native build system
 @subcommand('compile',
-    dict(name=['-t', '--toolchain'], help='Compile toolchain. Example: ARM, uARM, GCC_ARM, IAR'),
+    dict(name=['-t', '--toolchain'], help='Compile toolchain. Example: ARM, GCC_ARM, IAR'),
     dict(name=['-m', '--mcu'], help='Compile target. Example: K64F, NUCLEO_F401RE, NRF51822...'),
     dict(name='--library', dest='compile_library', action='store_true', help='Compile the current program or library as a static library.'),
     dict(name='--config', dest='compile_config', action='store_true', help='Show run-time compile configuration'),
@@ -2041,7 +2041,7 @@ def compile_(toolchain=None, mcu=None, source=False, build=False, compile_librar
 
 # Test command
 @subcommand('test',
-    dict(name=['-t', '--toolchain'], help='Compile toolchain. Example: ARM, uARM, GCC_ARM, IAR'),
+    dict(name=['-t', '--toolchain'], help='Compile toolchain. Example: ARM, GCC_ARM, IAR'),
     dict(name=['-m', '--mcu'], help='Compile target. Example: K64F, NUCLEO_F401RE, NRF51822...'),
     dict(name='--compile-list', dest='compile_list', action='store_true', help='List all tests that can be built'),
     dict(name='--run-list', dest='run_list', action='store_true', help='List all built tests that can be ran'),
@@ -2285,7 +2285,7 @@ def target_(name=None, global_cfg=False, supported=False):
     return config_('target', name, global_cfg=global_cfg)
 
 @subcommand('toolchain',
-    dict(name='name', nargs='?', help='Default toolchain name. Example: ARM, uARM, GCC_ARM, IAR'),
+    dict(name='name', nargs='?', help='Default toolchain name. Example: ARM, GCC_ARM, IAR'),
     dict(name=['-G', '--global'], dest='global_cfg', action='store_true', help='Use global settings, not local'),
     dict(name=['-S', '--supported'], dest='supported', action='store_true', help='Shows supported matrix of targets and toolchains'),
     help='Set or get default toolchain\n\n',
