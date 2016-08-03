@@ -1994,7 +1994,7 @@ def compile_(toolchain=None, target=None, options=False, compile_library=False, 
     args = remainder
     # Find the root of the program
     program = Program(os.getcwd(), True)
-    program.check_requirements()
+    program.check_requirements(True)
     # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
     orig_path = os.getcwd()
 
@@ -2084,7 +2084,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
     args = remainder
     # Find the root of the program
     program = Program(os.getcwd(), True)
-    program.check_requirements()
+    program.check_requirements(True)
     # Save original working directory
     orig_path = os.getcwd()
 
@@ -2170,7 +2170,7 @@ def export(ide=None, target=None, source=False, clean=False, supported=False):
     args = remainder
     # Find the root of the program
     program = Program(os.getcwd(), True)
-    program.check_requirements()
+    program.check_requirements(True)
     # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
     orig_path = os.getcwd()
     # Change directories to the program root to use mbed OS tools
@@ -2214,7 +2214,7 @@ def detect():
     args = remainder
     # Find the root of the program
     program = Program(os.getcwd(), True)
-    program.check_requirements()
+    program.check_requirements(True)
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
         tools_dir = program.get_tools()
