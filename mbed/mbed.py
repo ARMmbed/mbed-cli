@@ -124,25 +124,30 @@ cwd_root = ""
 
 
 # Logging and output
+def log(msg):
+    sys.stderr.write(msg)
+
 def message(msg):
     return "[mbed] %s\n" % msg
 
-def log(msg, level=1):
+def info(msg, level=1):
     if level <= 0 or verbose:
-        sys.stderr.write(message(msg))
+        for line in msg.splitlines():
+                log(message(line))
 
 def action(msg):
-    sys.stderr.write(message(msg))
+    for line in msg.splitlines():
+        log(message(line))
 
 def warning(msg):
     for line in msg.splitlines():
-        sys.stderr.write("[mbed] WARNING: %s\n" % line)
-    sys.stderr.write("---\n")
+        log("[mbed] WARNING: %s\n" % line)
+    log("---\n")
 
 def error(msg, code=-1):
     for line in msg.splitlines():
-        sys.stderr.write("[mbed] ERROR: %s\n" % line)
-    sys.stderr.write("---\n")
+        log("[mbed] ERROR: %s\n" % line)
+    log("---\n")
     sys.exit(code)
 
 def progress_cursor():
@@ -164,7 +169,7 @@ class ProcessException(Exception):
 
 def popen(command, stdin=None, **kwargs):
     # print for debugging
-    log('Exec "'+' '.join(command)+'" in '+os.getcwd())
+    info('Exec "'+' '.join(command)+'" in '+os.getcwd())
     try:
         proc = subprocess.Popen(command, **kwargs)
     except OSError as e:
@@ -180,7 +185,7 @@ def popen(command, stdin=None, **kwargs):
 
 def pquery(command, stdin=None, **kwargs):
     if very_verbose:
-        log('Query "'+' '.join(command)+'" in '+os.getcwd())
+        info('Query "'+' '.join(command)+'" in '+os.getcwd())
     try:
         proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
     except OSError as e:
@@ -301,7 +306,7 @@ class Bld(object):
             error("Unable to fetch late mbed library revision")
 
         if rev != Bld.getrev():
-            log("Cleaning up library build folder")
+            info("Cleaning up library build folder")
             for fl in os.listdir('.'):
                 if not fl.startswith('.'):
                     if os.path.isfile(fl):
@@ -309,7 +314,7 @@ class Bld(object):
                     else:
                         shutil.rmtree(fl)
 
-            log("Checkout \"%s\" in %s" % (rev, os.path.basename(os.getcwd())))
+            info("Checkout \"%s\" in %s" % (rev, os.path.basename(os.getcwd())))
             arch_url = m.group(1) + '/archive/' + rev + '.zip'
             arch_dir = m.group(7) + '-' + rev
             try:
@@ -375,14 +380,14 @@ class Hg(object):
         popen([hg_cmd, 'clone', formaturl(url, protocol), name] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def add(dest):
-        log("Adding reference \"%s\"" % dest)
+        info("Adding reference \"%s\"" % dest)
         try:
             popen([hg_cmd, 'add', dest] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
         except ProcessException:
             pass
 
     def remove(dest):
-        log("Removing reference \"%s\" " % dest)
+        info("Removing reference \"%s\" " % dest)
         try:
             popen([hg_cmd, 'rm', '-f', dest] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
         except ProcessException:
@@ -395,19 +400,19 @@ class Hg(object):
         popen([hg_cmd, 'push'] + (['--new-branch'] if all_refs else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def fetch():
-        log("Fetching revisions from remote repository to \"%s\"" % os.path.basename(os.getcwd()))
+        info("Fetching revisions from remote repository to \"%s\"" % os.path.basename(os.getcwd()))
         popen([hg_cmd, 'pull'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def discard():
-        log("Discarding local changes in \"%s\"" % os.path.basename(os.getcwd()))
+        info("Discarding local changes in \"%s\"" % os.path.basename(os.getcwd()))
         popen([hg_cmd, 'update', '-C'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def checkout(rev, clean=False, clean_files=False):
-        log("Checkout \"%s\" in %s to %s" % (rev, os.path.basename(os.getcwd()), rev))
+        info("Checkout \"%s\" in %s to %s" % (rev, os.path.basename(os.getcwd()), rev))
         if clean_files:
             files = pquery([hg_cmd, 'status', '--no-status', '-ui']).splitlines()
             for f in files:
-                log("Remove untracked file \"%s\"" % f)
+                info("Remove untracked file \"%s\"" % f)
                 os.remove(f)
         popen([hg_cmd, 'update'] + (['-C'] if clean else []) + (['-r', rev] if rev else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
@@ -544,14 +549,14 @@ class Git(object):
         popen([git_cmd, 'clone', formaturl(url, protocol), name] + (['--depth', depth] if depth else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def add(dest):
-        log("Adding reference "+dest)
+        info("Adding reference "+dest)
         try:
             popen([git_cmd, 'add', dest] + (['-v'] if very_verbose else []))
         except ProcessException:
             pass
 
     def remove(dest):
-        log("Removing reference "+dest)
+        info("Removing reference "+dest)
         try:
             popen([git_cmd, 'rm', '-f', dest] + ([] if very_verbose else ['-q']))
         except ProcessException:
@@ -576,29 +581,29 @@ class Git(object):
                     error(err+"Working set is not on a branch.", 1)
 
     def fetch():
-        log("Fetching revisions from remote repository to \"%s\"" % os.path.basename(os.getcwd()))
+        info("Fetching revisions from remote repository to \"%s\"" % os.path.basename(os.getcwd()))
         popen([git_cmd, 'fetch', '--all', '--tags'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def discard(clean_files=False):
-        log("Discarding local changes in \"%s\"" % os.path.basename(os.getcwd()))
+        info("Discarding local changes in \"%s\"" % os.path.basename(os.getcwd()))
         pquery([git_cmd, 'reset', 'HEAD'] + ([] if very_verbose else ['-q'])) # unmarks files for commit
         pquery([git_cmd, 'checkout', '.'] + ([] if very_verbose else ['-q'])) # undo  modified files
         pquery([git_cmd, 'clean', '-fd'] + (['-x'] if clean_files else []) + (['-q'] if very_verbose else ['-q'])) # cleans up untracked files and folders
 
     def merge(dest):
-        log("Merging \"%s\" with \"%s\"" % (os.path.basename(os.getcwd()), dest))
+        info("Merging \"%s\" with \"%s\"" % (os.path.basename(os.getcwd()), dest))
         popen([git_cmd, 'merge', dest] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def checkout(rev, clean=False):
         if not rev:
             return
-        log("Checkout \"%s\" in %s to %s" % (rev, os.path.basename(os.getcwd()), rev))
+        info("Checkout \"%s\" in %s to %s" % (rev, os.path.basename(os.getcwd()), rev))
         popen([git_cmd, 'checkout', rev] + (['-f'] if clean else []) + ([] if very_verbose else ['-q']))
         if Git.isdetached(): # try to find associated refs to avoid detached state
             refs = Git.getrefs(rev)
             for ref in refs: # re-associate with a local or remote branch (rev is the same)
                 branch = re.sub(r'^(.*?)\/(.*?)$', r'\2', ref)
-                log("Revision \"%s\" matches a branch \"%s\" reference. Re-associating with branch" % (rev, branch))
+                info("Revision \"%s\" matches a branch \"%s\" reference. Re-associating with branch" % (rev, branch))
                 popen([git_cmd, 'checkout', branch] + ([] if very_verbose else ['-q']))
                 break
 
@@ -620,9 +625,9 @@ class Git(object):
             else:
                 err = "Unable to update \"%s\" in \"%s\".\n" % (os.path.basename(os.getcwd()), os.getcwd())
                 if not remote:
-                    log(err+"The local repository is not associated with a remote one.")
+                    info(err+"The local repository is not associated with a remote one.")
                 if not branch:
-                    log(err+"Working set is not on a branch.")
+                    info(err+"Working set is not on a branch.")
 
     def status():
         return pquery([git_cmd, 'status', '-s'] + (['-v'] if very_verbose else []))
@@ -972,16 +977,16 @@ class Repo(object):
 
             # Try to clone with cache ref first
             if cache and not os.path.isdir(path):
-                log("Found matching cached repository in \"%s\"" % cache)
+                info("Found matching cached repository in \"%s\"" % cache)
                 try:
                     if os.path.split(path)[0] and not os.path.isdir(os.path.split(path)[0]):
                         os.makedirs(os.path.split(path)[0])
 
-                    log("Carbon copy from \"%s\" to \"%s\"" % (cache, path))
+                    info("Carbon copy from \"%s\" to \"%s\"" % (cache, path))
                     shutil.copytree(cache, path)
 
                     with cd(path):
-                        log("Update cached copy from remote repository")
+                        info("Update cached copy from remote repository")
                         scm.update(rev, True)
                         main = False
                 except (ProcessException, IOError):
@@ -2268,7 +2273,7 @@ def main():
     try:
         very_verbose = pargs.very_verbose
         verbose = very_verbose or pargs.verbose
-        log('Working path \"%s\" (%s)' % (os.getcwd(), Repo.pathtype(cwd_root)))
+        info('Working path \"%s\" (%s)' % (os.getcwd(), Repo.pathtype(cwd_root)))
         status = pargs.command(pargs)
     except ProcessException as e:
         error(
@@ -2282,7 +2287,7 @@ def main():
         else:
             error('OS Error: %s' % e[1], e[0])
     except KeyboardInterrupt as e:
-        log('User aborted!', -1)
+        info('User aborted!', -1)
         sys.exit(255)
     except Exception as e:
         if very_verbose:
