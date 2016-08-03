@@ -1,10 +1,11 @@
-# Introduction
+## Introduction
 
 *mbed CLI* is the name of the ARM mbed command line tool, packaged as mbed-cli, which enables the full mbed workflow: repositories version control, maintaining dependencies, publishing code, updating from remotely hosted repositories (GitHub, GitLab and mbed.org), and invoking ARM mbed's own build system and export functions, among other operations.
 
-This document covers the installation and usage of *mbed CLI*.
+This document covers the installation and usage of mbed CLI.
 
 ## Table of Contents
+
 1. [Requirements](#requirements)
 1. [Installing and uninstalling](#installing-mbed-cli)
 1. [Working context and command help](#working-context)
@@ -36,80 +37,96 @@ This document covers the installation and usage of *mbed CLI*.
   4. [Test directory structure](#test-directory-structure)
 1. [mbed CLI configuration](#mbed-cli-configuration)
 
+## Using mbed CLI
+
+The basic workflow for mbed CLI is to:
+
+1. Initialize a new repository, for either a new application (or library) or an imported one. In both cases, this action also brings in the mbed OS codebase.
+1. Build the application code.
+1. Test your build.
+1. Publish your application.
+
+But mbed CLI goes much further than the basic workflow. To support long-term development, mbed CLI offers nuanced source control, including selective updates of libraries and the code base, support for multiple toolchains, and manual configuration of the system.
+
+<span class="tips">**Tip:** mbed CLI help: To list all mbed CLI commands, use `mbed --help`. A detailed command-specific help is available by using `mbed <command> --help`.</span>
+
 ## Installation
 
-*mbed CLI* is supported on Windows, Linux and Mac OSX. We're keen to learn about your experience with *mbed CLI* on other operating systems at the [mbed CLI development page](https://github.com/ARMmbed/mbed-cli).
+mbed CLI is supported on Windows, Linux and Mac OS X. We're keen to learn about your experience with mbed CLI on other operating systems at the [mbed CLI development page](https://github.com/ARMmbed/mbed-cli).
 
 ### Requirements
 
-* **Python** - mbed CLI* is a Python script, so you'll need Python installed in order to use it. *mbed CLI* was tested with [version 2.7 of Python](https://www.python.org/download/releases/2.7/).
+* **Python** - mbed CLI is a Python script, so you'll need Python in order to use it. mbed CLI was tested with [version 2.7 of Python](https://www.python.org/download/releases/2.7/).
 
-* **Git and Mercurial** - mbed CLI* supports both Git and Mercurial repositories, so you'll need to install both:
+* **Git and Mercurial** - mbed CLI supports both Git and Mercurial repositories, so you'll need to install both:
     * [Git](https://git-scm.com/).
     * [Mercurial](https://www.mercurial-scm.org/).
 
     <span class="tips">**Note:** The directories of Git and Mercurial executables (`git` and `hg`) need to be in your system's PATH.</span>
 
-* **Command-line compiler or IDE Toolchain** - *mbed CLI* invokes the [mbed OS 5.0](https://github.com/ARMmbed/mbed-os) tools for various features - compiling, testing, exporting to industry standard toolchains. To compile your code, you would need either of these:
-    * Compilers: GCC ARM, ARMCC 5, IAR
+* **Command-line compiler or IDE Toolchain** - mbed CLI invokes the [mbed OS 5](https://github.com/ARMmbed/mbed-os) tools for various features, like compiling, testing and exporting to industry standard toolchains. To compile your code, you will need either of these:
+    * Compilers: GCC ARM, ARM Compiler 5, IAR
     * Toolchains: Keil uVision, DS-5, IAR Workbench
 
 ### Installing mbed CLI
 
-You can get the latest stable version of *mbed CLI* via PyPI by running:
+You can get the latest stable version of mbed CLI through PyPI, by running:
 
 ```
 $ pip install mbed-cli
 ```
 
-On Linux/Mac, you may need to run with `sudo`.
+On Linux or Mac, you may need to run with `sudo`.
 
-Alternatively you get the development version of *mbed CLI* by cloning the development repository [https://github.com/ARMmbed/mbed-cli](https://github.com/ARMmbed/mbed-cli):
+Alternatively, you can get the development version of mbed CLI by cloning the development repository [https://github.com/ARMmbed/mbed-cli](https://github.com/ARMmbed/mbed-cli):
 
-  `$ git clone https://github.com/ARMmbed/mbed-cli`
+```
+$ git clone https://github.com/ARMmbed/mbed-cli
+```
 
-  Once cloned you can install *mbed CLI* as a python package:
+Once cloned, you can install mbed CLI as a python package:
 
-  `$ python setup.py install` (on Linux/Mac, you may need to run with `sudo` as well)
+ ```
+$ python setup.py install
+```
 
-<span class="tips">**Note:** *mbed CLI* is compatible with [Virtual Python Environment (virtualenv)](https://pypi.python.org/pypi/virtualenv). You can read more about isolated Python virtual environments [here](http://docs.python-guide.org/en/latest/).</span>
+On Linux or Mac, you may need to run with `sudo`.
+
+<span class="tips">**Note:** mbed CLI is compatible with [Virtual Python Environment (virtualenv)](https://pypi.python.org/pypi/virtualenv). You can read more about isolated Python virtual environments [here](http://docs.python-guide.org/en/latest/).</span>
 
 ### Uninstalling mbed CLI
 
-To uninstall *mbed CLI*, simply run:
+To uninstall mbed CLI, simply run:
 
 ```
 pip uninstall mbed-cli
 ```
 
-## Using mbed CLI
+## Before you begin: understanding the working context and program root
 
-### Working context 
 
-*mbed CLI* uses the current directory as a working context, in a similar way to Git, Mercurial and many other command-line tools. This means that before calling any *mbed CLI* command, you should first change to a working directory of choice. For example:
+mbed CLI uses the current directory as a working context, in a similar way to Git, Mercurial and many other command-line tools. This means that before calling any mbed CLI command, you must first change to the directory containing the code you want to act on. For example, if you want to update the mbed OS sources in your ``mbed-example-program`` directory:
+
 ```
 $ cd mbed-example-program
 $ cd mbed-os
 $ mbed update master   # This will update "mbed-os", not "my-program"
 ```
 
-Various *mbed CLI* features require a program root, which whenever possible should be under version control - either [Git](https://git-scm.com/) or [Mercurial](https://www.mercurial-scm.org/). This makes it possible to seamlessly switch between revisions of the whole program and its libraries, control the program history, synchronize the program with remote repositories, share it with others, etc. Version control is also the primary and preferred delivery mechanism for mbed OS source code, which allows everyone to contribute to mbed OS!
+Various mbed CLI features require a program root, which whenever possible should be under version control - either [Git](https://git-scm.com/) or [Mercurial](https://www.mercurial-scm.org/). This makes it possible to seamlessly switch between revisions of the whole program and its libraries, control the program history, synchronize the program with remote repositories, share it with others, and so on. Version control is also the primary and preferred delivery mechanism for mbed OS source code, which allows everyone to contribute to mbed OS.
 
-<span class="warnings">**Warning**: *mbed CLI* stores information about libraries and dependencies in reference files that use the `.lib` extension (e.g. `lib_name.lib`). While these files are human-readable, we *strongly* advise that you don't edit these manually and let *mbed CLI* manage them instead.</span>
+<span class="warnings">**Warning**: mbed CLI stores information about libraries and dependencies in reference files that use the `.lib` extension (like `lib_name.lib`). While these files are human-readable, we *strongly* advise that you don't edit these manually - let mbed CLI manage them instead.</span>
 
-### mbed CLI help
 
-To list all *mbed CLI* commands use `mbed --help`. A detailed command-specific help is available via `mbed <command> --help`. 
+## Creating and importing programs
 
-### Creating and importing programs
+mbed CLI can create and import programs based on both mbed OS 2 and mbed OS 5.
 
-*mbed CLI* can create and import both mbed 2.0 and mbed OS 5.0 based programs.
+### Creating a new program for mbed OS 5
 
-#### Creating a new program
+When you create a new program, mbed CLI automatically imports the latest [mbed OS release](https://github.com/ARMmbed/mbed-os/). Each release includes all the components: code, build tools and desktop IDE project generators. 
 
-When you create a new program, *mbed CLI* automatically imports the latest [mbed OS release](https://github.com/ARMmbed/mbed-os/). This represents a **release** of mbed OS and will pull in all the components, including its build tools and desktop IDE project generators. 
-
-With this in mind, these are the steps for creating a new program (we'll call it `mbed-os-program`):
+With this in mind, let's create a new program (we'll call it `mbed-os-program`):
 
 ```
 $ mbed new mbed-os-program
@@ -117,7 +134,9 @@ $ mbed new mbed-os-program
 
 This creates a new folder "mbed-os-program", initializes a new repository and imports the latest revision of the mbed-os dependency to your program tree.
 
-Use `mbed ls` to list all imported libraries to your program.
+<span class="tips">**Tip:** You can control which source control management is used, or prevent source control management initialization, by using `--scm [name|none]` option.</span>
+
+Use `mbed ls` to list all the libraries imported to your program:
 
 ```
 $ cd mbed-os-program
@@ -141,17 +160,20 @@ mbed-os-program (mbed-os-program#189949915b9c)
    `- frameworks\unity (14fd303f30f9)
 ```
 
-<span class="notes">**Note**: If you want to start from an existing folder in your workspace, you can simply use `mbed new .`, which will initialize an mbed program and also initialize a new Git or Mercurial repository in that folder. You can control which source control management is used or prevent source control management initialization via `--scm [name|none]` option.</span>
+<span class="notes">**Note**: If you want to start from an existing folder in your workspace, you can simply use `mbed new .`, which will initialize an mbed program, as well as a new Git or Mercurial repository in that folder. </span>
 
-*mbed CLI* is also compatible with mbed 2.0 programs based on the [mbed library](https://mbed.org/users/mbed_official/code/mbed/) and will automatically import the latest [mbed library release](https://mbed.org/users/mbed_official/code/mbed/) if `--mbedlib` option is specified e.g.
+### Creating a new program for mbed OS 2
+
+mbed CLI is also compatible with mbed OS 2 programs based on the [mbed library](https://mbed.org/users/mbed_official/code/mbed/), and will automatically import the latest [mbed library release](https://mbed.org/users/mbed_official/code/mbed/) if you use the `--mbedlib` option:
+
 ```
 $ mbed new mbed-classic-program --mbedlib
 ```
+### Creating a new program without OS version selection
 
-You can create plain (empty) programs, without either mbed OS 5.0 or mbed 2.0  by adding the `--create-only` option.
+You can create plain (empty) programs, without either mbed OS 5 or mbed OS 2, by using the `--create-only` option.
 
-
-#### Importing an existing program
+### Importing an existing program
 
 Use `mbed import` to clone an existing program and all its dependencies to your machine:
 
@@ -160,15 +182,14 @@ $ mbed import https://github.com/ARMmbed/mbed-blinky/
 $ cd mbed-blinky
 ```
 
-*mbed CLI* also supports programs based on the mbed 2.0, which are automatically detected and do not require additional options.
+mbed CLI also supports programs based on mbed OS 2, which are automatically detected and do not require additional options:
 
 ```
 $ mbed import https://developer.mbed.org/teams/mbed/code/mbed_blinky/
 $ cd mbed_blinky
 ```
 
-
-#### Importing from git/hg clone
+### Importing from a Git or GitHub clone
 
 If you have manually cloned a git repository into your workspace and you want to add all missing libraries, then you can use the `deploy` command:
 
@@ -180,18 +201,22 @@ $ mbed deploy
 ...
 ```
 
-Don't forget to set the current directory as a root of your program:
+Don't forget to set the current directory as the root of your program:
 
 ```
 $ mbed new .
 ```
 
+## Adding and removing libraries
 
-### Adding and removing libraries
+While working on your code, you might need to add another library (dependency) to your application, or remove existing libraries. 
 
-While working on your code, you might need to add another library (dependency) to your application, or remove existing libraries.
+The mbed CLI add and remove features aren't simply built-in versions of ``hg``, ``git`` and ``rm``; their functionality is tailored to the way mbed OS and mbed CLI work:
 
-#### Adding a library
+* Adding a new library to your program is not the same as just cloning the repository. Don't clone a library using `hg` or `git`; use `mbed add` to add the library. This ensures that all dependencies - libraries or sub-libraries - are populated as well.
+* Removing a library from your program is not the same as deleting the library directory - there are library reference files that will need updating or cleaning. Use `mbed remove` to remove the library, don't simply remove its directory with 'rm'.
+
+### Adding a library
 
 Use `mbed add` to add the latest revision of a library:
 
@@ -207,190 +232,37 @@ $ mbed add https://developer.mbed.org/users/wim/code/TextLCD/#e5a0dcb43ecc
 
 ___Specifying a destination directory___
 
-You can give an additional argument to `add` to specify the directory in which you want to add your library. For example, If you'd rather add the previous library in a directory called "text-lcd" (instead of TextLCD):
+If you want to specify a directory to which to add your library, you can give an additional argument to ``add`` which names that directory. For example, If you'd rather add the previous library in a directory called "text-lcd" (instead of TextLCD):
 
 ```
 $ mbed add https://developer.mbed.org/users/wim/code/TextLCD/ text-lcd
 ```
 
-Note that add a library with a different name than the name of the repository is not encouraged, since it can easily lead to confusion.
+While mbed CLI supports this functionality, we don't encourage it - adding a library with a name that differs from its source repository can easily lead to confusion.
 
-<span class="notes">**Note**: Adding a new library to your program is not the same as just cloning the repository. Don't clone a library using `hg` or `git`; use `mbed add` to add the library as it will ensure that all dependencies - libraries or sub-libraries - are populated as well</span>
+### Removing a library
 
-
-#### Removing a library
-
-If at any point you decide that you don't need a library anymore, you can use `mbed remove` with the path of the library:
+If at any point you decide that you don't need a library any more, you can use `mbed remove` with the path of the library:
 
 ```
 $ mbed remove text-lcd
 ```
+## Compiling code
 
-<span class="notes">**Note**: Removing a library from your program is not the same as deleting the library directory - there are library reference files that would need updating or cleaning. Use `mbed remove` to remove the library, don't simply remove its directory with 'rm'.</span>
+### Toolchain selection
 
+After importing a program or creating a new one, you need to tell mbed CLI where to find the toolchains that you want to use for compiling your source tree. mbed CLI gets this information from a file named `mbed_settings.py`, which is automatically created at the top of your cloned repository (if it doesn't already exist). 
 
-### Updating programs and libraries
-
-#### Synchronizing library references
-
-Before triggering an update you might want to synchronize any changes that you've made to the program structure by running ``mbed sync``, which will update the necessary library references and get rid of the invalid ones.
-
-#### Update scenarios
-
-There are two main scenarios when updating:
-* Update to a *moving* revision, e.g. the tip of a branch
-* Update to a *specific* revision that is identified by revision hash or tag name
-
-Each scenario has two cases:
-* Update with local uncommitted changes - *dirty* update
-* Update without local uncommitted changes - *clean* update
-
-#### Updating to an upstream version
-
-To update your program to another upstream version, go to the root folder of the program and run:
-
-```
-$ mbed update [branch|tag|revison]
-```
-
-This fetches new revisions from the remote repository, updates the program to the specified branch, tag or revision. If none of these is specified then it updates the latest revision in the current branch. These series of actions are performed recursively against all dependencies and sub-dependencies in the program tree.
-
-You can change the working directory to a library folder and use `mbed update` to update that library and its dependencies to a different revision than the one referenced in the parent program or library. This allows you to experiment with different versions of libraries/dependencies in the program tree without having to change the parent program or library.
-
-<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: This command will fail if there are changes in your program or library that will be overwritten as a result of running `update`. This is by design: *mbed CLI* does not run operations that would result in overwriting local changes that are not yet committed. If you get an error, take care of your local changes (commit or use one of the options below), then re-run `update`.</span>
-
-#### Update options
-
-<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: As with any *mbed CLI* command, `mbed update` uses the current directory as a working context, meaning that before calling `mbed update` you should first change your working directory to the one you want to update, e.g. `cd mbed-os`.</span>
-
-#### Update examples
-
-To help understand what options you can use with *mbed CLI*, check the examples below.
-
-**Case 1: I want to update a program or a library to the latest version in a specific or current branch**
-
-__I want to preserve my uncommitted changes__ 
-
-Run `mbed update [branch]`. You might have to commit or stash your changes if the source control tool (Git or Mercurial) throws an error that the update will overwrite local changes.
-
-__I want a clean update (and discard uncommitted changes)__
-
-Run `mbed update [branch] --clean`
-
-Specifying a branch to `mbed update` would only checkout that branch and won't automatically merge/fast-forward to the remote/upstream branch. You can run `mbed update` to merge (fast-forward) your local branch with the latest remote branch. On git you can do `git pull`
-
-<span style="background-color:#E6E6E6;border:1px solid #000;display:block; height:100%; padding:10px">**Note**: The `--clean` option tells *mbed CLI* to update that program or library and its dependencies, and discard all local changes. WARNING: This action cannot be undone. Use with caution.</span>
-
-**Case 2: I want to update a program or a library to a specific revision or a tag**
- 
-__I want to preserve my uncommitted changes__ 
-
-Run `mbed update <tag_name|revision>`. You might have to commit or stash your changes if they conflict with the latest revision.
-
-__I want a clean update (discard changes)__
-
-Run `mbed update <tag_name|revision> --clean`
-
-
-__When you have unpublished local libraries__
-
-There are 3 additional options that define how unpublished local libraries are handled:
-
-`mbed update --clean-deps` - update the current program or library and its dependencies, and discard all local unpublished repositories. Use this with caution as your local unpublished repositories cannot be restored unless you have a backup copy.
-
-`mbed update --clean-files` - update the current program or library and its dependencies, discard local uncommitted changes and remove any untracked or ignored files. Use this with caution as your local unpublished repositories cannot be restored unless you have a backup copy.
-
-`mbed update --ignore` - update the current program or library and its dependencies, and ignore any local unpublished libraries (they won't be deleted or modified, just ignored).
-
-__Combining update options__
-
-You can combine the options above for the following scenarios:
-
-`mbed update --clean --clean-deps --clean-files` - update the current program or library and its dependencies, remove all local unpublished libraries, discard local uncommitted changes, and remove all untracked or ignored files. This wipes every single change that you made in the source tree and restores the stock layout.
-
-`mbed update --clean --ignore` - update the current program or library and its dependencies, but ignore any local repositories. mbed CLI will update whatever it can from the public repositories.
-
-Use these with caution as your uncommitted changes and unpublished libraries cannot be restored.
-
-
-### Publishing your changes
-
-#### Checking status
-
-As you develop your program, you'll edit parts of it - either your own code or code in some of the libraries that it depends on. You can get the status of all the repositories in your program (recursively) by running `mbed status`. If a repository has uncommitted changes, this command will display these changes. Example:
-
-```
-[mbed] Status for "mbed-os-program":
- M main.cpp
- M mbed-os.lib
-?? gdb_log.txt
-?? test_spec.json
-
-[mbed] Status for "mbed-os":
- M tools/toolchains/arm.py
- M tools/toolchains/gcc.py
-
-[mbed] Status for "mbed-client-classic":
- M source/m2mtimerpimpl.cpp
-
-[mbed] Status for "mbed-mesh-api":
- M source/include/static_config.h
-```
-
-#### Pushing upstream
-
-To push the changes in your local tree upstream, run `mbed publish`. `publish` works recursively, pushing the leaf dependencies first, then updating the dependents and pushing them too. 
-
-This is best explained by an example. Let's assume that the list of dependencies of your program (obtained by running `mbed ls`) looks like this:
-
-```
-mbed-os-program (189949915b9c)
-`- mbed-os (e39199afa2da)
-   |- frameworks/greentea-client (571cfef17dd0)
-   |- frameworks/unity (7483099b9df1)
-   |- core (d1ec4beabef3)
-   |- mbedtls (bef26f687287)
-   |- net/coap-service (eae41d1df943)
-   |- net/mbed-client (5dc62d168aa4)
-   |- net/mbed-client-c (ce64d6a0bdef)
-   |- net/mbed-client-classic (abda3cef87f0)
-   |- net/mbed-client-mbed-tls (8c436e5d1109)
-   |- net/mbed-client-randlib (80f5c491dd4d)
-   |- net/mbed-mesh-api (8187d3d275cc)
-   |- net/mbed-trace (07ce2714915d)
-   |- net/nanostack-hal-mbed-cmsis-rtos (023fd8906ce7)
-   |- net/nanostack-libservice (f61c845e0c59)
-   |- net/sal-stack-nanostack-eventloop (c163be9183b0)
-   `- net/sal-stack-nanostack (cd18b5a50df4)
-```
-
-Furthermore, let's assume that you make changes to `mbed-mesh-api`. `publish` detects the change on the leaf `mbed-mesh-api` dependency and asks you to commit it. Then it detects that `mbed-os` depends on `mbed-mesh-api`, updates mbed-os' dependency on `mbed-mesh-api` to its latest version (by updating the `mbed-mesh-api.lib` file inside `mbed-os/net/`) and asks you to commit it. This propagates up to `mbed-os` and finally to your program `mbed-os-program`.
-
-#### Forking workflow
-
-Git enables asymmetric workflow where the publish/push repository might be different than the original ("origin") one. This allows new revisions to land in a fork repository, while maintaining association with the original repository.
-
-To achieve this, first import an mbed OS program or mbed OS itself and then associate the push remote with your fork, e.g:
-
-```
-$ git remote set-url --push origin https://github.com/screamerbg/repo-fork
-```
-
-Each time you `git` commit+push or use `mbed publish`, the new revisions will be pushed against you fork. You can fetch from the original repository using `mbed update` or `git pull`. If you explicitly want to fetch/pull from your fork, then you can use `git pull https://github.com/screamerbg/repo-fork [branch]`
-
-Through the workflow explained above, mbed CLI will maintain association to the original ("origin") repository to which you might want to send pull request to), and will record references with the revision hashes that you push to your fork. Until your pull request is accepted, all recorded references will be invalid, but once the PR is accepted all revision hashes from your fork will become part the original repository, thus all references will become valid.
-
-
-### Compiling code
-
-#### Toolchain selection
-
-After importing a program or creating a new one, you need to tell *mbed CLI* where to find the toolchains that you want to use for compiling your source tree. *mbed CLI* gets this information from a file named `mbed_settings.py`, which is automatically created at the top of your cloned repository (if it doesn't already exist). As a rule, since `mbed_settings.py` contains local settings (possibly relevant only to a single OS on a single machine), it should not be versioned. In this file:
+Edit `mbed_settings.py` to set your toolchain:
 
 * If you want to use the [ARM Compiler toolchain](https://developer.arm.com/products/software-development-tools/compilers/arm-compiler-5/downloads), set `ARM_PATH` to the *base* directory of your ARM Compiler installation (example: c:\software\armcc5.06). The recommended version of the ARM Compiler toolchain is 5.06.
-* If you want to use the [GCC ARM Embedded toolchain](https://launchpad.net/gcc-arm-embedded), set `GCC_ARM_PATH` to the *binary* directory of your GCC ARM installation (example: c:\software\GNUToolsARMEmbedded\4.82013q4\bin). Use versions 4.8 or 4.9 of GCC ARM Embedded, but version 5.0 or any version above might be incompatible with the tools.
+* If you want to use the [GCC ARM Embedded toolchain](https://launchpad.net/gcc-arm-embedded), set `GCC_ARM_PATH` to the *binary* directory of your GCC ARM installation (example: c:\software\GNUToolsARMEmbedded\4.82013q4\bin). Use versions 4.8 or 4.9 of GCC ARM Embedded; version 5.0 or any version above might be incompatible with the tools.
 
-#### Compiling your program
+<span class="tips">**Tips:** You can set more than one toolchain, and select between them for each build, as explained below.</span>
+
+As a rule, since `mbed_settings.py` contains local settings (possibly relevant only to a single OS on a single machine), it should not be versioned. 
+
+### Compiling your program
 
 Use the `mbed compile` command to compile your code:
 
@@ -424,34 +296,28 @@ Total Flash memory (text + data + misc): 66014 bytes
 Image: .build/K64F/GCC_ARM/mbed-os-program.bin
 ```
 
-The arguments to *compile* are:
+The arguments for *compile* are:
 
-* `-m <MCU>` to select a target
-* `-t <TOOLCHAIN>` to select a toolchain, where `toolchain` can be either `ARM` (armcc compiler), `GCC_ARM` (GNU ARM Embedded), or `IAR` (IAR Embedded Workbench for ARM)
-* `--source <SOURCE>` to select the source directory. Default is `.` (the current dir). You can specify multiple source locations, even outside the program tree
-* `--build <BUILD>` to select the build directory. Default: `.build/` inside your program
-* `--library` to compile the code as a [static .a/.ar library](#compiling-static-libraries)
-* `--config` to inspect the run-time compile configuration (see below)
-* `-S` or `--supported` shows supported matrix of targets and toolchains
-* `-c ` (optional): will build from scratch; a clean build or rebuild.
-* `-j <jobs>` (optional): control the compile threads on your machine. Default value is 0, which infer the number of threads from the number of cores on your machine. You can use `-j 1` to trigger sequential compile of source code..
-* `-v` or `--verbose` for verbose diagnostic output
-* `-vv` or `--very_verbose` for very verbose diagnostic output
+* `-m <MCU>` to select a target.
+* `-t <TOOLCHAIN>` to select a toolchain (of those defined in `mbed_settings.py`, see above). The value can be either `ARM` (ARM Compiler 5), `GCC_ARM` (GNU ARM Embedded), or `IAR` (IAR Embedded Workbench for ARM).
+* `--source <SOURCE>` to select the source directory. The default is `.` (the current directorty). You can specify multiple source locations, even outside the program tree.
+* `--build <BUILD>` to select the build directory. Default: `.build/` inside your program.
+* `--library` to compile the code as a [static .a/.ar library](#compiling-static-libraries).
+* `--config` to inspect the run-time compile configuration (see below).
+* `-S` or `--supported` shows a matrix of the supported targets and toolchains.
+* `-c ` (optional) to build from scratch; a clean build or rebuild.
+* `-j <jobs>` (optional) to control the compile threads on your machine. The default value is 0, which infers the number of threads from the number of cores on your machine. You can use `-j 1` to trigger a sequential compile of source code.
+* `-v` or `--verbose` for verbose diagnostic output.
+* `-vv` or `--very_verbose` for very verbose diagnostic output.
 
 The compiled binary, ELF image, memory usage and link statistics can be found in the `.build` subdirectory of your program.
 
+### Compiling static libraries
 
-#### Compiling static libraries
+You can build a static library of your code by adding the `--library` argument to `mbed compile`. A typical application for static libraries is when you want to build multiple applications from the same mbed-os codebase without having to recompile for every application. To achieve this:
 
-You can build a static library of your code by adding `--library` argument to `mbed compile`, for example:
-
-```
-$ mbed compile -t ARM -m K64F --library --source=mbed-os
-```
-
-A typical application for static libraries is when you want to build multiple applications from the same mbed-os codebase without having to recompile for every application. To achieve this:
-1. Build a static library for mbed-os
-2. Compile multiple applications or tests against the static library
+1. Build a static library for mbed-os.
+2. Compile multiple applications or tests against the static library:
 
 ```
 $ mbed compile -t ARM -m K64F --library --no-archive --source=mbed-os --build=../mbed-os-build
@@ -474,13 +340,13 @@ Elf2Bin: threaded_blinky
 Image: ../threaded_blinky-out/threaded_blinky.bin
 ```
 
-#### Compile configuration system
+### Compile configuration system
 
-The [compile configuration system](https://github.com/ARMmbed/mbed-os/blob/master/docs/config_system.md) provides a flexible mechanism for configuring the mbed program, its libraries and the build target. Refer to the previous link for more details about the configuration system.
+The [compile configuration system](https://docs.mbed.com/docs/mbed-os-handbook/en/5.1/advanced/config_system/) provides a flexible mechanism for configuring the mbed program, its libraries and the build target. Refer to the previous link for more details about the configuration system.
 
-#### Inspecting configuration
+___Inspecting the configuration___
 
-If the [compile configuration system](https://github.com/ARMmbed/mbed-os/blob/master/docs/config_system.md) is used by the program, the configuration can be displayed using `mbed compile --config`:
+If the program uses the [compile configuration system](https://github.com/ARMmbed/mbed-os/blob/master/docs/config_system.md), you can use `mbed compile --config` to view the configuration:
 
 ```
 $ mbed compile --config -t GCC_ARM -m K64F
@@ -505,7 +371,7 @@ $ mbed compile --config -t GCC_ARM -m K64F --prefix target
 $ mbed compile --config -t GCC_ARM -m K64F --prefix target --prefix app
 ```
 
-#### Compile-time customizations
+### Compile-time customizations
 
 ___Macros___
 
@@ -524,13 +390,14 @@ $ mbed compile -t GCC_ARM -m K64F -o debug-info
 <span class="tips">**Tip:** If you have files that you want to compile only in release mode, put them in a directory called `TARGET_RELEASE` at any level of your tree. If you have files that you want to compile only in debug mode, put them in a directory called `TARGET_DEBUG` at any level of your tree (then use `-o debug-info` as explained above).
 </span>
 
-#### Automating toolchain and target selection
+### Automating toolchain and target selection
 
 Using `mbed target <target>` and `mbed toolchain <toolchain>` you can set the default target and toolchain for your program, meaning you won't have to specify these every time you compile or generate IDE project files.
 
-### Exporting to desktop IDEs
 
-If you need to debug your code, a good way to do that is to export your source tree to an IDE project file, so that you can use the IDE's debugging facilities. Currently *mbed CLI* supports exporting to Keil uVision, DS-5, IAR Workbench, Simplicity Studio and other IDEs.
+## Exporting to desktop IDEs
+
+If you need to debug your code, a good way to do that is to export your source tree to an IDE project file, so that you can use the IDE's debugging facilities. Currently mbed CLI supports exporting to Keil uVision, DS-5, IAR Workbench, Simplicity Studio and other IDEs.
 
 For example, to export to uVision run:
 
@@ -540,7 +407,7 @@ $ mbed export -i uvision -m K64F
 
 A `.uvproj` file is created in the projectfiles/uvision folder. You can open the project file with uVision.
 
-### Testing
+## Testing
 
 Use the `mbed test` command to compile and run tests:
 
@@ -587,73 +454,43 @@ mbedgt: completed in 21.28 sec
 The arguments to `test` are:
 
 * `-m <MCU>` to select a target for the compilation.
-* `-t <TOOLCHAIN>` to select a toolchain, where `toolchain` can be either `ARM` (armcc compiler), `GCC_ARM` (GNU ARM Embedded), or `IAR` (IAR Embedded Workbench for ARM)
-* `--compile-list` to list all the tests that can be built
-* `--run-list` to list all the tests that can be ran (they must be built first)
-* `--compile` to only compile the tests
-* `--run` to only run the tests
-* `-n <TESTS_BY_NAME>` to limit the tests built or ran to a comma separated list (ex. test1,test2,test3)
-* `--source <SOURCE>` to select the source directory. Default is `.` (the current dir). You can specify multiple source locations, even outside the program tree.
-* `--build <BUILD>` to select the build directory. Default: `.build/ inside your program
-* `-c or --clean` to clean the build directory before compiling
-* `--test-spec <TEST_SPEC>` to set the path for the test spec file used when building and running tests (the default path is the build directory)
-* `-v` or `--verbose` for verbose diagnostic output
-* `-vv` or `--very_verbose` for very verbose diagnostic output
+* `-t <TOOLCHAIN>` to select a toolchain (of those defined in `mbed_settings.py`, see above), where `toolchain` can be either `ARM` (ARM Compiler 5), `GCC_ARM` (GNU ARM Embedded), or `IAR` (IAR Embedded Workbench for ARM).
+* `--compile-list` to list all the tests that can be built. For example:
+	```
+	$ mbed test --compile-list
+	Test Case:
+	    Name: TESTS-functional-test1
+	    Path: .\TESTS\functional\test1
+	Test Case:
+	    Name: TESTS-functional-test2
+	    Path: .\TESTS\functional\test2
+	Test Case:
+	    Name: TESTS-functional-test3
+	    Path: .\TESTS\functional\test3
+	```
+* `--run-list` to list all the tests that can be run (they must be built first). For example:
+	```
+	$ mbed test --run-list
+	mbedgt: test specification file '.\.build/tests\K64F\ARM\test_spec.json' (specified with --test-spec option)
+	mbedgt: using '.\.build/tests\K64F\ARM\test_spec.json' from current directory!
+	mbedgt: available tests for built 'K64F-ARM', location '.\.build/tests\K64F\ARM'
+     	   test 'TESTS-functional-test1'
+     	   test 'TESTS-functional-test2'
+     	   test 'TESTS-functional-test3'
+	```
+* `--compile` to only compile the tests. For example, `$ mbed test -m K64F -t GCC_ARM --compile`.
+* `--run` to only run the tests. For example, `$ mbed test -m K64F -t GCC_ARM --run`.
+* `-n <TESTS_BY_NAME>` to limit the tests built or run to those listed (by name) in a comma separated list. For example, `$ mbed test -m K64F -t GCC_ARM -n TESTS-functional-test1,TESTS-functional-test2`.
+* `--source <SOURCE>` to select the source directory. The default is `.` (the current directory). You can specify multiple source locations, even outside the program tree.
+* `--build <BUILD>` to select the build directory. Default: `.build/ inside your program.
+* `-c or --clean` to clean the build directory before compiling,
+* `--test-spec <TEST_SPEC>` to set the path for the test spec file used when building and running tests (the default path is the build directory).
+* `-v` or `--verbose` for verbose diagnostic output.
+* `-vv` or `--very_verbose` for very verbose diagnostic output.
 
 The compiled binaries and test artifacts can be found in the `.build/tests/<TARGET>/<TOOLCHAIN>` directory of your program.
 
-#### Finding available tests
-
-You can find the tests that are available for **building** by using the `--compile-list` option:
-
-```
-$ mbed test --compile-list
-Test Case:
-    Name: TESTS-functional-test1
-    Path: .\TESTS\functional\test1
-Test Case:
-    Name: TESTS-functional-test2
-    Path: .\TESTS\functional\test2
-Test Case:
-    Name: TESTS-functional-test3
-    Path: .\TESTS\functional\test3
-```
-
-You can find the tests that are available for **running** by using the `--run-list` option:
-
-```
-$ mbed test --run-list
-mbedgt: test specification file '.\.build/tests\K64F\ARM\test_spec.json' (specified with --test-spec option)
-mbedgt: using '.\.build/tests\K64F\ARM\test_spec.json' from current directory!
-mbedgt: available tests for built 'K64F-ARM', location '.\.build/tests\K64F\ARM'
-        test 'TESTS-functional-test1'
-        test 'TESTS-functional-test2'
-        test 'TESTS-functional-test3'
-```
-
-#### Change the test action
-
-You can specify to only **build** the tests by using the `--compile` option:
-
-```
-$ mbed test -m K64F -t GCC_ARM --compile
-```
-
-You can specify to only **run** the tests by using the `--run` option:
-
-```
-$ mbed test -m K64F -t GCC_ARM --run
-```
-
-#### Limiting the test scope
-
-You can limit the scope of the tests built and ran by using the `-n` option. This takes a comma separated list of test names as an argument:
-
-```
-$ mbed test -m K64F -t GCC_ARM -n TESTS-functional-test1,TESTS-functional-test2
-```
-
-#### Test directory structure
+### Test directory structure
 
 Test code exists in the following directory structure:
 
@@ -688,27 +525,182 @@ As shown above, tests exist inside ```TESTS\testgroup\testcase\``` directories. 
 
 <span class="notes">**Note:** This feature does not work in applications that contain a  ```main``` function that is outside of a `TESTS` directory.</span>
 
+## Publishing your changes
+
+### Checking status
+
+As you develop your program, you'll edit parts of it - either your own code or code in some of the libraries that it depends on. You can get the status of all the repositories in your program (recursively) by running `mbed status`. If a repository has uncommitted changes, this command will display these changes. 
+
+Here's an example:
+
+```
+[mbed] Status for "mbed-os-program":
+ M main.cpp
+ M mbed-os.lib
+?? gdb_log.txt
+?? test_spec.json
+
+[mbed] Status for "mbed-os":
+ M tools/toolchains/arm.py
+ M tools/toolchains/gcc.py
+
+[mbed] Status for "mbed-client-classic":
+ M source/m2mtimerpimpl.cpp
+
+[mbed] Status for "mbed-mesh-api":
+ M source/include/static_config.h
+```
+
+You can then commit or discard these changes.
+
+### Pushing upstream
+
+To push the changes in your local tree upstream, run `mbed publish`. `publish` works recursively, pushing the leaf dependencies first, then updating the dependents and pushing them too. 
+
+This is best explained by an example. Let's assume that the list of dependencies of your program (obtained by running `mbed ls`) looks like this:
+
+```
+mbed-os-program (189949915b9c)
+`- mbed-os (e39199afa2da)
+   |- frameworks/greentea-client (571cfef17dd0)
+   |- frameworks/unity (7483099b9df1)
+   |- core (d1ec4beabef3)
+   |- mbedtls (bef26f687287)
+   |- net/coap-service (eae41d1df943)
+   |- net/mbed-client (5dc62d168aa4)
+   |- net/mbed-client-c (ce64d6a0bdef)
+   |- net/mbed-client-classic (abda3cef87f0)
+   |- net/mbed-client-mbed-tls (8c436e5d1109)
+   |- net/mbed-client-randlib (80f5c491dd4d)
+   |- net/mbed-mesh-api (8187d3d275cc)
+   |- net/mbed-trace (07ce2714915d)
+   |- net/nanostack-hal-mbed-cmsis-rtos (023fd8906ce7)
+   |- net/nanostack-libservice (f61c845e0c59)
+   |- net/sal-stack-nanostack-eventloop (c163be9183b0)
+   `- net/sal-stack-nanostack (cd18b5a50df4)
+```
+
+Furthermore, let's assume that you make changes to `mbed-mesh-api`. `publish` detects the change on the leaf `mbed-mesh-api` dependency and asks you to commit it. Then it detects that `mbed-os` depends on `mbed-mesh-api`, updates the `mbed-os` dependency on `mbed-mesh-api` to its latest version (by updating the `mbed-mesh-api.lib` file inside `mbed-os/net/`) and asks you to commit it. This propagates up to `mbed-os` and finally to your program `mbed-os-program`.
+
+### Forking workflow
+
+Git enables asymmetric workflow where the publish/push repository might be different than the original ("origin") one. This allows new revisions to land in a fork repository, while maintaining an association with the original repository.
+
+To achieve this, first import an mbed OS program or mbed OS itself and then associate the push remote with your fork. For example:
+
+```
+$ git remote set-url --push origin https://github.com/screamerbg/repo-fork
+```
+
+Each time you `git` commit and push, or use `mbed publish`, the new revisions will be pushed against your fork. You can fetch from the original repository using `mbed update` or `git pull`. If you explicitly want to fetch or pull from your fork, then you can use `git pull https://github.com/screamerbg/repo-fork [branch]`.
+
+Through the workflow explained above, mbed CLI will maintain association to the original repository (which you might want to send pull request to), and will record references with the revision hashes that you push to your fork. Until your pull request is accepted, all recorded references will be invalid. Once the PR is accepted, all revision hashes from your fork will become part the original repository, so all references will become valid.
+
+## Updating programs and libraries
+
+You can update programs and libraries on your local machine so that they pull in changes from the remote sources (GitHub or Mercurial). 
+
+There are two main scenarios when updating:
+
+* Update to a *moving* revision, like the tip of a branch.
+* Update to a *specific* revision that is identified by a revision hash or tag name.
+
+Each scenario has two cases:
+
+* Update with local uncommitted changes - *dirty* update.
+* Update without local uncommitted changes - *clean* update.
+
+As with any mbed CLI command, `mbed update` uses the current directory as a working context, meaning that before calling `mbed update` you should change your working directory to the one you want to update.For example, if you're updating mbed-os, use `cd mbed-os` before you begin updating.
+
+<span class="tips">**Tip: Synchronizing library references:** Before triggering an update, you might want to synchronize any changes that you've made to the program structure by running ``mbed sync``, which will update the necessary library references and get rid of the invalid ones.</span>
+
+### Protection against overwriting local changes
+
+The update command will fail if there are changes in your program or library that will be overwritten as a result of running `update`. This is by design: mbed CLI does not run operations that would result in overwriting local changes that are not yet committed. If you get an error, take care of your local changes (commit or use one of the options below), then re-run `update`.
+
+### Updating to an upstream version
+
+___Updating a program___
+
+To update your program to another upstream version, go to the root folder of the program and run:
+
+```
+$ mbed update [branch|tag|revision]
+```
+
+This fetches new revisions from the remote repository, updating the program to the specified branch, tag or revision. If none of these are specified, then it updates to the latest revision in the current branch. This series of actions is performed recursively against all dependencies and sub-dependencies in the program tree.
+
+___Updating a library___
+
+You can change the working directory to a library folder and use `mbed update` to update that library and its dependencies to a different revision than the one referenced in the parent program or library. This allows you to experiment with different versions of libraries/dependencies in the program tree, without having to change the parent program or library.
+
+### Update examples
+
+To help understand what options you can use with mbed CLI, check the examples below.
+
+**Case 1: I want to update a program or a library to the latest version in a specific or current branch**
+
+__I want to preserve my uncommitted changes__ 
+
+Run `mbed update [branch]`. You might have to commit or stash your changes if the source control tool (Git or Mercurial) throws an error that the update will overwrite local changes.
+
+__I want a clean update (and discard uncommitted changes)__
+
+Run `mbed update [branch] --clean`
+
+Specifying a branch to `mbed update` will only check out that branch, and won't automatically merge or fast-forward to the remote/upstream branch. You can run `mbed update` to merge (fast-forward) your local branch with the latest remote branch. On git you can do `git pull`
+
+<span class="warnings">**Warning**: The `--clean` option tells mbed CLI to update that program or library and its dependencies, and discard all local changes. This action cannot be undone; use with caution.</span>
+
+**Case 2: I want to update a program or a library to a specific revision or a tag**
+ 
+__I want to preserve my uncommitted changes__ 
+
+Run `mbed update <tag_name|revision>`. You might have to commit or stash your changes if they conflict with the latest revision.
+
+__I want a clean update (discard changes)__
+
+Run `mbed update <tag_name|revision> --clean`
+
+__When you have unpublished local libraries__
+
+There are three additional options that define how unpublished local libraries are handled:
+
+* `mbed update --clean-deps` - update the current program or library and its dependencies, and discard all local unpublished repositories. Use this with caution, as your local unpublished repositories cannot be restored unless you have a backup copy.
+
+* `mbed update --clean-files` - update the current program or library and its dependencies, discard local uncommitted changes and remove any untracked or ignored files. Use this with caution, as your local unpublished repositories cannot be restored unless you have a backup copy.
+
+* `mbed update --ignore` - update the current program or library and its dependencies, and ignore any local unpublished libraries (they won't be deleted or modified, just ignored).
+
+__Combining update options__
+
+You can combine the options above for the following scenarios:
+
+* `mbed update --clean --clean-deps --clean-files` - update the current program or library and its dependencies, remove all local unpublished libraries, discard local uncommitted changes, and remove all untracked or ignored files. This wipes every single change that you made in the source tree and restores the stock layout.
+
+* `mbed update --clean --ignore` - update the current program or library and its dependencies, but ignore any local repositories. mbed CLI will update whatever it can from the public repositories.
+
+Use these with caution as your uncommitted changes and unpublished libraries cannot be restored.
+
 ## mbed CLI configuration
 
-Many options in *mbed CLI* can be streamlined with global and local configuration.
+Many options in mbed CLI can be streamlined with global and local configuration.
 
-The *mbed CLI* configuration syntax is:
+The mbed CLI configuration syntax is:
 ```
 mbed config [--global] <var> [value] [--unset]
 ```
 
-The **global** configuration (via `--global` option) defines the default behavior of *mbed CLI* across programs unless overridden by *local* settings.
-
-The **local** configuration (without `--global`) is per mbed program and allows overriding of global or default *mbed CLI* settings within the scope of a program or library and its dependencies.
-
-If **no value** is specified then *mbed CLI* will print the currently set value for this settings from either local or global scope.
-
-The `--unset` option allows removing of a setting.
+* The **global** configuration (via `--global` option) defines the default behavior of mbed CLI across programs unless overridden by *local* settings.
+* The **local** configuration (without `--global`) is per mbed program and allows overriding of global or default mbed CLI settings within the scope of a program or library and its dependencies.
+* If **no value** is specified then mbed CLI will print the currently set value for this settings from either the local or global scope.
+* The `--unset` option allows removing of a setting.
 
 Here is a list of currently implemented configuration settings:
- * `target` - Define default target for `compile`, `test` and `export`, and is an alias to `mbed target`. Default: none.
- * `toolchain` - Defines default toolchain for `compile` and `test` can be set through `mbed toolchain`. Default: none.
- * `ARM_PATH`, `GCC_ARM_PATH`, `IAR_PATH` - defines default path to ARM Compiler, GCC ARM and IAR Workbench toolchains. Default: none.
- * `protocol` - Defines the default protocol used for importing/cloning of programs and libraries. Possible values are `https`, `http` and `ssh`. Use `ssh` if you have generated and registered SSH keys (Public Key Authentication) with a service like GitHub, GitLab, Bitbucket, etc. Read more about SSH keys [here](https://help.github.com/articles/generating-an-ssh-key/) Default: `https`.
- * `depth` - Defines *clone* depth for importing/cloning and applies only to *Git* repositories. Note that while this option may improve cloning speed, it may also prevent you from correctly checking out a dependency tree when the reference revision hash is older than the clone depth. Read more about shallow clones [here](https://git-scm.com/docs/git-clone). Default: none.
- * `cache` (EXPERIMENTAL) - Defines local path that will be used to store minimalistic copies of the imported/cloned repositories and attempt to use them to minimize traffic and speed up future importing. This feature is still under development, so this should not be used within a production environment. Default: none (disabled).
+
+ * `target` - defines the default target for `compile`, `test` and `export`; an alias of `mbed target`. Default: none.
+ * `toolchain` - defines the default toolchain for `compile` and `test`; can be set through `mbed toolchain`. Default: none.
+ * `ARM_PATH`, `GCC_ARM_PATH`, `IAR_PATH` - defines the default path to ARM Compiler, GCC ARM and IAR Workbench toolchains. Default: none.
+ * `protocol` - defines the default protocol used for importing or cloning of programs and libraries. The possible values are `https`, `http` and `ssh`. Use `ssh` if you have generated and registered SSH keys (Public Key Authentication) with a service like GitHub, GitLab, Bitbucket, etc. Read more about SSH keys [here](https://help.github.com/articles/generating-an-ssh-key/) Default: `https`.
+ * `depth` - defines the *clone* depth for importing or cloning and applies only to *Git* repositories. Note that while this option may improve cloning speed, it may also prevent you from correctly checking out a dependency tree when the reference revision hash is older than the clone depth. Read more about shallow clones [here](https://git-scm.com/docs/git-clone). Default: none.
+ * `cache` (EXPERIMENTAL) - defines the local path that will be used to store minimalistic copies of the imported or cloned repositories, and attempts to use them to minimize traffic and speed up future importing. This feature is still under development, so this should not be used within a production environment. Default: none (disabled).
