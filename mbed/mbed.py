@@ -125,7 +125,7 @@ cwd_root = ""
 
 # Logging and output
 def log(msg):
-    sys.stderr.write(msg)
+    sys.stdout.write(msg)
 
 def message(msg):
     return "[mbed] %s\n" % msg
@@ -133,7 +133,7 @@ def message(msg):
 def info(msg, level=1):
     if level <= 0 or verbose:
         for line in msg.splitlines():
-                log(message(line))
+            log(message(line))
 
 def action(msg):
     for line in msg.splitlines():
@@ -141,13 +141,13 @@ def action(msg):
 
 def warning(msg):
     for line in msg.splitlines():
-        log("[mbed] WARNING: %s\n" % line)
-    log("---\n")
+        sys.stderr.write("[mbed] WARNING: %s\n" % line)
+    sys.stderr.write("---\n")
 
 def error(msg, code=-1):
     for line in msg.splitlines():
-        log("[mbed] ERROR: %s\n" % line)
-    log("---\n")
+        sys.stderr.write("[mbed] ERROR: %s\n" % line)
+    sys.stderr.write("---\n")
     sys.exit(code)
 
 def progress_cursor():
@@ -1923,7 +1923,8 @@ def sync(recursive=True, keep_refs=False, top=True):
         "View the dependency tree of the current program or library."))
 def list_(detailed=False, prefix='', p_path=None, ignore=False):
     repo = Repo.fromrepo()
-    log("%s (%s)\n" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), (repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if detailed else str(repo.rev)[:12]) or 'no revision'))
+
+    print("%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if detailed else str(repo.rev)[:12]) or 'no revision')))
 
     for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.path)):
         if prefix:
