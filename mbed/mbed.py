@@ -1221,9 +1221,9 @@ class Program(object):
         try:
             with open(os.path.join(req_path, req_file), 'r') as f:
                 import pip
-                installed_packages = [package.project_name.lower() for package in pip.get_installed_distributions(local_only=True)]
+                installed_packages = [re.sub(r'-', '_', package.project_name.lower()) for package in pip.get_installed_distributions(local_only=True)]
                 for line in f.read().splitlines():
-                    pkg = re.sub(r'^([\w-]+).*$', r'\1', line).lower()
+                    pkg = re.sub(r'-', '_', re.sub(r'^([\w-]+).*$', r'\1', line).lower())
                     if not pkg in installed_packages:
                         missing.append(pkg)
 
