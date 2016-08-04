@@ -131,6 +131,9 @@ With this in mind, let's create a new program (we'll call it `mbed-os-program`):
 
 ```
 $ mbed new mbed-os-program
+[mbed] Creating new program "mbed-os-program" (git)
+[mbed] Adding library "mbed-os" from "https://github.com/ARMmbed/mbed-os" at latest revision in the current branch
+[mbed] Updating reference "mbed-os" -> "https://github.com/ARMmbed/mbed-os/#89962277c20729504d1d6c95250fbd36ea5f4a2d"
 ```
 
 This creates a new folder "mbed-os-program", initializes a new repository and imports the latest revision of the mbed-os dependency to your program tree.
@@ -142,23 +145,8 @@ Use `mbed ls` to list all the libraries imported to your program:
 ```
 $ cd mbed-os-program
 $ mbed ls -a
-mbed-os-program (mbed-os-program#189949915b9c)
-`- mbed-os (0d5eb2b8cee8)
-   |- core (737a7809f9e7)
-   |- features\FEATURE_CLIENT\coap-service (7a11be1ccb07)
-   |- features\FEATURE_CLIENT\mbed-client (a6a46726f027)
-   |- features\FEATURE_CLIENT\mbed-client-c (086b9c97f65b)
-   |- features\FEATURE_CLIENT\mbed-client-classic (c8ccada6b9ff)
-   |- features\FEATURE_CLIENT\mbed-client-mbed-tls (b14e7b3303c8)
-   |- features\FEATURE_CLIENT\mbed-client-randlib (80f5c491dd4d)
-   |- features\FEATURE_IPV6\mbed-mesh-api (0e92921f3dce)
-   |- features\FEATURE_IPV6\mbed-trace (e419c488f4f8)
-   |- features\FEATURE_IPV6\nanostack-hal-mbed-cmsis-rtos (36968fc133c7)
-   |- features\FEATURE_IPV6\nanostack-libservice (f61c845e0c59)
-   |- features\FEATURE_IPV6\sal-stack-nanostack-eventloop (c163be9183b0)
-   |- features\FEATURE_IPV6\sal-stack-nanostack-private (5d3365ce7df3)
-   |- frameworks\greentea-client (d0cbb41ae793)
-   `- frameworks\unity (14fd303f30f9)
+mbed-os-program (mbed-os-program)
+`- mbed-os (https://github.com/ARMmbed/mbed-os#89962277c207)
 ```
 
 <span class="notes">**Note**: If you want to start from an existing folder in your workspace, you can simply use `mbed new .`, which will initialize an mbed program, as well as a new Git or Mercurial repository in that folder. </span>
@@ -169,6 +157,12 @@ mbed CLI is also compatible with mbed OS 2 programs based on the [mbed library](
 
 ```
 $ mbed new mbed-classic-program --mbedlib
+[mbed] Creating new program "mbed-classic-program" (git)
+[mbed] Adding library "mbed" from "https://mbed.org/users/mbed_official/code/mbed/builds" at latest revision in the current branch
+[mbed] Downloading mbed library build "f9eeca106725" (might take a minute)
+[mbed] Unpacking mbed library build "f9eeca106725" in "D:\Work\examples\mbed-classic-program\mbed"
+[mbed] Updating reference "mbed" -> "https://mbed.org/users/mbed_official/code/mbed/builds/f9eeca106725"
+[mbed] Couldn't find build tools in your program. Downloading the mbed 2.0 SDK tools...
 ```
 ### Creating a new program without OS version selection
 
@@ -180,13 +174,18 @@ Use `mbed import` to clone an existing program and all its dependencies to your 
 
 ```
 $ mbed import https://github.com/ARMmbed/mbed-os-example-blinky
+[mbed] Importing program "mbed-os-example-blinky" from "https://github.com/ARMmbed/mbed-os-example-blinky" at latest revision in the current branch
+[mbed] Adding library "mbed-os" from "https://github.com/ARMmbed/mbed-os" at rev #dd36dc4228b5
 $ cd mbed-os-example-blinky
 ```
 
 mbed CLI also supports programs based on mbed OS 2, which are automatically detected and do not require additional options:
 
 ```
-$ mbed import https://developer.mbed.org/teams/mbed-os-examples/code/mbed-os-example-blinky/
+$ mbed import https://mbed.org/teams/mbed/code/mbed_blinky/
+[mbed] Importing program "mbed_blinky" from "https://mbed.org/teams/mbed/code/mbed_blinky" at latest revision in the current branch
+[mbed] Adding library "mbed" from "http://mbed.org/users/mbed_official/code/mbed/builds" at rev #f9eeca106725
+[mbed] Couldn't find build tools in your program. Downloading the mbed 2.0 SDK tools...
 $ cd mbed-os-example-blinky
 ```
 
@@ -208,10 +207,7 @@ If you have manually cloned a git repository into your workspace and you want to
 
 ```
 $ mbed deploy
-[mbed] Creating new program "test-prog" (git)
-[mbed] Adding library "mbed-os" from "https://github.com/ARMmbed/mbed-os/" at latest revision in the current branch
-[mbed] Adding library "mbed-os/core" from "https://github.com/mbedmicro/mbed/" at rev #b4bb088876cb72bda7006e423423aba4895d380c
-...
+[mbed] Adding library "mbed-os" from "https://github.com/ARMmbed/mbed-os" at rev #dd36dc4228b5
 ```
 
 Don't forget to set the current directory as the root of your program:
@@ -260,18 +256,50 @@ If at any point you decide that you don't need a library any more, you can use `
 ```
 $ mbed remove text-lcd
 ```
+
 ## Compiling code
 
 ### Toolchain selection
 
-After importing a program or creating a new one, you need to tell mbed CLI where to find the toolchains that you want to use for compiling your source tree. mbed CLI gets this information from a file named `mbed_settings.py`, which is automatically created at the top of your cloned repository (if it doesn't already exist). 
+After importing a program or creating a new one, you need to tell mbed CLI where to find the toolchains that you want to use for compiling your source tree.
+
+There are two ways to do this:
+* Through the mbed CLI configuration
+* Via mbed_settings.py file in the root of your program, which is automatically created (if it doesn't already exist). 
+
+#### Through mbed CLI configuration
+
+You can set the ARM Compiler  5 location via the command:
+
+```
+$ mbed config --global ARM_PATH "C:\Program Files\ARM"
+[mbed] C:\Program Files\ARM now set as global ARM_PATH
+```
+
+The `-G` switch tells mbed CLI to set this as a global setting, rather than local for the current program.
+
+Supported settings for toolchain paths are `ARM_PATH`, `GCC_ARM_PATH` and `IAR_PATH`
+
+You can see the active mbed CLI configuration via:
+
+```
+$ mbed config --list
+[mbed] Global config:
+ARM_PATH=C:\Program Files\ARM\armcc5.06
+IAR_PATH=C:\Program Files\IAR Workbench 7.0\arm
+
+[mbed] Local config (D:\temp\mbed-os-program):
+No local configuration is set
+```
+
+More information about mbed CLI configuration is available in the [configuration section](#mbed-cli-configuration) of this document.
+
+#### Through mbed_settings.py
 
 Edit `mbed_settings.py` to set your toolchain:
 
-* If you want to use the [ARM Compiler toolchain](https://developer.arm.com/products/software-development-tools/compilers/arm-compiler-5/downloads), set `ARM_PATH` to the *base* directory of your ARM Compiler installation (example: c:\software\armcc5.06). The recommended version of the ARM Compiler toolchain is 5.06.
-* If you want to use the [GCC ARM Embedded toolchain](https://launchpad.net/gcc-arm-embedded), set `GCC_ARM_PATH` to the *binary* directory of your GCC ARM installation (example: c:\software\GNUToolsARMEmbedded\4.82013q4\bin). Use versions 4.8 or 4.9 of GCC ARM Embedded; version 5.0 or any version above might be incompatible with the tools.
-
-<span class="tips">**Tips:** You can set more than one toolchain, and select between them for each build, as explained below.</span>
+* If you want to use the [ARM Compiler toolchain](https://developer.arm.com/products/software-development-tools/compilers/arm-compiler-5/downloads), set `ARM_PATH` to the *base* directory of your ARM Compiler installation (example: C:\Program Files\ARM\armcc5.06). The recommended version of the ARM Compiler toolchain is 5.06.
+* If you want to use the [GCC ARM Embedded toolchain](https://launchpad.net/gcc-arm-embedded), set `GCC_ARM_PATH` to the *binary* directory of your GCC ARM installation (example: C:\Program Files\GNU Tools ARM Embedded\4.9 2015q2\bin). Use versions 4.9 of GCC ARM Embedded; version 5.0 or any version above might be incompatible with the tools.
 
 As a rule, since `mbed_settings.py` contains local settings (possibly relevant only to a single OS on a single machine), it should not be versioned. 
 
@@ -575,27 +603,14 @@ To push the changes in your local tree upstream, run `mbed publish`. `publish` w
 This is best explained by an example. Let's assume that the list of dependencies of your program (obtained by running `mbed ls`) looks like this:
 
 ```
-mbed-os-program (189949915b9c)
-`- mbed-os (e39199afa2da)
-   |- frameworks/greentea-client (571cfef17dd0)
-   |- frameworks/unity (7483099b9df1)
-   |- core (d1ec4beabef3)
-   |- mbedtls (bef26f687287)
-   |- net/coap-service (eae41d1df943)
-   |- net/mbed-client (5dc62d168aa4)
-   |- net/mbed-client-c (ce64d6a0bdef)
-   |- net/mbed-client-classic (abda3cef87f0)
-   |- net/mbed-client-mbed-tls (8c436e5d1109)
-   |- net/mbed-client-randlib (80f5c491dd4d)
-   |- net/mbed-mesh-api (8187d3d275cc)
-   |- net/mbed-trace (07ce2714915d)
-   |- net/nanostack-hal-mbed-cmsis-rtos (023fd8906ce7)
-   |- net/nanostack-libservice (f61c845e0c59)
-   |- net/sal-stack-nanostack-eventloop (c163be9183b0)
-   `- net/sal-stack-nanostack (cd18b5a50df4)
+my-mbed-os-example (a5ac4bf2e468)
+|- mbed-os (5fea6e69ec1a)
+`- my-libs (e39199afa2da)
+   |- my-libs/iot-client (571cfef17dd0)
+   `- my-libs/test-framework (cd18b5a50df4)
 ```
 
-Furthermore, let's assume that you make changes to `mbed-mesh-api`. `publish` detects the change on the leaf `mbed-mesh-api` dependency and asks you to commit it. Then it detects that `mbed-os` depends on `mbed-mesh-api`, updates the `mbed-os` dependency on `mbed-mesh-api` to its latest version (by updating the `mbed-mesh-api.lib` file inside `mbed-os/net/`) and asks you to commit it. This propagates up to `mbed-os` and finally to your program `mbed-os-program`.
+Let's assume that you make changes to `ot-client`. `publish` detects the change on the leaf `ot-client` dependency and asks you to commit it. Then it detects that `my-libs` depends on `iot-client`, updates the `my-libs` dependency on `iot-client` to its latest version (by updating the `iot-client.lib` file) and asks you to commit it. This propagates up to `my-libs` and finally to your program `my-mbed-os-example`.
 
 ### Forking workflow
 
@@ -710,6 +725,7 @@ mbed config [--global] <var> [value] [--unset]
 * The **local** configuration (without `--global`) is per mbed program and allows overriding of global or default mbed CLI settings within the scope of a program or library and its dependencies.
 * If **no value** is specified then mbed CLI will print the currently set value for this settings from either the local or global scope.
 * The `--unset` option allows removing of a setting.
+* The `--list` option allows to list global and local configuration.
 
 Here is a list of currently implemented configuration settings:
 
