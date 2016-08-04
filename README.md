@@ -86,7 +86,7 @@ $ git clone https://github.com/ARMmbed/mbed-cli
 
 Once cloned, you can install mbed CLI as a python package:
 
- ```
+```
 $ python setup.py install
 ```
 
