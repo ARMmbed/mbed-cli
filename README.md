@@ -6,36 +6,33 @@ This document covers the installation and usage of mbed CLI.
 
 ## Table of Contents
 
-1. [Requirements](#requirements)
+1. [Using mbed CLI](#using-mbed-cli)
 1. [Installing and uninstalling](#installing-mbed-cli)
-1. [Working context and command help](#working-context)
+1. [Understanding working context and program root](#before-you-begin-understanding-the-working-context-and-program-root)
 1. [Creating and importing programs](#creating-and-importing-programs)
-  1. [Creating a new program](#creating-a-new-program)
-	2. [Importing an existing program](#importing-an-existing-program)
+  1. [Creating a new program](#creating-a-new-program-for-mbed-os-5)
+  2. [Importing an existing program](#importing-an-existing-program)
 1. [Adding and removing libraries](#adding-and-removing-libraries)
-	1. [Adding a library](#adding-a-library)
-	2. [Removing a library](#removing-a-library)
-1. [Updating programs and libraries](#updating-programs-and-libraries)
-	1. [Synchronizing library references](#synchronizing-library-references)
-	2. [Update scenarios](#update-scenarios)
-	3. [Updating to an upstream version](#updating-to-an-upstream-version)
-1. [Publishing your changes](#publishing-your-changes)
-	1. [Checking status](#checking-status)
-	2. [Pushing upstream](#pushing-upstream)
 1. [Compiling code](#compiling-code)
-	1. [Toolchain selection](#toolchain-selection)
-	2. [Compiling your program](#compiling-your-program)
-	3. [Compiling static libraries](#compiling-static-libraries)
+  1. [Toolchain selection](#toolchain-selection)
+  2. [Compiling your program](#compiling-your-program)
+  3. [Compiling static libraries](#compiling-static-libraries)
   4. [Compile configuration system](#compile-configuration-system)
   5. [Compile-time customizations](#compile-time-customizations)
-  6. [Automating toolchain and target selection](#automating-toolchain-and-target-selection)
 1. [Exporting to desktop IDEs](#exporting-to-desktop-ides)
 1. [Testing](#testing)
   1. [Finding available tests](#finding-available-tests)
   2. [Change the test action](#change-the-test-action)
   3. [Limiting the test scope](#limiting-the-test-scope)
   4. [Test directory structure](#test-directory-structure)
+1. [Publishing your changes](#publishing-your-changes)
+  1. [Checking status](#checking-status)
+  2. [Pushing upstream](#pushing-upstream)
+1. [Updating programs and libraries](#updating-programs-and-libraries)
+  1. [Updating to an upstream version](#updating-to-an-upstream-version)
+  2. [Update examples](#update-examples)
 1. [mbed CLI configuration](#mbed-cli-configuration)
+1. [Troubleshooting](#troubleshooting)
 
 
 ## Using mbed CLI
@@ -419,7 +416,9 @@ ___Macros___
 
 You can specify macros in your command line using the -D option. For example:
 
-`$ mbed compile -t GCC_ARM -m K64F -c -DUVISOR_PRESENT`
+```
+$ mbed compile -t GCC_ARM -m K64F -c -DUVISOR_PRESENT
+```
 
 ___Compiling in debug mode___
 
