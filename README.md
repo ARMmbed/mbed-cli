@@ -22,7 +22,7 @@ This document covers the installation and usage of mbed CLI.
 1. [Exporting to desktop IDEs](#exporting-to-desktop-ides)
 1. [Testing](#testing)
   1. [Finding available tests](#finding-available-tests)
-  2. [Change the test action](#change-the-test-action)
+  2. [Compiling and running tests](#compiling-and-running-tests)
   3. [Limiting the test scope](#limiting-the-test-scope)
   4. [Test directory structure](#test-directory-structure)
 1. [Publishing your changes](#publishing-your-changes)
@@ -477,52 +477,30 @@ mbedgt: test suite report:
 +--------------+---------------+---------------------------------+--------+--------------------+-------------+
 | target       | platform_name | test suite                      | result | elapsed_time (sec) | copy_method |
 +--------------+---------------+---------------------------------+--------+--------------------+-------------+
-| K64F-GCC_ARM | K64F          | TESTS-unit-myclass | OK     | 21.09              | shell       |
+| K64F-GCC_ARM | K64F          | TESTS-unit-myclass              | OK     | 21.09              |    shell    |
 +--------------+---------------+---------------------------------+--------+--------------------+-------------+
 mbedgt: test suite results: 1 OK
 mbedgt: test case report:
-+--------------+---------------+---------------------------------+---------------------------------+--------+--------+--------+--------------------+
++--------------+---------------+------------------------------------------+--------+--------+--------+--------------------+
 | target       | platform_name | test suite         | test case           | passed | failed | result | elapsed_time (sec) |
-+--------------+---------------+---------------------------------+---------------------------------+--------+--------+--------+--------------------+
++--------------+---------------+--------------------+---------------------+--------+--------+--------+--------------------+
 | K64F-GCC_ARM | K64F          | TESTS-unit-myclass | TESTS-unit-myclass1 | 1      | 0      | OK     | 5.00               |
 | K64F-GCC_ARM | K64F          | TESTS-unit-myclass | TESTS-unit-myclass2 | 1      | 0      | OK     | 5.00               |
 | K64F-GCC_ARM | K64F          | TESTS-unit-myclass | TESTS-unit-myclass3 | 1      | 0      | OK     | 5.00               |
-+--------------+---------------+---------------------------------+---------------------------------+--------+--------+--------+--------------------+
++--------------+---------------+--------------------+---------------------+--------+--------+--------+--------------------+
 mbedgt: test case results: 3 OK
 mbedgt: completed in 21.28 sec
 ```
 
 The arguments to `test` are:
-
 * `-m <MCU>` to select a target for the compilation.
 * `-t <TOOLCHAIN>` to select a toolchain (of those defined in `mbed_settings.py`, see above), where `toolchain` can be either `ARM` (ARM Compiler 5), `GCC_ARM` (GNU ARM Embedded), or `IAR` (IAR Embedded Workbench for ARM).
-* `--compile-list` to list all the tests that can be built. For example:
-	```
-	$ mbed test --compile-list
-	Test Case:
-	    Name: TESTS-functional-test1
-	    Path: .\TESTS\functional\test1
-	Test Case:
-	    Name: TESTS-functional-test2
-	    Path: .\TESTS\functional\test2
-	Test Case:
-	    Name: TESTS-functional-test3
-	    Path: .\TESTS\functional\test3
-	```
-* `--run-list` to list all the tests that can be run (they must be built first). For example:
-	```
-	$ mbed test --run-list
-	mbedgt: test specification file '.\.build/tests\K64F\ARM\test_spec.json' (specified with --test-spec option)
-	mbedgt: using '.\.build/tests\K64F\ARM\test_spec.json' from current directory!
-	mbedgt: available tests for built 'K64F-ARM', location '.\.build/tests\K64F\ARM'
-     	   test 'TESTS-functional-test1'
-     	   test 'TESTS-functional-test2'
-     	   test 'TESTS-functional-test3'
-	```
-* `--compile` to only compile the tests. For example, `$ mbed test -m K64F -t GCC_ARM --compile`.
-* `--run` to only run the tests. For example, `$ mbed test -m K64F -t GCC_ARM --run`.
-* `-n <TESTS_BY_NAME>` to limit the tests built or run to those listed (by name) in a comma separated list. For example, `$ mbed test -m K64F -t GCC_ARM -n TESTS-functional-test1,TESTS-functional-test2`.
-* `--source <SOURCE>` to select the source directory. The default is `.` (the current directory). You can specify multiple source locations, even outside the program tree.
+* `--compile-list` to list all the tests that can be built
+* `--run-list` to list all the tests that can be ran (they must be built first)
+* `--compile` to only compile the tests
+* `--run` to only run the tests
+* `-n <TESTS_BY_NAME>` to limit the tests built or ran to a comma separated list (ex. test1,test2,test3)
+* `--source <SOURCE>` to select the source directory. Default is `.` (the current dir). You can specify multiple source locations, even outside the program tree.
 * `--build <BUILD>` to select the build directory. Default: `.build/` inside your program.
 * `--options <OPTIONS>` to select compile options. Examples: "debug-info": will generate debugging information; "small-build" will use microlib/nanolib, but limit RTOS to single thread; "save-asm": will save the asm generated by the compiler
 * `-c or --clean` to clean the build directory before compiling,
@@ -531,6 +509,59 @@ The arguments to `test` are:
 * `-vv` or `--very_verbose` for very verbose diagnostic output.
 
 The compiled binaries and test artifacts can be found in the `.build/tests/<TARGET>/<TOOLCHAIN>` directory of your program.
+
+#### Finding available tests
+
+You can find the tests that are available for **building** by using the `--compile-list` option:
+
+```
+$ mbed test --compile-list
+Test Case:
+    Name: TESTS-functional-test1
+    Path: .\TESTS\functional\test1
+Test Case:
+    Name: TESTS-functional-test2
+    Path: .\TESTS\functional\test2
+Test Case:
+    Name: TESTS-functional-test3
+    Path: .\TESTS\functional\test3
+```
+
+You can find the tests that are available for **running** by using the `--run-list` option:
+
+```
+$ mbed test --run-list
+mbedgt: test specification file '.\.build/tests\K64F\ARM\test_spec.json' (specified with --test-spec option)
+mbedgt: using '.\.build/tests\K64F\ARM\test_spec.json' from current directory!
+mbedgt: available tests for built 'K64F-ARM', location '.\.build/tests\K64F\ARM'
+        test 'TESTS-functional-test1'
+        test 'TESTS-functional-test2'
+        test 'TESTS-functional-test3'
+```
+
+#### Compiling and running tests
+
+You can specify to only **build** the tests by using the `--compile` option:
+
+```
+$ mbed test -m K64F -t GCC_ARM --compile
+```
+
+You can specify to only **run** the tests by using the `--run` option:
+
+```
+$ mbed test -m K64F -t GCC_ARM --run
+```
+
+If you don't specify any of these `mbed test` will first compile all available tests and then run them.
+
+#### Limiting the test scope
+
+You can limit the scope of the tests built and ran by using the `-n` option. This takes a comma separated list of test names as an argument:
+
+```
+$ mbed test -m K64F -t GCC_ARM -n TESTS-functional-test1,TESTS-functional-test2
+```
 
 ### Test directory structure
 
