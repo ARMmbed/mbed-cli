@@ -6,35 +6,16 @@ This document covers the installation and usage of mbed CLI.
 
 ## Table of Contents
 
-1. [Requirements](#requirements)
-1. [Installing and uninstalling](#installing-mbed-cli)
-1. [Working context and command help](#working-context)
+1. [Using mbed CLI](#using-mbed-cli)
+1. [Installation](#installation)
+1. [Before you begin](#before-you-begin-understanding-the-working-context-and-program-root)
 1. [Creating and importing programs](#creating-and-importing-programs)
-  1. [Creating a new program](#creating-a-new-program)
-	2. [Importing an existing program](#importing-an-existing-program)
 1. [Adding and removing libraries](#adding-and-removing-libraries)
-	1. [Adding a library](#adding-a-library)
-	2. [Removing a library](#removing-a-library)
-1. [Updating programs and libraries](#updating-programs-and-libraries)
-	1. [Synchronizing library references](#synchronizing-library-references)
-	2. [Update scenarios](#update-scenarios)
-	3. [Updating to an upstream version](#updating-to-an-upstream-version)
-1. [Publishing your changes](#publishing-your-changes)
-	1. [Checking status](#checking-status)
-	2. [Pushing upstream](#pushing-upstream)
 1. [Compiling code](#compiling-code)
-	1. [Toolchain selection](#toolchain-selection)
-	2. [Compiling your program](#compiling-your-program)
-	3. [Compiling static libraries](#compiling-static-libraries)
-  4. [Compile configuration system](#compile-configuration-system)
-  5. [Compile-time customizations](#compile-time-customizations)
-  6. [Automating toolchain and target selection](#automating-toolchain-and-target-selection)
 1. [Exporting to desktop IDEs](#exporting-to-desktop-ides)
 1. [Testing](#testing)
-  1. [Finding available tests](#finding-available-tests)
-  2. [Change the test action](#change-the-test-action)
-  3. [Limiting the test scope](#limiting-the-test-scope)
-  4. [Test directory structure](#test-directory-structure)
+1. [Publishing your changes](#publishing-your-changes)
+1. [Updating programs and libraries](#updating-programs-and-libraries)
 1. [mbed CLI configuration](#mbed-cli-configuration)
 
 ## Using mbed CLI
@@ -178,15 +159,27 @@ You can create plain (empty) programs, without either mbed OS 5 or mbed OS 2, by
 Use `mbed import` to clone an existing program and all its dependencies to your machine:
 
 ```
-$ mbed import https://github.com/ARMmbed/mbed-blinky/
-$ cd mbed-blinky
+$ mbed import https://github.com/ARMmbed/mbed-os-example-blinky
+$ cd mbed-os-example-blinky
 ```
 
 mbed CLI also supports programs based on mbed OS 2, which are automatically detected and do not require additional options:
 
 ```
-$ mbed import https://developer.mbed.org/teams/mbed/code/mbed_blinky/
-$ cd mbed_blinky
+$ mbed import https://developer.mbed.org/teams/mbed-os-examples/code/mbed-os-example-blinky/
+$ cd mbed-os-example-blinky
+```
+
+You can use the "import" command without specicying a full URL; a default prefix (https://github.com/ARMmbed) is added to the URL. For example, this command:
+ 
+```
+$ mbed import mbed-os-example-blinky
+```
+
+is equivalent to this command:
+ 
+```
+$ mbed import https://github.com/ARMmbed/mbed-os-example-blinky
 ```
 
 ### Importing from a Git or GitHub clone
