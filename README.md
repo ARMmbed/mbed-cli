@@ -37,6 +37,7 @@ This document covers the installation and usage of mbed CLI.
   4. [Test directory structure](#test-directory-structure)
 1. [mbed CLI configuration](#mbed-cli-configuration)
 
+
 ## Using mbed CLI
 
 The basic workflow for mbed CLI is to:
@@ -178,15 +179,27 @@ You can create plain (empty) programs, without either mbed OS 5 or mbed OS 2, by
 Use `mbed import` to clone an existing program and all its dependencies to your machine:
 
 ```
-$ mbed import https://github.com/ARMmbed/mbed-blinky/
-$ cd mbed-blinky
+$ mbed import https://github.com/ARMmbed/mbed-os-example-blinky
+$ cd mbed-os-example-blinky
 ```
 
 mbed CLI also supports programs based on mbed OS 2, which are automatically detected and do not require additional options:
 
 ```
-$ mbed import https://developer.mbed.org/teams/mbed/code/mbed_blinky/
-$ cd mbed_blinky
+$ mbed import https://developer.mbed.org/teams/mbed-os-examples/code/mbed-os-example-blinky/
+$ cd mbed-os-example-blinky
+```
+
+You can use the "import" command without specicying a full URL; a default prefix (https://github.com/ARMmbed) is added to the URL. For example, this command:
+ 
+```
+$ mbed import mbed-os-example-blinky
+```
+
+is equivalent to this command:
+ 
+```
+$ mbed import https://github.com/ARMmbed/mbed-os-example-blinky
 ```
 
 ### Importing from a Git or GitHub clone
