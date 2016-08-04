@@ -720,5 +720,12 @@ Here is a list of currently implemented configuration settings:
  * `depth` - defines the *clone* depth for importing or cloning and applies only to *Git* repositories. Note that while this option may improve cloning speed, it may also prevent you from correctly checking out a dependency tree when the reference revision hash is older than the clone depth. Read more about shallow clones [here](https://git-scm.com/docs/git-clone). Default: none.
  * `cache` (EXPERIMENTAL) - defines the local path that will be used to store minimalistic copies of the imported or cloned repositories, and attempts to use them to minimize traffic and speed up future importing. This feature is still under development, so this should not be used within a production environment. Default: none (disabled).
  
-## Not supported environments
-* Executing mbed CLI inside cygwin (https://github.com/ARMmbed/mbed-cli/issues/299)
+## Troubleshooting
+
+#### Unable to import Mercurial based (mbed.org) programs or libraries.
+1. Check whether you have Mercurial installed in your system path by  running `hg` in command prompt. If you're receiving "command not found" or similar message, then you need to install Mercurial and add it to your system path.
+
+2. Try to clone a Mercurial repository directly, e.g. `hg clone https://developer.mbed.org/teams/mbed/code/mbed_blinky/`. If you're receiving error similar to `abort: error: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed (_ssl.:590)` then your system certificates are very old. You need to update your system certificates and possibly add the host certificate fingerprint of `mbed.com` and `mbed.org`. Read more about Mercurial's certificate management [here](https://www.mercurial-scm.org/wiki/CACertificates).
+
+#### Various issues when running mbed CLI in cygwin environment
+Currently mbed CLI is not compatible with cygwin environment and cannot be executed inside it (https://github.com/ARMmbed/mbed-cli/issues/299)
