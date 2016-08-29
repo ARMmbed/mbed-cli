@@ -2157,7 +2157,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
 
 # Export command
 @subcommand('export',
-    dict(name=['-i', '--ide'], help='IDE to create project files for. Example: UVISION4, UVISION5, GCC_ARM, IAR, COIDE', required=True),
+    dict(name=['-i', '--ide'], help='IDE to create project files for. Example: UVISION4, UVISION5, GCC_ARM, IAR, COIDE'),
     dict(name=['-m', '--target'], help='Export for target MCU. Example: K64F, NUCLEO_F401RE, NRF51822...'),
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
@@ -2194,7 +2194,7 @@ def export(ide=None, target=None, source=False, clean=False, supported=False):
 
     popen(['python', '-u', os.path.join(tools_dir, 'project.py')]
           + list(chain.from_iterable(izip(repeat('-D'), macros)))
-          + ['-i', ide.lower(), '-m', target]
+          + (['-i', ide.lower(), '-m', target] if ide else [])
           + (['-c'] if clean else [])
           + list(chain.from_iterable(izip(repeat('--source'), source)))
           + args,
