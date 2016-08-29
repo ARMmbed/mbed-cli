@@ -1570,11 +1570,15 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
         p.set_root()
         if not create_only and not p.get_os_dir() and not p.get_mbedlib_dir():
             url = mbed_lib_url if mbedlib else mbed_os_url
+            d = 'mbed' if mbedlib else 'mbed-os'
             try:
                 with cd(d_path):
                     add(url, depth=depth, protocol=protocol, top=False)
+                    if not mbedlib:
+                        with cd(d):
+                            repo = Repo.fromrepo()
+                            repo.checkout('latest')
             except Exception as e:
-                d = 'mbed' if mbedlib else 'mbed-os'
                 if os.path.isdir(os.path.join(d_path, d)):
                     rmtree_readonly(os.path.join(d_path, d))
                 raise e
