@@ -449,7 +449,7 @@ class Hg(object):
                 lines = f.read().splitlines()
                 if tagpaths in lines:
                     idx = lines.index(tagpaths)
-                    m = re.match(r'^([\w_]+)\s*=\s*(.*)?$', lines[idx+1])
+                    m = re.match(r'^([\w_]+)\s*=\s*(.*)$', lines[idx+1])
                     if m:
                         if m.group(1) == 'default':
                             default_url = m.group(2)
@@ -1366,7 +1366,7 @@ class Cfg(object):
             lines = []
 
         for line in lines:
-            m = re.match(r'^([\w+-]+)\=(.*)?$', line)
+            m = re.match(r'^([\w+-]+)\=(.*)$', line)
             if m and m.group(1) == var:
                 lines.remove(line)
 
@@ -1390,7 +1390,7 @@ class Cfg(object):
             lines = []
 
         for line in lines:
-            m = re.match(r'^([\w+-]+)\=(.*)?$', line)
+            m = re.match(r'^([\w+-]+)\=(.*)$', line)
             if m and m.group(1) == var:
                 return m.group(2)
         return default_val
@@ -1406,7 +1406,7 @@ class Cfg(object):
 
         vars = {}
         for line in lines:
-            m = re.match(r'^([\w+-]+)\=(.*)?$', line)
+            m = re.match(r'^([\w+-]+)\=(.*)$', line)
             if m and m.group(1) and m.group(1) != 'ROOT':
                 vars[m.group(1)] = m.group(2)
         return vars
