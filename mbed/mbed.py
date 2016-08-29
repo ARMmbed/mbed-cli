@@ -409,7 +409,7 @@ class Hg(object):
         popen([hg_cmd, 'update', '-C'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def checkout(rev, clean=False, clean_files=False):
-        info("Checkout \"%s\" in %s to %s" % (rev, os.path.basename(os.getcwd()), rev))
+        info("Checkout \"%s\" in %s" % (rev if rev else "latest", os.path.basename(os.getcwd())))
         if clean_files:
             files = pquery([hg_cmd, 'status', '--no-status', '-ui']).splitlines()
             for f in files:
@@ -598,7 +598,7 @@ class Git(object):
     def checkout(rev, clean=False):
         if not rev:
             return
-        info("Checkout \"%s\" in %s to %s" % (rev, os.path.basename(os.getcwd()), rev))
+        info("Checkout \"%s\" in %s" % (rev, os.path.basename(os.getcwd())))
         popen([git_cmd, 'checkout', rev] + (['-f'] if clean else []) + ([] if very_verbose else ['-q']))
         if Git.isdetached(): # try to find associated refs to avoid detached state
             refs = Git.getrefs(rev)
@@ -1286,6 +1286,22 @@ class Program(object):
                         rmtree_readonly(tools_dir)
                     error("An error occurred while cloning the mbed SDK tools from \"%s\"" % mbed_sdk_tools_url)
 
+    def update_tools(self, path):
+        if not os.path.exists(path):
+            os.mkdir(path)
+        with cd(path):
+            tools_dir = 'tools'
+            if not os.path.exists(tools_dir):
+                return self.add_tools(path)
+            else:
+                with cd(tools_dir):
+                    try:
+                        action("Updating the mbed 2.0 SDK tools...")
+                        repo = Repo.fromrepo()
+                        repo.update()
+                    except Exception:
+                        error("An error occurred while update the mbed SDK tools from \"%s\"" % mbed_sdk_tools_url)
+
     def get_tools(self):
         mbed_tools_path = self.get_tools_dir()
         if not mbed_tools_path:
@@ -1707,8 +1723,10 @@ def deploy(ignore=False, depth=None, protocol=None, top=True):
             repo.ignore(relpath(repo.path, lib.path))
 
     if top:
-        Program(repo.path).post_action()
-
+        program = Program(repo.path)
+        program.post_action()
+        if program.is_classic:
+            program.update_tools('.temp')
 
 # Publish command
 @subcommand('publish',
@@ -1869,6 +1887,8 @@ def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=Fa
         program = Program(repo.path)
         program.set_root()
         program.post_action()
+        if program.is_classic:
+            program.update_tools('.temp')
 
 
 # Synch command
