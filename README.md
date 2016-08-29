@@ -54,7 +54,7 @@ mbed CLI is supported on Windows, Linux and Mac OS X. We're keen to learn about 
 
 ### Requirements
 
-* **Python** - mbed CLI is a Python script, so you'll need Python in order to use it. mbed CLI was tested with [version 2.7 of Python](https://www.python.org/download/releases/2.7/).
+* **Python** - mbed CLI is a Python script, so you'll need Python in order to use it. mbed CLI was tested with [version 2.7.9 of Python](https://www.python.org/download/releases/2.7/).
 
 * **Git and Mercurial** - mbed CLI supports both Git and Mercurial repositories, so you'll need to install both:
     * [Git](https://git-scm.com/).
