@@ -1291,9 +1291,7 @@ class Program(object):
             os.mkdir(path)
         with cd(path):
             tools_dir = 'tools'
-            if not os.path.exists(tools_dir):
-                return self.add_tools(path)
-            else:
+            if os.path.exists(tools_dir):
                 with cd(tools_dir):
                     try:
                         action("Updating the mbed 2.0 SDK tools...")
