@@ -66,6 +66,11 @@ mbed CLI is supported on Windows, Linux and Mac OS X. We're keen to learn about 
     * Compilers: GCC ARM, ARM Compiler 5, IAR
     * Toolchains: Keil uVision, DS-5, IAR Workbench
 
+
+### Video tutorial for manual installation 
+
+<span class="images">[![Video tutorial](http://img.youtube.com/vi/cM0dFoTuU14/0.jpg)](https://www.youtube.com/watch?v=cM0dFoTuU14)</span>
+
 ### Installing mbed CLI
 
 You can get the latest stable version of mbed CLI through PyPI, by running:
