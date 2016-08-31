@@ -105,8 +105,11 @@ To uninstall mbed CLI, simply run:
 pip uninstall mbed-cli
 ```
 
-## Before you begin: understanding the working context and program root
+## Quicks start video
 
+<span class="images">[![Video tutorial](http://img.youtube.com/vi/PI1Kq9RSN_Y/0.jpg)](https://www.youtube.com/watch?v=PI1Kq9RSN_Y)</span>
+
+## Before you begin: understanding the working context and program root
 
 mbed CLI uses the current directory as a working context, in a similar way to Git, Mercurial and many other command-line tools. This means that before calling any mbed CLI command, you must first change to the directory containing the code you want to act on. For example, if you want to update the mbed OS sources in your ``mbed-example-program`` directory:
 
