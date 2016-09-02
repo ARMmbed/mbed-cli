@@ -1987,9 +1987,10 @@ def status_(ignore=False):
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
     dict(name=['-N', '--artifact-name'], help='Name of the built program or library'),
     dict(name=['-S', '--supported'], dest='supported', action='store_true', help='Shows supported matrix of targets and toolchains'),
+    dict(name='--app-config', dest="app_config", help="Path of an app configuration file (Default is to look for 'mbed_app.json')"),
     help='Compile code using the mbed build tools',
     description=("Compile this program using the mbed build tools."))
-def compile_(toolchain=None, target=None, options=False, compile_library=False, compile_config=False, config_prefix=None, source=False, build=False, clean=False, artifact_name=None, supported=False):
+def compile_(toolchain=None, target=None, options=False, compile_library=False, compile_config=False, config_prefix=None, source=False, build=False, clean=False, artifact_name=None, supported=False, app_config=None):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
@@ -2010,6 +2011,7 @@ def compile_(toolchain=None, target=None, options=False, compile_library=False, 
     if supported:
         popen(['python', '-u', os.path.join(tools_dir, 'make.py')]
               + (['-S'] if supported else []) + (['-v'] if very_verbose else [])
+              + (['--app-config', app_config] if app_config else [])
               + args,
               env=env)
         return
@@ -2056,6 +2058,7 @@ def compile_(toolchain=None, target=None, options=False, compile_library=False, 
               + ['--build', build]
               + (['-c'] if clean else [])
               + (['--artifact-name', artifact_name] if artifact_name else [])
+              + (['--app-config', app_config] if app_config else [])
               + (['-v'] if verbose else [])
               + args,
               env=env)
