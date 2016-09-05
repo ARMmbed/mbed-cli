@@ -35,7 +35,7 @@ import argparse
 
 
 # Application version
-ver = '0.9.1'
+ver = '0.9.5'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
@@ -409,7 +409,7 @@ class Hg(object):
         popen([hg_cmd, 'update', '-C'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def checkout(rev, clean=False, clean_files=False):
-        info("Checkout \"%s\" in %s to %s" % (rev, os.path.basename(os.getcwd()), rev))
+        info("Checkout \"%s\" in %s" % (rev if rev else "latest", os.path.basename(os.getcwd())))
         if clean_files:
             files = pquery([hg_cmd, 'status', '--no-status', '-ui']).splitlines()
             for f in files:
@@ -449,7 +449,7 @@ class Hg(object):
                 lines = f.read().splitlines()
                 if tagpaths in lines:
                     idx = lines.index(tagpaths)
-                    m = re.match(r'^([\w_]+)\s*=\s*(.*)?$', lines[idx+1])
+                    m = re.match(r'^([\w_]+)\s*=\s*(.*)$', lines[idx+1])
                     if m:
                         if m.group(1) == 'default':
                             default_url = m.group(2)
@@ -598,7 +598,7 @@ class Git(object):
     def checkout(rev, clean=False):
         if not rev:
             return
-        info("Checkout \"%s\" in %s to %s" % (rev, os.path.basename(os.getcwd()), rev))
+        info("Checkout \"%s\" in %s" % (rev, os.path.basename(os.getcwd())))
         popen([git_cmd, 'checkout', rev] + (['-f'] if clean else []) + ([] if very_verbose else ['-q']))
         if Git.isdetached(): # try to find associated refs to avoid detached state
             refs = Git.getrefs(rev)
@@ -1286,6 +1286,20 @@ class Program(object):
                         rmtree_readonly(tools_dir)
                     error("An error occurred while cloning the mbed SDK tools from \"%s\"" % mbed_sdk_tools_url)
 
+    def update_tools(self, path):
+        if not os.path.exists(path):
+            os.mkdir(path)
+        with cd(path):
+            tools_dir = 'tools'
+            if os.path.exists(tools_dir):
+                with cd(tools_dir):
+                    try:
+                        action("Updating the mbed 2.0 SDK tools...")
+                        repo = Repo.fromrepo()
+                        repo.update()
+                    except Exception:
+                        error("An error occurred while update the mbed SDK tools from \"%s\"" % mbed_sdk_tools_url)
+
     def get_tools(self):
         mbed_tools_path = self.get_tools_dir()
         if not mbed_tools_path:
@@ -1366,7 +1380,7 @@ class Cfg(object):
             lines = []
 
         for line in lines:
-            m = re.match(r'^([\w+-]+)\=(.*)?$', line)
+            m = re.match(r'^([\w+-]+)\=(.*)$', line)
             if m and m.group(1) == var:
                 lines.remove(line)
 
@@ -1390,7 +1404,7 @@ class Cfg(object):
             lines = []
 
         for line in lines:
-            m = re.match(r'^([\w+-]+)\=(.*)?$', line)
+            m = re.match(r'^([\w+-]+)\=(.*)$', line)
             if m and m.group(1) == var:
                 return m.group(2)
         return default_val
@@ -1406,7 +1420,7 @@ class Cfg(object):
 
         vars = {}
         for line in lines:
-            m = re.match(r'^([\w+-]+)\=(.*)?$', line)
+            m = re.match(r'^([\w+-]+)\=(.*)$', line)
             if m and m.group(1) and m.group(1) != 'ROOT':
                 vars[m.group(1)] = m.group(2)
         return vars
@@ -1554,11 +1568,15 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
         p.set_root()
         if not create_only and not p.get_os_dir() and not p.get_mbedlib_dir():
             url = mbed_lib_url if mbedlib else mbed_os_url
+            d = 'mbed' if mbedlib else 'mbed-os'
             try:
                 with cd(d_path):
                     add(url, depth=depth, protocol=protocol, top=False)
+                    if not mbedlib:
+                        with cd(d):
+                            repo = Repo.fromrepo()
+                            repo.checkout('latest')
             except Exception as e:
-                d = 'mbed' if mbedlib else 'mbed-os'
                 if os.path.isdir(os.path.join(d_path, d)):
                     rmtree_readonly(os.path.join(d_path, d))
                 raise e
@@ -1707,8 +1725,10 @@ def deploy(ignore=False, depth=None, protocol=None, top=True):
             repo.ignore(relpath(repo.path, lib.path))
 
     if top:
-        Program(repo.path).post_action()
-
+        program = Program(repo.path)
+        program.post_action()
+        if program.is_classic:
+            program.update_tools('.temp')
 
 # Publish command
 @subcommand('publish',
@@ -1869,6 +1889,8 @@ def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=Fa
         program = Program(repo.path)
         program.set_root()
         program.post_action()
+        if program.is_classic:
+            program.update_tools('.temp')
 
 
 # Synch command
@@ -2157,7 +2179,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
 
 # Export command
 @subcommand('export',
-    dict(name=['-i', '--ide'], help='IDE to create project files for. Example: UVISION4, UVISION5, GCC_ARM, IAR, COIDE', required=True),
+    dict(name=['-i', '--ide'], help='IDE to create project files for. Example: UVISION4, UVISION5, GCC_ARM, IAR, COIDE'),
     dict(name=['-m', '--target'], help='Export for target MCU. Example: K64F, NUCLEO_F401RE, NRF51822...'),
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
@@ -2194,7 +2216,7 @@ def export(ide=None, target=None, source=False, clean=False, supported=False):
 
     popen(['python', '-u', os.path.join(tools_dir, 'project.py')]
           + list(chain.from_iterable(izip(repeat('-D'), macros)))
-          + ['-i', ide.lower(), '-m', target]
+          + (['-i', ide.lower(), '-m', target] if ide else [])
           + (['-c'] if clean else [])
           + list(chain.from_iterable(izip(repeat('--source'), source)))
           + args,
@@ -2335,6 +2357,11 @@ def main():
 
     # Help messages adapt based on current dir
     cwd_root = os.getcwd()
+ 
+    if sys.version_info[0] != 2 or sys.version_info[1] < 7:
+        error(
+            "mbed CLI is compatible with Python version >= 2.7 and < 3.0\n"
+            "Please refer to the online guide available at https://github.com/ARMmbed/mbed-cli")
 
     # Parse/run command
     if len(sys.argv) <= 1:
