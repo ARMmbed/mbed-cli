@@ -571,7 +571,7 @@ You can limit the scope of the tests built and ran by using the `-n` option. Thi
 $ mbed test -m K64F -t GCC_ARM -n TESTS-functional-test1,TESTS-functional-test2
 ```
 
-You can run a familiy test suit by using the `-n` option and add `*` at the end of the test directory name:
+You can run a family test suit by using the `-n` option and add `*` at the end of the test directory name:
 
 ```
 $ mbed test -m NUCLEO_F429ZI -t GCC_ARM -n TESTS-functional*
