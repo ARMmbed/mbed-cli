@@ -571,6 +571,15 @@ You can limit the scope of the tests built and ran by using the `-n` option. Thi
 $ mbed test -m K64F -t GCC_ARM -n TESTS-functional-test1,TESTS-functional-test2
 ```
 
+You can use the wildcard character `*` to run a group of tests that share a common prefix without specifying each test individually. For instance, if you only want to run the three tests `TESTS-functional-test1`, `TESTS-functional-test2`, and `TESTS-functional-test3` but you have other tests in your project, you can run:
+
+```
+$ mbed test -m NUCLEO_F429ZI -t GCC_ARM -n TESTS-functional*
+```
+
+**Note:** Some shells will try to expand the wildcard character `*` into filenames that exist in your working directory. To prevent this behavior, please see your shell's documentation.
+
+
 ### Test directory structure
 
 Test code exists in the following directory structure:
