@@ -1303,18 +1303,15 @@ class Program(object):
                     error("An error occurred while cloning the mbed SDK tools from \"%s\"" % mbed_sdk_tools_url)
 
     def update_tools(self, path):
-        if not os.path.exists(path):
-            os.mkdir(path)
-        with cd(path):
-            tools_dir = 'tools'
-            if os.path.exists(tools_dir):
-                with cd(tools_dir):
-                    try:
-                        action("Updating the mbed 2.0 SDK tools...")
-                        repo = Repo.fromrepo()
-                        repo.update()
-                    except Exception:
-                        error("An error occurred while update the mbed SDK tools from \"%s\"" % mbed_sdk_tools_url)
+        tools_dir = 'tools'
+        if os.path.exists(os.path.join(path, tools_dir)):
+            with cd(os.path.join(path, tools_dir)):
+                try:
+                    action("Updating the mbed 2.0 SDK tools...")
+                    repo = Repo.fromrepo()
+                    repo.update()
+                except Exception:
+                    error("An error occurred while update the mbed SDK tools from \"%s\"" % mbed_sdk_tools_url)
 
     def get_tools(self):
         mbed_tools_path = self.get_tools_dir()
@@ -1358,6 +1355,7 @@ class Program(object):
             with open('MACROS.txt') as f:
                 macros = f.read().splitlines()
         return macros
+
 
     def ignore_build_dir(self):
         build_path = os.path.join(self.path, self.build_dir)
