@@ -266,7 +266,7 @@ class Bld(object):
     def clone(url, path=None, depth=None, protocol=None):
         m = Bld.isurl(url)
         if not m:
-            raise ProcessException(1, "Not an mbed library build URL")
+            raise ProcessException(1, "Not a library build URL")
 
         try:
             Bld.init(path)
@@ -275,61 +275,61 @@ class Bld(object):
         except Exception as e:
             error(e[1], e[0])
 
+    def cleanup():
+        info("Cleaning up library build folder")
+        for fl in os.listdir('.'):
+            if not fl.startswith('.'):
+                if os.path.isfile(fl):
+                    os.remove(fl)
+                else:
+                    shutil.rmtree(fl)
+
     def fetch_rev(url, rev):
-        tmp_file = os.path.join('.'+Bld.name, '.rev-' + rev + '.zip')
-        arch_dir = 'mbed-' + rev
+        rev_file = os.path.join('.'+Bld.name, '.rev-' + rev + '.zip')
         try:
-            if not os.path.exists(tmp_file):
-                action("Downloading mbed library build \"%s\" (might take a minute)" % rev)
+            if not os.path.exists(rev_file):
+                action("Downloading library build \"%s\" (might take a minute)" % rev)
                 outfd = open(tmp_file, 'wb')
                 inurl = urllib2.urlopen(url)
                 outfd.write(inurl.read())
                 outfd.close()
         except:
-            if os.path.isfile(tmp_file):
-                os.remove(tmp_file)
+            if os.path.isfile(rev_file):
+                os.remove(rev_file)
             raise Exception(128, "Download failed!\nPlease try again later.")
 
+    def unpack_rev(rev):
+        rev_file = os.path.join('.'+Bld.name, '.rev-' + rev + '.zip')
         try:
-            with zipfile.ZipFile(tmp_file) as zf:
-                action("Unpacking mbed library build \"%s\" in \"%s\"" % (rev, os.getcwd()))
-                zf.extractall()
+            with zipfile.ZipFile(rev_file) as zf:
+                action("Unpacking library build \"%s\" in \"%s\"" % (rev, os.getcwd()))
+                zf.extractall('.')
         except:
-            if os.path.isfile(tmp_file):
-                os.remove(tmp_file)
-            if os.path.isfile(arch_dir):
-                rmtree_readonly(arch_dir)
-            raise Exception(128, "An error occurred while unpacking mbed library archive \"%s\" in \"%s\"" % (tmp_file, os.getcwd()))
+            if os.path.isfile(rev_file):
+                os.remove(rev_file)
+            raise Exception(128, "An error occurred while unpacking library archive \"%s\" in \"%s\"" % (rev_file, os.getcwd()))
 
     def checkout(rev, clean=False):
         url = Bld.geturl()
         m = Bld.isurl(url)
         if not m:
-            raise ProcessException(1, "Not an mbed library build URL")
+            raise ProcessException(1, "Not a library build URL")
         rev = Hg.remoteid(m.group(1), rev)
         if not rev:
-            error("Unable to fetch late mbed library revision")
+            error("Unable to fetch library build information")
 
-        if rev != Bld.getrev():
-            info("Cleaning up library build folder")
-            for fl in os.listdir('.'):
-                if not fl.startswith('.'):
-                    if os.path.isfile(fl):
-                        os.remove(fl)
-                    else:
-                        shutil.rmtree(fl)
+        arch_url = m.group(1) + '/archive/' + rev + '.zip'
+        Bld.fetch_rev(arch_url, rev)
+
+        if rev != Bld.getrev() or clean:
+            Bld.cleanup()
 
             info("Checkout \"%s\" in %s" % (rev, os.path.basename(os.getcwd())))
-            arch_url = m.group(1) + '/archive/' + rev + '.zip'
-            arch_dir = m.group(7) + '-' + rev
             try:
-                if not os.path.exists(arch_dir):
-                    Bld.fetch_rev(arch_url, rev)
+                Bld.unpack_rev(rev)
+                Bld.seturl(url+'/'+rev)
             except Exception as e:
-                if os.path.exists(arch_dir):
-                    rmtree_readonly(arch_dir)
                 error(e[1], e[0])
-            Bld.seturl(url+'/'+rev)
 
     def update(rev=None, clean=False, clean_files=False, is_local=False):
         return Bld.checkout(rev, clean)
