@@ -32,6 +32,7 @@ from urlparse import urlparse
 import urllib2
 import zipfile
 import argparse
+import tempfile
 
 
 # Application version
@@ -120,6 +121,7 @@ mbed_sdk_tools_url = 'https://mbed.org/users/mbed_official/code/mbed-sdk-tools'
 verbose = False
 very_verbose = False
 install_requirements = True
+cache_repositories = True
 
 # stores current working directory for recursive operations
 cwd_root = ""
@@ -338,6 +340,7 @@ class Bld(object):
         return ""
 
     def seturl(url):
+        info("Setting url to \"%s\" in %s" % (url, os.getcwd()))
         if not os.path.exists('.'+Bld.name):
             os.mkdir('.'+Bld.name)
 
@@ -444,11 +447,36 @@ class Hg(object):
                 raise e
             return 0
 
+    def seturl(url):
+        info("Setting url to \"%s\" in %s" % (url, os.getcwd()))
+        hgrc = os.path.join('.hg', 'hgrc')
+        tagpaths = '[paths]'
+        remote = 'default'
+        lines = []
+
+        try:
+            with open(hgrc) as f:
+                lines = f.read().splitlines()
+        except IOError:
+            pass
+
+        if tagpaths in lines:
+            idx = lines.index(tagpaths)
+            m = re.match(r'^([\w_]+)\s*=\s*(.*)$', lines[idx+1])
+            if m:
+                remote = m.group(1)
+                del lines[idx+1]
+            lines.insert(idx, remote+' = '+url)
+        else:
+            lines.append(tagpaths)
+            lines.append(remote+' = '+url)
+
     def geturl():
         tagpaths = '[paths]'
         default_url = ''
         url = ''
-        if os.path.isfile(os.path.join('.hg', 'hgrc')):
+
+        try:
             with open(os.path.join('.hg', 'hgrc')) as f:
                 lines = f.read().splitlines()
                 if tagpaths in lines:
@@ -459,8 +487,11 @@ class Hg(object):
                             default_url = m.group(2)
                         else:
                             url = m.group(2)
-            if default_url:
-                url = default_url
+        except IOError:
+            pass
+
+        if default_url:
+            url = default_url
 
         return formaturl(url or pquery([hg_cmd, 'paths', 'default']).strip())
 
@@ -697,6 +728,10 @@ class Git(object):
                 result.append([remote[0], remote[1], t])
         return result
 
+    def seturl(url):
+        info("Setting url to \"%s\" in %s" % (url, os.getcwd()))
+        return pquery([git_cmd, 'remote', 'set-url', 'origin', url]).strip()
+
     def geturl():
         url = ""
         remotes = Git.getremotes()
@@ -814,7 +849,8 @@ class Repo(object):
         else:
             error('Invalid repository (%s)' % url.strip(), -1)
 
-        repo.cache = Program(repo.path).get_cfg('CACHE')
+        if cache_repositories:
+            repo.cache = Program(repo.path).get_cfg('CACHE') or os.path.join(tempfile.gettempdir(), 'mbed-repo-cache')
 
         return repo
 
@@ -845,7 +881,8 @@ class Repo(object):
 
         repo.path = os.path.abspath(path)
         repo.name = os.path.basename(repo.path)
-        repo.cache = Program(repo.path).get_cfg('CACHE')
+        if cache_repositories:
+            repo.cache = Program(repo.path).get_cfg('CACHE') or os.path.join(tempfile.gettempdir(), 'mbed-repo-cache')
 
         repo.sync()
 
@@ -1003,10 +1040,12 @@ class Repo(object):
                     shutil.copytree(cache, path)
 
                     with cd(path):
+                        scm.seturl(formaturl(url, protocol))
                         info("Update cached copy from remote repository")
                         scm.update(rev, True)
                         main = False
                 except (ProcessException, IOError):
+                    info("Discarding cached repository")
                     if os.path.isdir(path):
                         rmtree_readonly(path)
 
@@ -1652,7 +1691,8 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
         with cd(repo.path):
             Program(repo.path).set_root()
             try:
-                repo.checkout(repo.rev, True)
+                if repo.getrev() != repo.rev:
+                    repo.checkout(repo.rev, True)
             except ProcessException as e:
                 err = "Unable to update \"%s\" to %s" % (repo.name, repo.revtype(repo.rev, True))
                 if depth:
