@@ -8,7 +8,7 @@ test:
         - cd .tests && mbed new new-test
         - cd .tests/new-test && mbed ls
         - cd .tests/new-test && mbed compile --source=. --source=mbed-os/TESTS/integration/basic -j 0
-        - cd .tests/new-test && mbed test --compile -n tests-integration-basic -j 0
+        - cd .tests/new-test && mbed test --compile -n mbed-os-tests-integration-basic -j 0
         - cd .tests && mbed import https://developer.mbed.org/teams/Morpheus/code/mbed-Client-Morpheus-hg hg-test
         - cd .tests/hg-test && mbed update b02527cafcde8612ff051fea57e9975aca598807 --clean
         - cd .tests/hg-test && mbed update --clean
