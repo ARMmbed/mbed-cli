@@ -53,7 +53,7 @@ ignores = [
     "*.orig",
 
     # mbed Tools
-    "build",
+    "BUILD",
     ".build",
     ".export",
 
@@ -1119,7 +1119,7 @@ class Program(object):
     is_cwd = False
     is_repo = False
     is_classic = False
-    build_dir = "build"
+    build_dir = "BUILD"
 
     def __init__(self, path=None, print_warning=False):
         path = os.path.abspath(path or os.getcwd())
