@@ -2186,7 +2186,6 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
             popen(['mbedgt', '--test-spec', test_spec, '--list']
                   + (['-n', tests_by_name] if tests_by_name else [])
                   + (['-V'] if verbose else [])
-                  + (['--app-config', app_config] if app_config else [])
                   + args,
                   env=env)
 
@@ -2194,7 +2193,6 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
             popen(['mbedgt', '--test-spec', test_spec]
                   + (['-n', tests_by_name] if tests_by_name else [])
                   + (['-V'] if verbose else [])
-                  + (['--app-config', app_config] if app_config else [])
                   + args,
                   env=env)
 
