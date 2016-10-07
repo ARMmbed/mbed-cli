@@ -29,7 +29,7 @@ import stat
 import errno
 from itertools import chain, izip, repeat
 from urlparse import urlparse
-import urllib
+import urllib2
 import zipfile
 import argparse
 
@@ -281,7 +281,10 @@ class Bld(object):
         try:
             if not os.path.exists(tmp_file):
                 action("Downloading mbed library build \"%s\" (might take a minute)" % rev)
-                urllib.urlretrieve(url, tmp_file)
+                outfd = open(tmp_file, 'wb')
+                inurl = urllib2.urlopen(url)
+                outfd.write(inurl.read())
+                outfd.close()
         except:
             if os.path.isfile(tmp_file):
                 os.remove(tmp_file)
