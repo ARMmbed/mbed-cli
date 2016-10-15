@@ -657,7 +657,7 @@ my-mbed-os-example (a5ac4bf2e468)
    `- my-libs/test-framework (cd18b5a50df4)
 ```
 
-Let's assume that you make changes to `ot-client`. `publish` detects the change on the leaf `ot-client` dependency and asks you to commit it. Then it detects that `my-libs` depends on `iot-client`, updates the `my-libs` dependency on `iot-client` to its latest version (by updating the `iot-client.lib` file) and asks you to commit it. This propagates up to `my-libs` and finally to your program `my-mbed-os-example`.
+Let's assume that you make changes to `iot-client`. `publish` detects the change on the leaf `iot-client` dependency and asks you to commit it. Then it detects that `my-libs` depends on `iot-client`, updates the `my-libs` dependency on `iot-client` to its latest version (by updating the `iot-client.lib` file) and asks you to commit it. This propagates up to `my-libs` and finally to your program `my-mbed-os-example`.
 
 ### Forking workflow
 
