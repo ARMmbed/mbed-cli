@@ -35,7 +35,7 @@ import argparse
 
 
 # Application version
-ver = '0.9.9'
+ver = '0.9.10'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
@@ -600,14 +600,23 @@ class Git(object):
         if not rev:
             return
         info("Checkout \"%s\" in %s" % (rev, os.path.basename(os.getcwd())))
-        popen([git_cmd, 'checkout', rev] + (['-f'] if clean else []) + ([] if very_verbose else ['-q']))
-        if Git.isdetached(): # try to find associated refs to avoid detached state
-            refs = Git.getrefs(rev)
-            for ref in refs: # re-associate with a local or remote branch (rev is the same)
-                branch = re.sub(r'^(.*?)\/(.*?)$', r'\2', ref)
+        branch = None
+        refs = Git.getrefs(rev)
+        for ref in refs: # re-associate with a local or remote branch (rev is the same)
+            m = re.match(r'^(.*?)\/(.*?)$', ref)
+            if m and m.group(2) != "HEAD": # matches origin/<branch> and isn't HEAD ref
+                if not os.path.exists(os.path.join('.git', 'refs', 'heads', m.group(2))): # okay only if local branch with that name doesn't exist (git will checkout the origin/<branch> in that case)
+                    branch = m.group(2)
+            elif ref != "HEAD":
+                branch = ref # matches local branch and isn't HEAD ref
+
+            if branch:
                 info("Revision \"%s\" matches a branch \"%s\" reference. Re-associating with branch" % (rev, branch))
                 popen([git_cmd, 'checkout', branch] + ([] if very_verbose else ['-q']))
                 break
+
+        if not branch:
+            popen([git_cmd, 'checkout', rev] + (['-f'] if clean else []) + ([] if very_verbose else ['-q']))
 
     def update(rev=None, clean=False, clean_files=False, is_local=False):
         if clean:
@@ -698,9 +707,9 @@ class Git(object):
         return pquery([git_cmd, 'rev-parse', 'HEAD']).strip()
 
     # Gets current branch or returns empty string if detached
-    def getbranch():
+    def getbranch(rev='HEAD'):
         try:
-            branch = pquery([git_cmd, 'rev-parse', '--symbolic-full-name', '--abbrev-ref', 'HEAD']).strip()
+            branch = pquery([git_cmd, 'rev-parse', '--symbolic-full-name', '--abbrev-ref', rev]).strip()
         except ProcessException:
             branch = "master"
         return branch if branch != "HEAD" else ""
