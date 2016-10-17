@@ -1329,11 +1329,11 @@ class Program(object):
         if target and (target.lower() == 'detect' or target.lower() == 'auto'):
             targets = self.get_detected_targets()
             if targets == False:
-                error("The target detection requires that the 'mbed-ls' python module is installed.")
+                error("The target detection requires that the 'mbed-ls' python module is installed.\nYou can install mbed-ls by running 'pip install mbed-ls'.")
             elif len(targets) > 1:
                 error("Multiple targets were detected.\nOnly 1 target board should be connected to your system when you use the '-m auto' switch.")
             elif len(targets) == 0:
-                error("No targets were detected.\nPlease make sure a target board to this system.")
+                error("No targets were detected.\nPlease make sure a target board is connected to this system.")
             else:
                 action("Detected \"%s\" connected to \"%s\" and using com port \"%s\"" % (targets[0]['name'], targets[0]['mount'], targets[0]['serial']))
                 target = targets[0]['name']
