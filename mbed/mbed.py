@@ -1245,7 +1245,6 @@ class Program(object):
                         missing = []
                     except ProcessException:
                         warning("Unable to auto-install required Python modules.")
-                        pass
 
         except (IOError, ImportError, OSError):
             pass
@@ -1385,7 +1384,7 @@ class Global(object):
     def list_cfg(self, *args, **kwargs):
         return Cfg(self.path).list(*args, **kwargs)
 
-# Cfg classed used for handling the config backend 
+# Cfg classed used for handling the config backend
 class Cfg(object):
     path = None
     file = ".mbed"
@@ -1415,7 +1414,6 @@ class Cfg(object):
                 f.write('\n'.join(lines) + '\n')
         except (IOError, OSError):
             warning("Unable to write config file %s" % fl)
-            pass
 
     # Gets config value
     def get(self, var, default_val=None):
@@ -1797,7 +1795,7 @@ def publish(all_refs=None, msg=None, top=True):
             repo.publish(all_refs)
         else:
             if top:
-                action("Nothing to publish to the remote repository (the source tree is unmodified)")            
+                action("Nothing to publish to the remote repository (the source tree is unmodified)")
     except ProcessException as e:
         if e[0] != 1:
             raise e
@@ -1987,7 +1985,7 @@ def sync(recursive=True, keep_refs=False, top=True):
 def list_(detailed=False, prefix='', p_path=None, ignore=False):
     repo = Repo.fromrepo()
 
-    print("%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if detailed else str(repo.rev)[:12]) or 'no revision')))
+    print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if detailed else str(repo.rev)[:12]) or 'no revision'))
 
     for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.path)):
         if prefix:
@@ -2157,7 +2155,6 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
         if not build:
             build = os.path.join(program.path, program.build_dir, 'tests', target, tchain)
 
-        
         if test_spec:
             # Preserve path to given test spec
             test_spec = os.path.relpath(os.path.join(orig_path, test_spec), program.path)
@@ -2297,7 +2294,7 @@ def detect():
 def config_(var=None, value=None, global_cfg=False, unset=False, list_config=False):
     name = var
     var = str(var).upper()
-    
+
     if list_config:
         g = Global()
         g_vars = g.list_cfg().items()
@@ -2306,7 +2303,7 @@ def config_(var=None, value=None, global_cfg=False, unset=False, list_config=Fal
             for v in g_vars:
                 log("%s=%s\n" % (v[0], v[1]))
         else:
-            log("No global configuration is set\n")        
+            log("No global configuration is set\n")
         log("\n")
 
         p = Program(os.getcwd())
@@ -2389,7 +2386,7 @@ def main():
 
     # Help messages adapt based on current dir
     cwd_root = os.getcwd()
- 
+
     if sys.version_info[0] != 2 or sys.version_info[1] < 7:
         error(
             "mbed CLI is compatible with Python version >= 2.7 and < 3.0\n"
