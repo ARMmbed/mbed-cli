@@ -27,6 +27,7 @@ import contextlib
 import shutil
 import stat
 import errno
+import ctypes
 from itertools import chain, izip, repeat
 from urlparse import urlparse
 import urllib2
@@ -1322,17 +1323,29 @@ class Program(object):
         return env
 
     def get_target(self, target=None):
-        target_cfg = self.get_cfg('TARGET')
-        target = target if target else target_cfg
+        if target:
+            if target.lower() == 'detect' or target.lower() == 'auto':
+                targets = self.get_detected_targets()
+                if targets == False:
+                    error("The target detection requires that the 'mbed-ls' python module is installed.")
+                elif len(targets) > 1:
+                    error("Multiple targets were detected.\nOnly 1 target board should be connected to your system when you use the '-m auto' switch.")
+                elif len(targets) == 0:
+                    error("No targets were detected.\nPlease make sure a target board to this system.")
+                else:
+                    action("Detected \"%s\" connected to \"%s\" and using com port \"%s\"" % (targets[0]['name'], targets[0]['mount'], targets[0]['serial']))
+                    target = targets[0]['name']
+        else:
+            target = self.get_cfg('TARGET')
         if target is None:
-            error('Please specify compile target using the -m switch or set default target using command "target"', 1)
+            error("Please specify target using the -m switch or set default target using command 'mbed target'", 1)
         return target
 
     def get_toolchain(self, toolchain=None):
         toolchain_cfg = self.get_cfg('TOOLCHAIN')
         tchain = toolchain if toolchain else toolchain_cfg
         if tchain is None:
-            error('Please specify compile toolchain using the -t switch or set default toolchain using command "toolchain"', 1)
+            error("Please specify toolchain using the -t switch or set default toolchain using command 'mbed toolchain'", 1)
         return tchain
 
     def set_defaults(self, target=None, toolchain=None):
@@ -1358,6 +1371,28 @@ class Program(object):
                     f.write('*\n')
             except IOError:
                 error("Unable to write build ignore file in \"%s\"" % os.path.join(build_path, '.mbedignore'), 1)
+
+    def get_detected_targets(self):
+        targets = []
+        try:
+            import mbed_lstools
+            oldError = None
+            if os.name == 'nt':
+                oldError = ctypes.windll.kernel32.SetErrorMode(1) # Disable Windows error box temporarily. note that SEM_FAILCRITICALERRORS = 1
+            mbeds = mbed_lstools.create()
+            detect_muts_list = mbeds.list_mbeds()
+            if os.name == 'nt':
+                ctypes.windll.kernel32.SetErrorMode(oldError)
+
+            for mut in detect_muts_list:
+                targets.append({
+                    'id': mut['target_id'], 'name': mut['platform_name'],
+                    'mount': mut['mount_point'], 'serial': mut['serial_port']
+                })
+        except (IOError, ImportError, OSError):
+            return False
+
+        return targets
 
 
 # Global class used for global config
@@ -2261,18 +2296,25 @@ def detect():
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
-    program = Program(os.getcwd(), True)
+    program = Program(os.getcwd(), False)
     program.check_requirements(True)
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
-        tools_dir = program.get_tools()
+        tools_dir = program.get_tools_dir()
 
-    # Prepare environment variables
-    env = program.get_env()
+    if tools_dir:
+        # Prepare environment variables
+        env = program.get_env()
 
-    popen(['python', '-u', os.path.join(tools_dir, 'detect_targets.py')]
-          + args,
-          env=env)
+        popen(['python', '-u', os.path.join(tools_dir, 'detect_targets.py')]
+              + args,
+              env=env)
+    else:
+        warning("The mbed tools were not found in \"%s\". \nLimited information will be shown about connected mbed targets/boards" % program.path)
+        targets = program.get_detected_targets()
+        if targets:
+            for target in targets:
+                action("Detected \"%s\" connected to \"%s\" and using com port \"%s\"" % (target['name'], target['mount'], target['serial']))
 
 
 # Generic config command
