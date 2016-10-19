@@ -35,7 +35,7 @@ import argparse
 
 
 # Application version
-ver = '0.9.9'
+ver = '0.9.10'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
@@ -603,14 +603,23 @@ class Git(object):
         if not rev:
             return
         info("Checkout \"%s\" in %s" % (rev, os.path.basename(os.getcwd())))
-        popen([git_cmd, 'checkout', rev] + (['-f'] if clean else []) + ([] if very_verbose else ['-q']))
-        if Git.isdetached(): # try to find associated refs to avoid detached state
-            refs = Git.getrefs(rev)
-            for ref in refs: # re-associate with a local or remote branch (rev is the same)
-                branch = re.sub(r'^(.*?)\/(.*?)$', r'\2', ref)
+        branch = None
+        refs = Git.getrefs(rev)
+        for ref in refs: # re-associate with a local or remote branch (rev is the same)
+            m = re.match(r'^(.*?)\/(.*?)$', ref)
+            if m and m.group(2) != "HEAD": # matches origin/<branch> and isn't HEAD ref
+                if not os.path.exists(os.path.join('.git', 'refs', 'heads', m.group(2))): # okay only if local branch with that name doesn't exist (git will checkout the origin/<branch> in that case)
+                    branch = m.group(2)
+            elif ref != "HEAD":
+                branch = ref # matches local branch and isn't HEAD ref
+
+            if branch:
                 info("Revision \"%s\" matches a branch \"%s\" reference. Re-associating with branch" % (rev, branch))
                 popen([git_cmd, 'checkout', branch] + ([] if very_verbose else ['-q']))
                 break
+
+        if not branch:
+            popen([git_cmd, 'checkout', rev] + (['-f'] if clean else []) + ([] if very_verbose else ['-q']))
 
     def update(rev=None, clean=False, clean_files=False, is_local=False):
         if clean:
@@ -701,9 +710,9 @@ class Git(object):
         return pquery([git_cmd, 'rev-parse', 'HEAD']).strip()
 
     # Gets current branch or returns empty string if detached
-    def getbranch():
+    def getbranch(rev='HEAD'):
         try:
-            branch = pquery([git_cmd, 'rev-parse', '--symbolic-full-name', '--abbrev-ref', 'HEAD']).strip()
+            branch = pquery([git_cmd, 'rev-parse', '--symbolic-full-name', '--abbrev-ref', rev]).strip()
         except ProcessException:
             branch = "master"
         return branch if branch != "HEAD" else ""
@@ -813,13 +822,16 @@ class Repo(object):
     def fromlib(cls, lib=None):
         with open(lib) as f:
             ref = f.read(200)
-            if ref.startswith('!<arch>'):
-                warning(
-                    "A static library \"%s\" in \"%s\" uses a non-standard .lib file extension, which is not compatible with the mbed build tools.\n"
-                    "Please change the extension of \"%s\" (for example to \"%s\").\n" % (os.path.basename(lib), os.path.split(lib)[0], os.path.basename(lib), os.path.basename(lib).replace('.lib', '.ar')))
-                return False
-            else:
-                return cls.fromurl(ref, lib[:-4])
+
+        m_local = re.match(regex_local_ref, ref.strip().replace('\\', '/'))
+        m_repo_url = re.match(regex_url_ref, ref.strip().replace('\\', '/'))
+        m_bld_url = re.match(regex_build_url, ref.strip().replace('\\', '/'))
+        if not (m_local or m_bld_url or m_repo_url):
+            warning(
+                "File \"%s\" in \"%s\" uses a non-standard .lib file extension, which is not compatible with the mbed build tools.\n" % (os.path.basename(lib), os.path.split(lib)[0]))
+            return False
+        else:
+            return cls.fromurl(ref, lib[:-4])
 
     @classmethod
     def fromrepo(cls, path=None):
@@ -1239,7 +1251,6 @@ class Program(object):
                         missing = []
                     except ProcessException:
                         warning("Unable to auto-install required Python modules.")
-                        pass
 
         except (IOError, ImportError, OSError):
             pass
@@ -1379,7 +1390,7 @@ class Global(object):
     def list_cfg(self, *args, **kwargs):
         return Cfg(self.path).list(*args, **kwargs)
 
-# Cfg classed used for handling the config backend 
+# Cfg classed used for handling the config backend
 class Cfg(object):
     path = None
     file = ".mbed"
@@ -1409,7 +1420,6 @@ class Cfg(object):
                 f.write('\n'.join(lines) + '\n')
         except (IOError, OSError):
             warning("Unable to write config file %s" % fl)
-            pass
 
     # Gets config value
     def get(self, var, default_val=None):
@@ -1791,7 +1801,7 @@ def publish(all_refs=None, msg=None, top=True):
             repo.publish(all_refs)
         else:
             if top:
-                action("Nothing to publish to the remote repository (the source tree is unmodified)")            
+                action("Nothing to publish to the remote repository (the source tree is unmodified)")
     except ProcessException as e:
         if e[0] != 1:
             raise e
@@ -1981,7 +1991,7 @@ def sync(recursive=True, keep_refs=False, top=True):
 def list_(detailed=False, prefix='', p_path=None, ignore=False):
     repo = Repo.fromrepo()
 
-    print("%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if detailed else str(repo.rev)[:12]) or 'no revision')))
+    print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if detailed else str(repo.rev)[:12]) or 'no revision'))
 
     for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.path)):
         if prefix:
@@ -2151,7 +2161,6 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
         if not build:
             build = os.path.join(program.path, program.build_dir, 'tests', target, tchain)
 
-        
         if test_spec:
             # Preserve path to given test spec
             test_spec = os.path.relpath(os.path.join(orig_path, test_spec), program.path)
@@ -2291,7 +2300,7 @@ def detect():
 def config_(var=None, value=None, global_cfg=False, unset=False, list_config=False):
     name = var
     var = str(var).upper()
-    
+
     if list_config:
         g = Global()
         g_vars = g.list_cfg().items()
@@ -2300,7 +2309,7 @@ def config_(var=None, value=None, global_cfg=False, unset=False, list_config=Fal
             for v in g_vars:
                 log("%s=%s\n" % (v[0], v[1]))
         else:
-            log("No global configuration is set\n")        
+            log("No global configuration is set\n")
         log("\n")
 
         p = Program(os.getcwd())
@@ -2383,7 +2392,7 @@ def main():
 
     # Help messages adapt based on current dir
     cwd_root = os.getcwd()
- 
+
     if sys.version_info[0] != 2 or sys.version_info[1] < 7:
         error(
             "mbed CLI is compatible with Python version >= 2.7 and < 3.0\n"
