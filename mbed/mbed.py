@@ -291,7 +291,7 @@ class Bld(object):
         try:
             if not os.path.exists(rev_file):
                 action("Downloading library build \"%s\" (might take a minute)" % rev)
-                outfd = open(tmp_file, 'wb')
+                outfd = open(rev_file, 'wb')
                 inurl = urllib2.urlopen(url)
                 outfd.write(inurl.read())
                 outfd.close()
@@ -849,8 +849,9 @@ class Repo(object):
         else:
             error('Invalid repository (%s)' % url.strip(), -1)
 
-        if cache_repositories:
-            repo.cache = Program(repo.path).get_cfg('CACHE') or os.path.join(tempfile.gettempdir(), 'mbed-repo-cache')
+        g = Global()
+        if cache_repositories and not g.get_cfg('CACHE_DISABLED'):
+            repo.cache = g.get_cfg('CACHE') or os.path.join(tempfile.gettempdir(), 'mbed-repo-cache')
 
         return repo
 
@@ -881,8 +882,10 @@ class Repo(object):
 
         repo.path = os.path.abspath(path)
         repo.name = os.path.basename(repo.path)
-        if cache_repositories:
-            repo.cache = Program(repo.path).get_cfg('CACHE') or os.path.join(tempfile.gettempdir(), 'mbed-repo-cache')
+        
+        g = Global()
+        if cache_repositories and not g.get_cfg('CACHE_DISABLED'):
+            repo.cache = g.get_cfg('CACHE') or os.path.join(tempfile.gettempdir(), 'mbed-repo-cache')
 
         repo.sync()
 
