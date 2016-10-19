@@ -819,13 +819,16 @@ class Repo(object):
     def fromlib(cls, lib=None):
         with open(lib) as f:
             ref = f.read(200)
-            if ref.startswith('!<arch>'):
-                warning(
-                    "A static library \"%s\" in \"%s\" uses a non-standard .lib file extension, which is not compatible with the mbed build tools.\n"
-                    "Please change the extension of \"%s\" (for example to \"%s\").\n" % (os.path.basename(lib), os.path.split(lib)[0], os.path.basename(lib), os.path.basename(lib).replace('.lib', '.ar')))
-                return False
-            else:
-                return cls.fromurl(ref, lib[:-4])
+
+        m_local = re.match(regex_local_ref, ref.strip().replace('\\', '/'))
+        m_repo_url = re.match(regex_url_ref, ref.strip().replace('\\', '/'))
+        m_bld_url = re.match(regex_build_url, ref.strip().replace('\\', '/'))
+        if not (m_local or m_bld_url or m_repo_url):
+            warning(
+                "File \"%s\" in \"%s\" uses a non-standard .lib file extension, which is not compatible with the mbed build tools.\n" % (os.path.basename(lib), os.path.split(lib)[0]))
+            return False
+        else:
+            return cls.fromurl(ref, lib[:-4])
 
     @classmethod
     def fromrepo(cls, path=None):
