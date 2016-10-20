@@ -1776,7 +1776,7 @@ def publish(all_refs=None, msg=None, top=True):
     if repo.is_local:
         error(
             "%s \"%s\" in \"%s\" is a local repository.\nPlease associate it with a remote repository URL before attempting to publish.\n"
-            "Read more about %s repositories here:\nhttp://developer.mbed.org/handbook/how-to-publish-with-%s/" % ("Program" if top else "Library", repo.name, repo.path, repo.scm.name, repo.scm.name), 1)
+            "Read more about publishing local repositories here:\nhttps://github.com/ARMmbed/mbed-cli/#publishing-local-program-or-library" % ("Program" if top else "Library", repo.name, repo.path, repo.scm.name), 1)
 
     for lib in repo.libs:
         if lib.check_repo():

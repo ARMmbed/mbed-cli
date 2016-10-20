@@ -54,11 +54,11 @@ mbed CLI is supported on Windows, Linux and Mac OS X. We're keen to learn about 
 
 ### Requirements
 
-* **Python** - mbed CLI is a Python script, so you'll need Python in order to use it. mbed CLI was tested with version 2.7.9 of Python. You can download that or a newer version [here](https://www.python.org/downloads/).
+* **Python** - mbed CLI is a Python script, so you'll need Python in order to use it. mbed CLI was tested with [version 2.7.11 of Python](https://www.python.org/downloads/release/python-2711/) and is not compatible with Python 3.
 
 * **Git and Mercurial** - mbed CLI supports both Git and Mercurial repositories, so you'll need to install both:
-    * [Git](https://git-scm.com/).
-    * [Mercurial](https://www.mercurial-scm.org/).
+    * [Git](https://git-scm.com/) - version 1.9.5 or later
+    * [Mercurial](https://www.mercurial-scm.org/) - version 2.2.2 or later
 
     <span class="tips">**Note:** The directories of Git and Mercurial executables (`git` and `hg`) need to be in your system's PATH.</span>
 
@@ -658,6 +658,24 @@ my-mbed-os-example (a5ac4bf2e468)
 ```
 
 Let's assume that you make changes to `iot-client`. `publish` detects the change on the leaf `iot-client` dependency and asks you to commit it. Then it detects that `my-libs` depends on `iot-client`, updates the `my-libs` dependency on `iot-client` to its latest version (by updating the `iot-client.lib` file) and asks you to commit it. This propagates up to `my-libs` and finally to your program `my-mbed-os-example`.
+
+## Publishing a local program or library
+
+When you create a new (local) source-control managed program or library, its revision history exists only locally; the repository is not associated with the remote one. To publish the local repository without losing its revision history, please follow these steps:
+
+1. Create a new empty repository on the remote site. This can be based on a public repository hosting service (GitHub, Bitbucket, mbed.org), your own service or even a different location on your system.
+2. Copy the URL/location of the new repository in your clipboard and open command line in the local repository directory (for example change directory to `mbed-os-example/local-lib`).
+3. To associate the local repository:
+ * For Git - run `git remote add origin <url-or-paht-to-your-remote-repo>`.
+ * For Mercurial - edit .hg/hgrc and add (or replace if exists):
+ 
+            ```
+            [paths]
+            default = <url-or-paht-to-your-remote-repo>
+            ```
+4. Run `mbed publish` to publish your changes.
+
+In scanario with nested local repositories, start with the leaf repositories first.
 
 ### Forking workflow
 
