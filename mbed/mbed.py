@@ -653,10 +653,10 @@ class Git(object):
             popen([git_cmd, 'checkout', rev] + (['-f'] if clean else []) + ([] if very_verbose else ['-q']))
 
     def update(rev=None, clean=False, clean_files=False, is_local=False):
-        if clean:
-            Git.discard(clean_files)
         if not is_local:
             Git.fetch()
+        if clean:
+            Git.discard(clean_files)
         if rev:
             Git.checkout(rev, clean)
         else:
@@ -668,11 +668,11 @@ class Git(object):
                 except ProcessException:
                     pass
             else:
-                err = "Unable to update \"%s\" in \"%s\".\n" % (os.path.basename(os.getcwd()), os.getcwd())
+                err = "Unable to update \"%s\" in \"%s\"." % (os.path.basename(os.getcwd()), os.getcwd())
                 if not remote:
-                    info(err+"The local repository is not associated with a remote one.")
+                    info(err+" The local repository is not associated with a remote one.")
                 if not branch:
-                    info(err+"Working set is not on a branch.")
+                    info(err+" Working set is not on a branch.")
 
     def status():
         return pquery([git_cmd, 'status', '-s'] + (['-v'] if very_verbose else []))
@@ -844,7 +844,7 @@ class Repo(object):
             repo.path = os.path.abspath(path or os.path.join(os.getcwd(), repo.name))
             repo.url = formaturl(m_repo_url.group(1))
             repo.rev = m_repo_url.group(3)
-            if repo.rev and not re.match(r'^([a-fA-F0-9]{6,40})$', repo.rev):
+            if repo.rev and repo.rev != 'latest' and not re.match(r'^([a-fA-F0-9]{6,40})$', repo.rev):
                 error('Invalid revision (%s)' % repo.rev, -1)
         else:
             error('Invalid repository (%s)' % url.strip(), -1)
@@ -1634,15 +1634,11 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
         p.path = cwd_root
         p.set_root()
         if not create_only and not p.get_os_dir() and not p.get_mbedlib_dir():
-            url = mbed_lib_url if mbedlib else mbed_os_url
+            url = mbed_lib_url if mbedlib else mbed_os_url+'#latest'
             d = 'mbed' if mbedlib else 'mbed-os'
             try:
                 with cd(d_path):
                     add(url, depth=depth, protocol=protocol, top=False)
-                    if not mbedlib:
-                        with cd(d):
-                            repo = Repo.fromrepo()
-                            repo.checkout('latest')
             except Exception as e:
                 if os.path.isdir(os.path.join(d_path, d)):
                     rmtree_readonly(os.path.join(d_path, d))
@@ -1694,7 +1690,7 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
         with cd(repo.path):
             Program(repo.path).set_root()
             try:
-                if repo.getrev() != repo.rev:
+                if repo.rev and repo.getrev() != repo.rev:
                     repo.checkout(repo.rev, True)
             except ProcessException as e:
                 err = "Unable to update \"%s\" to %s" % (repo.name, repo.revtype(repo.rev, True))
