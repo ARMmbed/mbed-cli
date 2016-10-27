@@ -344,7 +344,7 @@ Image: BUILD/K64F/GCC_ARM/mbed-os-program.bin
 
 The arguments for *compile* are:
 
-* `-m <MCU>` to select a target.
+* `-m <MCU>` to select a target. If 'detect' or 'auto' parameter is passed then mbed CLI will attempt to detect the connected target and compile against it.
 * `-t <TOOLCHAIN>` to select a toolchain (of those defined in `mbed_settings.py`, see above). The value can be either `ARM` (ARM Compiler 5), `GCC_ARM` (GNU ARM Embedded), or `IAR` (IAR Embedded Workbench for ARM).
 * `--source <SOURCE>` to select the source directory. The default is `.` (the current directorty). You can specify multiple source locations, even outside the program tree.
 * `--build <BUILD>` to select the build directory. Default: `BUILD/` inside your program.
@@ -443,6 +443,8 @@ $ mbed compile -t GCC_ARM -m K64F --profile mbed-os/tools/profiles/debug.json
 
 Using `mbed target <target>` and `mbed toolchain <toolchain>` you can set the default target and toolchain for your program, meaning you won't have to specify these every time you compile or generate IDE project files.
 
+You can also use `mbed target detect', which will attempt to detect the connected target board and use it as parameter every time you compile or export.
+
 
 ## Exporting to desktop IDEs
 
@@ -501,7 +503,7 @@ mbedgt: completed in 21.28 sec
 ```
 
 The arguments to `test` are:
-* `-m <MCU>` to select a target for the compilation.
+* `-m <MCU>` to select a target for the compilation. If 'detect' or 'auto' parameter is passed then mbed CLI will attempt to detect the connected target and compile against it.
 * `-t <TOOLCHAIN>` to select a toolchain (of those defined in `mbed_settings.py`, see above), where `toolchain` can be either `ARM` (ARM Compiler 5), `GCC_ARM` (GNU ARM Embedded), or `IAR` (IAR Embedded Workbench for ARM).
 * `--compile-list` to list all the tests that can be built
 * `--run-list` to list all the tests that can be ran (they must be built first)
