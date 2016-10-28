@@ -849,9 +849,10 @@ class Repo(object):
         else:
             error('Invalid repository (%s)' % url.strip(), -1)
 
-        g = Global()
-        if cache_repositories and not g.get_cfg('CACHE_DISABLED'):
-            repo.cache = g.get_cfg('CACHE') or os.path.join(tempfile.gettempdir(), 'mbed-repo-cache')
+        cache_cfg = Global().get_cfg('CACHE', '')
+        if cache_repositories and cache_cfg != 'none' and cache_cfg != 'off' and cache_cfg != 'disabled':
+            loc = cache_cfg if (cache_cfg and cache_cfg != 'on' and cache_cfg != 'enabled') else None
+            repo.cache = loc or os.path.join(tempfile.gettempdir(), 'mbed-repo-cache')
 
         return repo
 
@@ -883,9 +884,10 @@ class Repo(object):
         repo.path = os.path.abspath(path)
         repo.name = os.path.basename(repo.path)
         
-        g = Global()
-        if cache_repositories and not g.get_cfg('CACHE_DISABLED'):
-            repo.cache = g.get_cfg('CACHE') or os.path.join(tempfile.gettempdir(), 'mbed-repo-cache')
+        cache_cfg = Global().get_cfg('CACHE', '')
+        if cache_repositories and cache_cfg != 'none' and cache_cfg != 'off' and cache_cfg != 'disabled':
+            loc = cache_cfg if (cache_cfg and cache_cfg != 'on' and cache_cfg != 'enabled') else None
+            repo.cache = loc or os.path.join(tempfile.gettempdir(), 'mbed-repo-cache')
 
         repo.sync()
 
