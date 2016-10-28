@@ -265,6 +265,15 @@ class Bld(object):
         if not os.path.exists(path):
             os.mkdir(path)
 
+    def cleanup():
+        info("Cleaning up library build folder")
+        for fl in os.listdir('.'):
+            if not fl.startswith('.'):
+                if os.path.isfile(fl):
+                    os.remove(fl)
+                else:
+                    shutil.rmtree(fl)
+
     def clone(url, path=None, depth=None, protocol=None):
         m = Bld.isurl(url)
         if not m:
@@ -276,15 +285,6 @@ class Bld(object):
                 Bld.seturl(url+'/tip')
         except Exception as e:
             error(e[1], e[0])
-
-    def cleanup():
-        info("Cleaning up library build folder")
-        for fl in os.listdir('.'):
-            if not fl.startswith('.'):
-                if os.path.isfile(fl):
-                    os.remove(fl)
-                else:
-                    shutil.rmtree(fl)
 
     def fetch_rev(url, rev):
         rev_file = os.path.join('.'+Bld.name, '.rev-' + rev + '.zip')
@@ -383,6 +383,9 @@ class Hg(object):
 
     def init(path=None):
         popen([hg_cmd, 'init'] + ([path] if path else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
+
+    def cleanup():
+        return True
 
     def clone(url, name=None, depth=None, protocol=None):
         popen([hg_cmd, 'clone', formaturl(url, protocol), name] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
@@ -580,6 +583,11 @@ class Git(object):
 
     def init(path=None):
         popen([git_cmd, 'init'] + ([path] if path else []) + ([] if very_verbose else ['-q']))
+
+    def cleanup():
+        info("Cleaning up Git index")
+        if os.path.exists(os.path.join('.git', 'logs')):
+            rmtree_readonly(os.path.join('.git', 'logs'))
 
     def clone(url, name=None, depth=None, protocol=None):
         popen([git_cmd, 'clone', formaturl(url, protocol), name] + (['--depth', depth] if depth else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
@@ -1046,6 +1054,7 @@ class Repo(object):
 
                     with cd(path):
                         scm.seturl(formaturl(url, protocol))
+                        scm.cleanup()
                         info("Update cached copy from remote repository")
                         scm.update(rev, True)
                         main = False
