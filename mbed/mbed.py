@@ -1442,6 +1442,9 @@ class Cfg(object):
 
     # Sets config value
     def set(self, var, val):
+        if not re.match(r'^([\w+-]+)$', var):
+            error("%s is invalid config variable name" % var)
+
         fl = os.path.join(self.path, self.file)
         try:
             with open(fl) as f:
