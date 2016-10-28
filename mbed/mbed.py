@@ -850,7 +850,7 @@ class Repo(object):
             error('Invalid repository (%s)' % url.strip(), -1)
 
         cache_cfg = Global().get_cfg('CACHE', '')
-        if cache_repositories and cache_cfg != 'none' and cache_cfg != 'off' and cache_cfg != 'disabled':
+        if cache_repositories and cache_cfg and cache_cfg != 'none' and cache_cfg != 'off' and cache_cfg != 'disabled':
             loc = cache_cfg if (cache_cfg and cache_cfg != 'on' and cache_cfg != 'enabled') else None
             repo.cache = loc or os.path.join(tempfile.gettempdir(), 'mbed-repo-cache')
 
@@ -885,7 +885,7 @@ class Repo(object):
         repo.name = os.path.basename(repo.path)
         
         cache_cfg = Global().get_cfg('CACHE', '')
-        if cache_repositories and cache_cfg != 'none' and cache_cfg != 'off' and cache_cfg != 'disabled':
+        if cache_repositories and cache_cfg and cache_cfg != 'none' and cache_cfg != 'off' and cache_cfg != 'disabled':
             loc = cache_cfg if (cache_cfg and cache_cfg != 'on' and cache_cfg != 'enabled') else None
             repo.cache = loc or os.path.join(tempfile.gettempdir(), 'mbed-repo-cache')
 
@@ -1203,7 +1203,7 @@ class Program(object):
         if self.is_cwd and print_warning:
             warning(
                 "Could not find mbed program in current path \"%s\".\n"
-                "You can fix this by calling \"mbed new .\" or \"mbed config root .\" in the root of your program." % self.path)
+                "You can fix this by calling \"mbed new .\" in the root of your program." % self.path)
 
     def get_cfg(self, *args, **kwargs):
         return Cfg(self.path).get(*args, **kwargs) or Global().get_cfg(*args, **kwargs)
@@ -2379,6 +2379,10 @@ def config_(var=None, value=None, global_cfg=False, unset=False, list_config=Fal
         else:
             # Find the root of the program
             program = Program(os.getcwd())
+            if program.is_cwd:
+                error(
+                    "Could not find mbed program in current path \"%s\".\n"
+                    "Change the current directory to a valid mbed program or use the '--global' option to set global configuration." % program.path)
             with cd(program.path):
                 if unset:
                     program.set_cfg(var, None)
