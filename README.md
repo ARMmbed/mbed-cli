@@ -359,6 +359,8 @@ The arguments for *compile* are:
 
 The compiled binary, ELF image, memory usage and link statistics can be found in the `build` subdirectory of your program.
 
+For more information on build profiles see https://github.com/ARMmbed/mbed-os/blob/master/docs/Toolchain_Profiles.md .
+
 ### Compiling static libraries
 
 You can build a static library of your code by adding the `--library` argument to `mbed compile`. A typical application for static libraries is when you want to build multiple applications from the same mbed-os codebase without having to recompile for every application. To achieve this:
