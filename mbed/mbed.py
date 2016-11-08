@@ -33,10 +33,11 @@ from urlparse import urlparse
 import urllib2
 import zipfile
 import argparse
+import tempfile
 
 
 # Application version
-ver = '0.9.10'
+ver = '1.0.0'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
@@ -121,6 +122,7 @@ mbed_sdk_tools_url = 'https://mbed.org/users/mbed_official/code/mbed-sdk-tools'
 verbose = False
 very_verbose = False
 install_requirements = True
+cache_repositories = True
 
 # stores current working directory for recursive operations
 cwd_root = ""
@@ -264,10 +266,19 @@ class Bld(object):
         if not os.path.exists(path):
             os.mkdir(path)
 
+    def cleanup():
+        info("Cleaning up library build folder")
+        for fl in os.listdir('.'):
+            if not fl.startswith('.'):
+                if os.path.isfile(fl):
+                    os.remove(fl)
+                else:
+                    shutil.rmtree(fl)
+
     def clone(url, path=None, depth=None, protocol=None):
         m = Bld.isurl(url)
         if not m:
-            raise ProcessException(1, "Not an mbed library build URL")
+            raise ProcessException(1, "Not a library build URL")
 
         try:
             Bld.init(path)
@@ -277,60 +288,51 @@ class Bld(object):
             error(e[1], e[0])
 
     def fetch_rev(url, rev):
-        tmp_file = os.path.join('.'+Bld.name, '.rev-' + rev + '.zip')
-        arch_dir = 'mbed-' + rev
+        rev_file = os.path.join('.'+Bld.name, '.rev-' + rev + '.zip')
         try:
-            if not os.path.exists(tmp_file):
-                action("Downloading mbed library build \"%s\" (might take a minute)" % rev)
-                outfd = open(tmp_file, 'wb')
+            if not os.path.exists(rev_file):
+                action("Downloading library build \"%s\" (might take a minute)" % rev)
+                outfd = open(rev_file, 'wb')
                 inurl = urllib2.urlopen(url)
                 outfd.write(inurl.read())
                 outfd.close()
         except:
-            if os.path.isfile(tmp_file):
-                os.remove(tmp_file)
+            if os.path.isfile(rev_file):
+                os.remove(rev_file)
             raise Exception(128, "Download failed!\nPlease try again later.")
 
+    def unpack_rev(rev):
+        rev_file = os.path.join('.'+Bld.name, '.rev-' + rev + '.zip')
         try:
-            with zipfile.ZipFile(tmp_file) as zf:
-                action("Unpacking mbed library build \"%s\" in \"%s\"" % (rev, os.getcwd()))
-                zf.extractall()
+            with zipfile.ZipFile(rev_file) as zf:
+                action("Unpacking library build \"%s\" in \"%s\"" % (rev, os.getcwd()))
+                zf.extractall('.')
         except:
-            if os.path.isfile(tmp_file):
-                os.remove(tmp_file)
-            if os.path.isfile(arch_dir):
-                rmtree_readonly(arch_dir)
-            raise Exception(128, "An error occurred while unpacking mbed library archive \"%s\" in \"%s\"" % (tmp_file, os.getcwd()))
+            if os.path.isfile(rev_file):
+                os.remove(rev_file)
+            raise Exception(128, "An error occurred while unpacking library archive \"%s\" in \"%s\"" % (rev_file, os.getcwd()))
 
     def checkout(rev, clean=False):
         url = Bld.geturl()
         m = Bld.isurl(url)
         if not m:
-            raise ProcessException(1, "Not an mbed library build URL")
+            raise ProcessException(1, "Not a library build URL")
         rev = Hg.remoteid(m.group(1), rev)
         if not rev:
-            error("Unable to fetch late mbed library revision")
+            error("Unable to fetch library build information")
 
-        if rev != Bld.getrev():
-            info("Cleaning up library build folder")
-            for fl in os.listdir('.'):
-                if not fl.startswith('.'):
-                    if os.path.isfile(fl):
-                        os.remove(fl)
-                    else:
-                        shutil.rmtree(fl)
+        arch_url = m.group(1) + '/archive/' + rev + '.zip'
+        Bld.fetch_rev(arch_url, rev)
+
+        if rev != Bld.getrev() or clean:
+            Bld.cleanup()
 
             info("Checkout \"%s\" in %s" % (rev, os.path.basename(os.getcwd())))
-            arch_url = m.group(1) + '/archive/' + rev + '.zip'
-            arch_dir = m.group(7) + '-' + rev
             try:
-                if not os.path.exists(arch_dir):
-                    Bld.fetch_rev(arch_url, rev)
+                Bld.unpack_rev(rev)
+                Bld.seturl(url+'/'+rev)
             except Exception as e:
-                if os.path.exists(arch_dir):
-                    rmtree_readonly(arch_dir)
                 error(e[1], e[0])
-            Bld.seturl(url+'/'+rev)
 
     def update(rev=None, clean=False, clean_files=False, is_local=False):
         return Bld.checkout(rev, clean)
@@ -339,6 +341,7 @@ class Bld(object):
         return ""
 
     def seturl(url):
+        info("Setting url to \"%s\" in %s" % (url, os.getcwd()))
         if not os.path.exists('.'+Bld.name):
             os.mkdir('.'+Bld.name)
 
@@ -381,6 +384,9 @@ class Hg(object):
 
     def init(path=None):
         popen([hg_cmd, 'init'] + ([path] if path else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
+
+    def cleanup():
+        return True
 
     def clone(url, name=None, depth=None, protocol=None):
         popen([hg_cmd, 'clone', formaturl(url, protocol), name] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
@@ -445,11 +451,36 @@ class Hg(object):
                 raise e
             return 0
 
+    def seturl(url):
+        info("Setting url to \"%s\" in %s" % (url, os.getcwd()))
+        hgrc = os.path.join('.hg', 'hgrc')
+        tagpaths = '[paths]'
+        remote = 'default'
+        lines = []
+
+        try:
+            with open(hgrc) as f:
+                lines = f.read().splitlines()
+        except IOError:
+            pass
+
+        if tagpaths in lines:
+            idx = lines.index(tagpaths)
+            m = re.match(r'^([\w_]+)\s*=\s*(.*)$', lines[idx+1])
+            if m:
+                remote = m.group(1)
+                del lines[idx+1]
+            lines.insert(idx, remote+' = '+url)
+        else:
+            lines.append(tagpaths)
+            lines.append(remote+' = '+url)
+
     def geturl():
         tagpaths = '[paths]'
         default_url = ''
         url = ''
-        if os.path.isfile(os.path.join('.hg', 'hgrc')):
+
+        try:
             with open(os.path.join('.hg', 'hgrc')) as f:
                 lines = f.read().splitlines()
                 if tagpaths in lines:
@@ -460,8 +491,11 @@ class Hg(object):
                             default_url = m.group(2)
                         else:
                             url = m.group(2)
-            if default_url:
-                url = default_url
+        except IOError:
+            pass
+
+        if default_url:
+            url = default_url
 
         return formaturl(url or pquery([hg_cmd, 'paths', 'default']).strip())
 
@@ -551,6 +585,11 @@ class Git(object):
     def init(path=None):
         popen([git_cmd, 'init'] + ([path] if path else []) + ([] if very_verbose else ['-q']))
 
+    def cleanup():
+        info("Cleaning up Git index")
+        if os.path.exists(os.path.join('.git', 'logs')):
+            rmtree_readonly(os.path.join('.git', 'logs'))
+
     def clone(url, name=None, depth=None, protocol=None):
         popen([git_cmd, 'clone', formaturl(url, protocol), name] + (['--depth', depth] if depth else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
@@ -623,10 +662,10 @@ class Git(object):
             popen([git_cmd, 'checkout', rev] + (['-f'] if clean else []) + ([] if very_verbose else ['-q']))
 
     def update(rev=None, clean=False, clean_files=False, is_local=False):
-        if clean:
-            Git.discard(clean_files)
         if not is_local:
             Git.fetch()
+        if clean:
+            Git.discard(clean_files)
         if rev:
             Git.checkout(rev, clean)
         else:
@@ -638,11 +677,11 @@ class Git(object):
                 except ProcessException:
                     pass
             else:
-                err = "Unable to update \"%s\" in \"%s\".\n" % (os.path.basename(os.getcwd()), os.getcwd())
+                err = "Unable to update \"%s\" in \"%s\"." % (os.path.basename(os.getcwd()), os.getcwd())
                 if not remote:
-                    info(err+"The local repository is not associated with a remote one.")
+                    info(err+" The local repository is not associated with a remote one.")
                 if not branch:
-                    info(err+"Working set is not on a branch.")
+                    info(err+" Working set is not on a branch.")
 
     def status():
         return pquery([git_cmd, 'status', '-s'] + (['-v'] if very_verbose else []))
@@ -697,6 +736,10 @@ class Git(object):
             if not rtype or rtype == t:
                 result.append([remote[0], remote[1], t])
         return result
+
+    def seturl(url):
+        info("Setting url to \"%s\" in %s" % (url, os.getcwd()))
+        return pquery([git_cmd, 'remote', 'set-url', 'origin', url]).strip()
 
     def geturl():
         url = ""
@@ -810,12 +853,15 @@ class Repo(object):
             repo.path = os.path.abspath(path or os.path.join(os.getcwd(), repo.name))
             repo.url = formaturl(m_repo_url.group(1))
             repo.rev = m_repo_url.group(3)
-            if repo.rev and not re.match(r'^([a-fA-F0-9]{6,40})$', repo.rev):
+            if repo.rev and repo.rev != 'latest' and not re.match(r'^([a-fA-F0-9]{6,40})$', repo.rev):
                 error('Invalid revision (%s)' % repo.rev, -1)
         else:
             error('Invalid repository (%s)' % url.strip(), -1)
 
-        repo.cache = Program(repo.path).get_cfg('CACHE')
+        cache_cfg = Global().get_cfg('CACHE', '')
+        if cache_repositories and cache_cfg and cache_cfg != 'none' and cache_cfg != 'off' and cache_cfg != 'disabled':
+            loc = cache_cfg if (cache_cfg and cache_cfg != 'on' and cache_cfg != 'enabled') else None
+            repo.cache = loc or os.path.join(tempfile.gettempdir(), 'mbed-repo-cache')
 
         return repo
 
@@ -846,7 +892,11 @@ class Repo(object):
 
         repo.path = os.path.abspath(path)
         repo.name = os.path.basename(repo.path)
-        repo.cache = Program(repo.path).get_cfg('CACHE')
+        
+        cache_cfg = Global().get_cfg('CACHE', '')
+        if cache_repositories and cache_cfg and cache_cfg != 'none' and cache_cfg != 'off' and cache_cfg != 'disabled':
+            loc = cache_cfg if (cache_cfg and cache_cfg != 'on' and cache_cfg != 'enabled') else None
+            repo.cache = loc or os.path.join(tempfile.gettempdir(), 'mbed-repo-cache')
 
         repo.sync()
 
@@ -1004,10 +1054,13 @@ class Repo(object):
                     shutil.copytree(cache, path)
 
                     with cd(path):
+                        scm.seturl(formaturl(url, protocol))
+                        scm.cleanup()
                         info("Update cached copy from remote repository")
                         scm.update(rev, True)
                         main = False
                 except (ProcessException, IOError):
+                    info("Discarding cached repository")
                     if os.path.isdir(path):
                         rmtree_readonly(path)
 
@@ -1160,7 +1213,7 @@ class Program(object):
         if self.is_cwd and print_warning:
             warning(
                 "Could not find mbed program in current path \"%s\".\n"
-                "You can fix this by calling \"mbed new .\" or \"mbed config root .\" in the root of your program." % self.path)
+                "You can fix this by calling \"mbed new .\" in the root of your program." % self.path)
 
     def get_cfg(self, *args, **kwargs):
         return Cfg(self.path).get(*args, **kwargs) or Global().get_cfg(*args, **kwargs)
@@ -1304,18 +1357,15 @@ class Program(object):
                     error("An error occurred while cloning the mbed SDK tools from \"%s\"" % mbed_sdk_tools_url)
 
     def update_tools(self, path):
-        if not os.path.exists(path):
-            os.mkdir(path)
-        with cd(path):
-            tools_dir = 'tools'
-            if os.path.exists(tools_dir):
-                with cd(tools_dir):
-                    try:
-                        action("Updating the mbed 2.0 SDK tools...")
-                        repo = Repo.fromrepo()
-                        repo.update()
-                    except Exception:
-                        error("An error occurred while update the mbed SDK tools from \"%s\"" % mbed_sdk_tools_url)
+        tools_dir = 'tools'
+        if os.path.exists(os.path.join(path, tools_dir)):
+            with cd(os.path.join(path, tools_dir)):
+                try:
+                    action("Updating the mbed 2.0 SDK tools...")
+                    repo = Repo.fromrepo()
+                    repo.update()
+                except Exception:
+                    error("An error occurred while update the mbed SDK tools from \"%s\"" % mbed_sdk_tools_url)
 
     def get_tools(self):
         mbed_tools_path = self.get_tools_dir()
@@ -1372,6 +1422,7 @@ class Program(object):
             with open('MACROS.txt') as f:
                 macros = f.read().splitlines()
         return macros
+
 
     def ignore_build_dir(self):
         build_path = os.path.join(self.path, self.build_dir)
@@ -1436,6 +1487,9 @@ class Cfg(object):
 
     # Sets config value
     def set(self, var, val):
+        if not re.match(r'^([\w+-]+)$', var):
+            error("%s is invalid config variable name" % var)
+
         fl = os.path.join(self.path, self.file)
         try:
             with open(fl) as f:
@@ -1630,15 +1684,11 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
         p.path = cwd_root
         p.set_root()
         if not create_only and not p.get_os_dir() and not p.get_mbedlib_dir():
-            url = mbed_lib_url if mbedlib else mbed_os_url
+            url = mbed_lib_url if mbedlib else mbed_os_url+'#latest'
             d = 'mbed' if mbedlib else 'mbed-os'
             try:
                 with cd(d_path):
                     add(url, depth=depth, protocol=protocol, top=False)
-                    if not mbedlib:
-                        with cd(d):
-                            repo = Repo.fromrepo()
-                            repo.checkout('latest')
             except Exception as e:
                 if os.path.isdir(os.path.join(d_path, d)):
                     rmtree_readonly(os.path.join(d_path, d))
@@ -1690,7 +1740,8 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
         with cd(repo.path):
             Program(repo.path).set_root()
             try:
-                repo.checkout(repo.rev, True)
+                if repo.rev and repo.getrev() != repo.rev:
+                    repo.checkout(repo.rev, True)
             except ProcessException as e:
                 err = "Unable to update \"%s\" to %s" % (repo.name, repo.revtype(repo.rev, True))
                 if depth:
@@ -2383,6 +2434,10 @@ def config_(var=None, value=None, global_cfg=False, unset=False, list_config=Fal
         else:
             # Find the root of the program
             program = Program(os.getcwd())
+            if program.is_cwd:
+                error(
+                    "Could not find mbed program in current path \"%s\".\n"
+                    "Change the current directory to a valid mbed program or use the '--global' option to set global configuration." % program.path)
             with cd(program.path):
                 if unset:
                     program.set_cfg(var, None)
