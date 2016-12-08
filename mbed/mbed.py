@@ -785,6 +785,10 @@ class Git(object):
 
     def ignores():
         try:
+            ignore_file_parent_directory = os.path.dirname(Git.ignore_file)
+            if not os.path.exists(ignore_file_parent_directory):
+                os.mkdir(ignore_file_parent_directory)
+
             with open(Git.ignore_file, 'w') as f:
                 f.write('\n'.join(ignores)+'\n')
         except IOError:
@@ -799,6 +803,10 @@ class Git(object):
 
         if not exists:
             try:
+                ignore_file_parent_directory = os.path.dirname(Git.ignore_file)
+                if not os.path.exists(ignore_file_parent_directory):
+                    os.mkdir(ignore_file_parent_directory)
+
                 with open(Git.ignore_file, 'a') as f:
                     f.write(dest.replace("\\", "/") + '\n')
             except IOError:
@@ -813,6 +821,10 @@ class Git(object):
         if dest in lines:
             lines.remove(dest)
             try:
+                ignore_file_parent_directory = os.path.dirname(Git.ignore_file)
+                if not os.path.exists(ignore_file_parent_directory):
+                    os.mkdir(ignore_file_parent_directory)
+
                 with open(Git.ignore_file, 'w') as f:
                     f.write('\n'.join(lines) + '\n')
             except IOError:
