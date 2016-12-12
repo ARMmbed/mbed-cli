@@ -1,6 +1,6 @@
 ## Introduction
 
-*mbed CLI* is the name of the ARM mbed command-line tool, packaged as mbed-cli, which enables the full mbed workflow: repositories version control, maintaining dependencies, publishing code, updating from remotely hosted repositories (GitHub, GitLab and mbed.org), and invoking ARM mbed's own build system and export functions, among other operations.
+*mbed CLI* is the name of the ARM mbed command-line tool, packaged as mbed-cli, which enables the full mbed workflow: repositories version control, maintaining dependencies, publishing code, updating from remotely hosted repositories (GitHub, GitLab and mbed.org) and invoking ARM mbed's own build system and export functions, among other operations.
 
 This document covers the installation and usage of mbed CLI.
 
@@ -54,7 +54,7 @@ Windows, Linux and Mac OS X support mbed CLI. We're keen to learn about your exp
 
 ### Requirements
 
-* **Python** - mbed CLI is a Python script, so you'll need Python to use it. We tested mbed CLI with [version 2.7.11 of Python](https://www.python.org/downloads/release/python-2711/). It is not compatible with Python 3.
+* **Python** - mbed CLI is a Python script, so you'll need Python to use it. We test mbed CLI with [version 2.7.11 of Python](https://www.python.org/downloads/release/python-2711/). It is not compatible with Python 3.
 
 * **Git and Mercurial** - mbed CLI supports both Git and Mercurial repositories, so you'll need to install both:
     * [Git](https://git-scm.com/) - version 1.9.5 or later.
@@ -62,9 +62,9 @@ Windows, Linux and Mac OS X support mbed CLI. We're keen to learn about your exp
 
     <span class="tips">**Note:** The directories of Git and Mercurial executables (`git` and `hg`) need to be in your system's PATH.</span>
 
-* **Command-line compiler or IDE toolchain** - mbed CLI invokes the [mbed OS 5](https://github.com/ARMmbed/mbed-os) tools for various features, such as compiling, testing and exporting to industry standard toolchains. To compile your code, you will need a compiler and a toolchain:
+* **Command-line compiler or IDE toolchain** - mbed CLI invokes the [mbed OS 5](https://github.com/ARMmbed/mbed-os) tools for various features, such as compiling, testing and exporting to industry standard toolchains. To compile your code, you will need either a compiler or an IDE:
     * Compilers: GCC ARM, ARM Compiler 5, IAR.
-    * Toolchains: Keil uVision, DS-5, IAR Workbench.
+    * IDE: Keil uVision, DS-5, IAR Workbench.
 
 
 ### Video tutorial for manual installation 
@@ -693,7 +693,7 @@ $ git remote set-url --push origin https://github.com/screamerbg/repo-fork
 
 Each time you `git` commit and push, or use `mbed publish`, the new revisions will be pushed against your fork. You can fetch from the original repository using `mbed update` or `git pull`. If you explicitly want to fetch or pull from your fork, then you can use `git pull https://github.com/screamerbg/repo-fork [branch]`.
 
-Through the workflow explained above, mbed CLI will maintain association to the original repository (which you may want to send a pull request to), and will record references with the revision hashes that you push to your fork. Until your pull request (PR) is accepted, all recorded references will be invalid. Once the PR is accepted, all revision hashes from your fork will become part the original repository, so all references will become valid.
+Through the workflow explained above, mbed CLI will maintain association to the original repository (which you may want to send a pull request to) and will record references with the revision hashes that you push to your fork. Until your pull request (PR) is accepted, all recorded references will be invalid. Once the PR is accepted, all revision hashes from your fork will become part the original repository, so all references will become valid.
 
 ## Updating programs and libraries
 
@@ -747,7 +747,7 @@ __I want a clean update (and discard uncommitted changes)__
 
 Run `mbed update [branch] --clean`
 
-Specifying a branch to `mbed update` will only check out that branch, and won't automatically merge or fast-forward to the remote/upstream branch. You can run `mbed update` to merge (fast-forward) your local branch with the latest remote branch. On Git you can do `git pull`.
+Specifying a branch to `mbed update` will only check out that branch and won't automatically merge or fast-forward to the remote/upstream branch. You can run `mbed update` to merge (fast-forward) your local branch with the latest remote branch. On Git you can do `git pull`.
 
 <span class="warnings">**Warning**: The `--clean` option tells mbed CLI to update that program or library and its dependencies and discard all local changes. This action cannot be undone; use with caution.</span>
 
@@ -763,13 +763,13 @@ Run `mbed update <tag_name|revision> --clean`
 
 __When you have unpublished local libraries__
 
-There are three additional options that show how unpublished local libraries are handled:
+There are three additional options that modify how unpublished local libraries are handled:
 
-* `mbed update --clean-deps` - update the current program or library and its dependencies, and discard all local unpublished repositories. Use this with caution because your local unpublished repositories cannot be restored unless you have a backup copy.
+* `mbed update --clean-deps` - update the current program or library and its dependencies and discard all local unpublished repositories. Use this with caution because your local unpublished repositories cannot be restored unless you have a backup copy.
 
 * `mbed update --clean-files` - update the current program or library and its dependencies, discard local uncommitted changes and remove any untracked or ignored files. Use this with caution because your local unpublished repositories cannot be restored unless you have a backup copy.
 
-* `mbed update --ignore` - update the current program or library and its dependencies, and ignore any local unpublished libraries (they won't be deleted or modified, just ignored).
+* `mbed update --ignore` - update the current program or library and its dependencies and ignore any local unpublished libraries (they won't be deleted or modified, just ignored).
 
 __Combining update options__
 
