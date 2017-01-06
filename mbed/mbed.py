@@ -2345,12 +2345,16 @@ def export(ide=None, target=None, source=False, clean=False, supported=False):
     target = program.get_target(target)
     macros = program.get_macros()
 
+    if not ide:
+        error('Please specify ide using the -i switch')
+
     if not source or len(source) == 0:
         source = [os.path.relpath(program.path, orig_path)]
 
     popen(['python', '-u', os.path.join(tools_dir, 'project.py')]
           + list(chain.from_iterable(izip(repeat('-D'), macros)))
-          + (['-i', ide.lower(), '-m', target] if ide else [])
+          + ['-i', ide.lower()]
+          + ['-m', target]
           + (['-c'] if clean else [])
           + list(chain.from_iterable(izip(repeat('--source'), source)))
           + args,
