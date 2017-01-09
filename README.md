@@ -97,6 +97,10 @@ On Linux or Mac, you may need to run with `sudo`.
 
 <span class="tips">**Note:** mbed CLI is compatible with [Virtual Python Environment (virtualenv)](https://pypi.python.org/pypi/virtualenv). You can read more about isolated Python virtual environments [here](http://docs.python-guide.org/en/latest/).</span>
 
+### Windows installer
+
+Alternatively on Windows you can install mbed CLI using our installer. It can be found here: [mbed CLI Windows Installer](https://mbed-media.mbed.com/filer_public/c7/6e/c76e9a17-f551-4a0f-8bd7-28b247b8f66d/mbed_install_v031.exe)
+
 ### Uninstalling mbed CLI
 
 To uninstall mbed CLI, simply run:
