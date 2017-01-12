@@ -391,7 +391,7 @@ Image: ../threaded_blinky-out/threaded_blinky.bin
 
 ### Compile configuration system
 
-The [compile configuration system](https://docs.mbed.com/docs/mbed-os-handbook/en/5.1/advanced/config_system/) provides a flexible mechanism for configuring the mbed program, its libraries and the build target. Refer to the previous link for more details about the configuration system.
+The [compile configuration system](https://docs.mbed.com/docs/mbed-os-handbook/en/5.3/advanced/config_system/) provides a flexible mechanism for configuring the mbed program, its libraries and the build target. Refer to the previous link for more details about the configuration system.
 
 ___Inspecting the configuration___
 
