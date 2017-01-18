@@ -99,7 +99,7 @@ On Linux or Mac, you may need to run with `sudo`.
 
 ### Windows installer
 
-Alternatively on Windows you can install mbed CLI using our installer. It can be found here: [mbed CLI Windows Installer](https://mbed-media.mbed.com/filer_public/c7/6e/c76e9a17-f551-4a0f-8bd7-28b247b8f66d/mbed_install_v031.exe)
+Alternatively on Windows you can install mbed CLI using our installer. It can be found here: [mbed CLI Windows Installer](https://mbed-media.mbed.com/filer_public/2c/88/2c880c48-2059-40fb-882b-3fa52ac172fc/mbed_install_v032.exe)
 
 ### Uninstalling mbed CLI
 
