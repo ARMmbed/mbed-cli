@@ -395,7 +395,7 @@ The [compile configuration system](https://docs.mbed.com/docs/mbed-os-handbook/e
 
 ___Inspecting the configuration___
 
-If the program uses the [compile configuration system](https://github.com/ARMmbed/mbed-os/blob/master/docs/config_system.md), you can use `mbed compile --config` to view the configuration:
+If the program uses the [compile configuration system](https://docs.mbed.com/docs/mbed-os-handbook/en/latest/advanced/config_system/d), you can use `mbed compile --config` to view the configuration:
 
 ```
 $ mbed compile --config -t GCC_ARM -m K64F
