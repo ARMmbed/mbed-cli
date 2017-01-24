@@ -2144,7 +2144,6 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
     # Find the root of the program
     program = Program(os.getcwd(), True)
     program.check_requirements(True)
-    program.ignore_build_dir()
     # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
     orig_path = os.getcwd()
 
@@ -2178,39 +2177,46 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
               + (['-v'] if verbose else [])
               + (list(chain.from_iterable(izip(repeat('--prefix'), config_prefix))) if config_prefix else []),
               env=env)
-    elif compile_library:
-        # Compile as a library (current dir is default)
-        if not build:
-            build = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, 'libraries', os.path.basename(orig_path), target, tchain)
-
-        popen(['python', '-u', os.path.join(tools_dir, 'build.py')]
-              + list(chain.from_iterable(izip(repeat('-D'), macros)))
-              + ['-t', tchain, '-m', target]
-              + list(chain.from_iterable(izip(repeat('--profile'), profile or [])))
-              + list(chain.from_iterable(izip(repeat('--source'), source)))
-              + ['--build', build]
-              + (['-c'] if clean else [])
-              + (['--artifact-name', artifact_name] if artifact_name else [])
-              + (['-v'] if verbose else [])
-              + args,
-              env=env)
     else:
-        # Compile as application (root is default)
+        # If the user hasn't supplied a build directory, ignore the default build directory
         if not build:
-            build = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, target, tchain)
+            program.ignore_build_dir()
+        
+        build_path = build
 
-        popen(['python', '-u', os.path.join(tools_dir, 'make.py')]
-              + list(chain.from_iterable(izip(repeat('-D'), macros)))
-              + ['-t', tchain, '-m', target]
-              + list(chain.from_iterable(izip(repeat('--profile'), profile or [])))
-              + list(chain.from_iterable(izip(repeat('--source'), source)))
-              + ['--build', build]
-              + (['-c'] if clean else [])
-              + (['--artifact-name', artifact_name] if artifact_name else [])
-              + (['--app-config', app_config] if app_config else [])
-              + (['-v'] if verbose else [])
-              + args,
-              env=env)
+        if compile_library:
+            # Compile as a library (current dir is default)
+            if not build_path:
+                build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, 'libraries', os.path.basename(orig_path), target, tchain)
+
+            popen(['python', '-u', os.path.join(tools_dir, 'build.py')]
+                  + list(chain.from_iterable(izip(repeat('-D'), macros)))
+                  + ['-t', tchain, '-m', target]
+                  + list(chain.from_iterable(izip(repeat('--profile'), profile or [])))
+                  + list(chain.from_iterable(izip(repeat('--source'), source)))
+                  + ['--build', build_path]
+                  + (['-c'] if clean else [])
+                  + (['--artifact-name', artifact_name] if artifact_name else [])
+                  + (['-v'] if verbose else [])
+                  + args,
+                  env=env)
+        else:
+            # Compile as application (root is default)
+            if not build_path:
+                build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, target, tchain)
+
+            popen(['python', '-u', os.path.join(tools_dir, 'make.py')]
+                  + list(chain.from_iterable(izip(repeat('-D'), macros)))
+                  + ['-t', tchain, '-m', target]
+                  + list(chain.from_iterable(izip(repeat('--profile'), profile or [])))
+                  + list(chain.from_iterable(izip(repeat('--source'), source)))
+                  + ['--build', build_path]
+                  + (['-c'] if clean else [])
+                  + (['--artifact-name', artifact_name] if artifact_name else [])
+                  + (['--app-config', app_config] if app_config else [])
+                  + (['-v'] if verbose else [])
+                  + args,
+                  env=env)
 
     program.set_defaults(target=target, toolchain=tchain)
 
@@ -2238,7 +2244,6 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
     # Find the root of the program
     program = Program(os.getcwd(), True)
     program.check_requirements(True)
-    program.ignore_build_dir()
     # Save original working directory
     orig_path = os.getcwd()
 
@@ -2257,15 +2262,16 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
             source = [program.path]
 
         # Setup the build path if not specified
-        if not build:
-            build = os.path.join(program.path, program.build_dir, 'tests', target, tchain)
+        build_path = build
+        if not build_path:
+            build_path = os.path.join(program.path, program.build_dir, 'tests', target, tchain)
 
         if test_spec:
             # Preserve path to given test spec
             test_spec = os.path.relpath(os.path.join(orig_path, test_spec), program.path)
         else:
             # Create the path to the test spec file
-            test_spec = os.path.join(build, 'test_spec.json')
+            test_spec = os.path.join(build_path, 'test_spec.json')
 
         if compile_list:
             popen(['python', '-u', os.path.join(tools_dir, 'test.py'), '--list']
@@ -2279,13 +2285,17 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
                   env=env)
 
         if compile_only or build_and_run_tests:
+            # If the user hasn't supplied a build directory, ignore the default build directory
+            if not build:
+                program.ignore_build_dir()
+
             popen(['python', '-u', os.path.join(tools_dir, 'test.py')]
                   + list(chain.from_iterable(izip(repeat('-D'), macros)))
                   + list(chain.from_iterable(izip(repeat('--profile'), profile or [])))
                   + ['-t', tchain, '-m', target]
                   + (['-c'] if clean else [])
                   + list(chain.from_iterable(izip(repeat('--source'), source)))
-                  + ['--build', build]
+                  + ['--build', build_path]
                   + ['--test-spec', test_spec]
                   + (['-n', tests_by_name] if tests_by_name else [])
                   + (['-v'] if verbose else [])
@@ -2326,7 +2336,6 @@ def export(ide=None, target=None, source=False, clean=False, supported=False):
     # Find the root of the program
     program = Program(os.getcwd(), True)
     program.check_requirements(True)
-    program.ignore_build_dir()
     # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
     orig_path = os.getcwd()
     # Change directories to the program root to use mbed OS tools
@@ -2350,6 +2359,8 @@ def export(ide=None, target=None, source=False, clean=False, supported=False):
 
     if not source or len(source) == 0:
         source = [os.path.relpath(program.path, orig_path)]
+    
+    program.ignore_build_dir()
 
     popen(['python', '-u', os.path.join(tools_dir, 'project.py')]
           + list(chain.from_iterable(izip(repeat('-D'), macros)))
