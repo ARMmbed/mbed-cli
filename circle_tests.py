@@ -43,10 +43,10 @@ if tests:
 
     for cmd in tests:
         os.chdir(cwd)
-        print "\n----------\nEXEC: \"%s\" " % cmd
+        print("\n----------\nEXEC: \"%s\" " % cmd)
         proc = subprocess.Popen(cmd, shell=True)
         proc.communicate()
 
         if proc.returncode != 0:
-            print "\n------------\nERROR: \"%s\"" % cmd
+            print("\n------------\nERROR: \"%s\"" % cmd)
             sys.exit(1)

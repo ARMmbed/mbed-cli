@@ -17,6 +17,9 @@ import os
 import re
 import shutil
 import stat
+import sys
+
+is_python_3 = sys.version_info >= (3, )
 
 MBED_PATH = os.path.abspath(os.path.join('mbed', 'mbed.py'))
 
@@ -25,21 +28,21 @@ class ProcessException(Exception):
     pass
 
 def popen(command, stdin=None, **kwargs):
-    print ' '.join(command)
+    print(' '.join(command))
     proc = subprocess.Popen(command, **kwargs)
 
     if proc.wait() != 0:
         raise ProcessException(proc.returncode)
 
 def pquery(command, stdin=None, **kwargs):
-    print ' '.join(command)
+    print(' '.join(command))
     proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
     stdout, _ = proc.communicate(stdin)
 
     if proc.returncode != 0:
         raise ProcessException(proc.returncode)
 
-    return stdout
+    return stdout.decode() if is_python_3 and hasattr(stdout, 'decode') else stdout
 
 # Directory navigation
 @contextlib.contextmanager
@@ -104,7 +107,7 @@ def assertls(mbed, dir, tree):
     with cd(dir):
         result = pquery(['python', mbed, 'ls'])
 
-    print result
+    print(result)
     assert re.match(tree, result, re.MULTILINE)
 
 def scm(dir=None):
@@ -185,7 +188,7 @@ def testrepos(mbed, request):
                     hash = pquery(['git', 'rev-parse', 'HEAD'])
                 elif scm() == 'hg':
                     hash = pquery(['hg', 'id', '-i'])
-            f.write(test3 + '/#' + hash + '\n')
+                f.write(test3 + '/#' + hash + '\n')
 
         if scm() == 'git':
             popen(['git', 'add', 'test3.lib'])
@@ -203,7 +206,7 @@ def testrepos(mbed, request):
                     hash = pquery(['git', 'rev-parse', 'HEAD'])
                 elif scm() == 'hg':
                     hash = pquery(['hg', 'id', '-i'])
-            f.write(test2 + '/#' + hash + '\n')
+                f.write(test2 + '/#' + hash + '\n')
 
         if scm() == 'git':
             popen(['git', 'add', 'test2.lib'])
