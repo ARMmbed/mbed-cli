@@ -2461,10 +2461,10 @@ def config_(var=None, value=None, global_cfg=False, unset=False, list_config=Fal
         else:
             # Find the root of the program
             program = Program(os.getcwd())
-            if program.is_cwd:
+            if program.is_cwd and not var == 'ROOT':
                 error(
                     "Could not find mbed program in current path \"%s\".\n"
-                    "Change the current directory to a valid mbed program or use the '--global' option to set global configuration." % program.path)
+                    "Change the current directory to a valid mbed program, set the current directory as an mbed program with 'mbed config root .', or use the '--global' option to set global configuration." % program.path)
             with cd(program.path):
                 if unset:
                     program.set_cfg(var, None)
