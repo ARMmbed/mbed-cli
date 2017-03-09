@@ -746,3 +746,5 @@ _mbed () {
 }
 
 complete -o bashdefault -o default -F _mbed mbed
+complete -o bashdefault -o default -F _mbed mbed-cli
+
