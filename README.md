@@ -268,16 +268,30 @@ $ mbed remove text-lcd
 
 After importing a program or creating a new one, you need to tell mbed CLI where to find the toolchains that you want to use for compiling your source tree.
 
-There are two ways to do this:
-* Through the mbed CLI configuration.
-* Via mbed_settings.py file in the root of your program, which is automatically created (if it doesn't already exist). 
+There are multiple ways to configure toolchain locations:
+* `mbed_settings.py` file in the root of your program. The tools will automatically create this file if it doesn't already exist. 
+* The mbed CLI configuration.
+* Setting an environment variable.
+* Adding directory of the compiler binary to your PATH.
+
+Methods for configuring toolchains that appear earlier in the above list override methods that appear later.
+
+#### Through mbed_settings.py
+
+Edit `mbed_settings.py` to set your toolchain:
+
+* To use the [ARM Compiler toolchain](https://developer.arm.com/products/software-development-tools/compilers/arm-compiler-5/downloads), set `ARM_PATH` to the *base* directory of your ARM Compiler installation (example: C:\Program Files\ARM\armcc5.06). The recommended version of the ARM Compiler toolchain is 5.06.
+* To use the [GCC ARM Embedded toolchain](https://launchpad.net/gcc-arm-embedded), set `GCC_ARM_PATH` to the *binary* directory of your GCC ARM installation (example: C:\Program Files\GNU Tools ARM Embedded\4.9 2015q2\bin). Use version 4.9 of GCC ARM Embedded; version 5.0 or any more recent version might be incompatible with the tools.
+* To use the [IAR EWARM toolhain](https://www.iar.com/iar-embedded-workbench/#!?architecture=ARM), set `IAR_PATH` to the *base* directory of your IAR installation. Use versions 7.80 of IAR EWARM; prior versions might be incompatible with the tools.
+
+Because `mbed_settings.py` contains local settings (possibly relevant only to a single OS on a single machine), you should not check it into version control. 
 
 #### Through mbed CLI configuration
 
 You can set the ARM Compiler  5 location via the command:
 
 ```
-$ mbed config --global ARM_PATH "C:\Program Files\ARM"
+$ mbed config -G ARM_PATH "C:\Program Files\ARM"
 [mbed] C:\Program Files\ARM now set as global ARM_PATH
 ```
 
@@ -299,14 +313,16 @@ No local configuration is set
 
 More information about mbed CLI configuration is available in the [configuration section](#mbed-cli-configuration) of this document.
 
-#### Through mbed_settings.py
+#### Setting environment variable
 
-Edit `mbed_settings.py` to set your toolchain:
+For each of the compilers, `mbed compile` checks a corresponding environment variable for the compiler's location. The environment variables are as follows:
+* `MBED_ARM_PATH`: The path to the *base* directory of your ARM Compiler installation. This should be the directory containing the directory containing the binaries for `armcc` and friends.
+* `MBED_IAR_PATH`: The path to the *base* directory of your IAR EWARM Compiler installation. This should be one directory containing the directory containing the binaries for `iccarm` and friends.
+* `MBED_GCC_ARM_PATH`: The path to the *binary* directory of your GCC ARM Embedded Compiler installation. This should be the directory containing the binaries for `arm-none-eabi-gcc` and friends.
 
-* If you want to use the [ARM Compiler toolchain](https://developer.arm.com/products/software-development-tools/compilers/arm-compiler-5/downloads), set `ARM_PATH` to the *base* directory of your ARM Compiler installation (example: C:\Program Files\ARM\armcc5.06). The recommended version of the ARM Compiler toolchain is 5.06.
-* If you want to use the [GCC ARM Embedded toolchain](https://launchpad.net/gcc-arm-embedded), set `GCC_ARM_PATH` to the *binary* directory of your GCC ARM installation (example: C:\Program Files\GNU Tools ARM Embedded\4.9 2015q2\bin). Use versions 4.9 of GCC ARM Embedded; version 5.0 or any version above may be incompatible with the tools.
+#### Compiler detection through the `PATH`
 
-As a rule, because `mbed_settings.py` contains local settings (possibly relevant only to a single OS on a single machine), it should not be versioned. 
+If none of the above are configured, the `mbed compile` command will fall back to checking your `PATH` for an executable that is part of the compiler suite in question. This check is the same as a shell would perform to find the executable on the command-line. When `mbed compile` finds the executable it is looking for, it uses the location of that executable as the appropriate path except in the case of GCC, which will not use a path.
 
 ### Compiling your program
 
