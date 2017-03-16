@@ -16,15 +16,13 @@ def getHelpTxt(command=None):
     out, err = p.communicate()
     return out
 
-if __name__ == '__main__':
-    #commands = defaultdict(defaultdict(list))
+def parseCommands():
     commands = defaultdict(defaultdict)
     helpTxt = getHelpTxt()
     #print helpTxt
     for line in helpTxt.split('\n'):
         match = re.search(commandRegex, line)
         if match:
-            print "have match"
             g = match.groupdict()
             commands[g["command"]]["helptxt"] = g["helptxt"]
             commands[g["command"]]["subcommands"] = []
@@ -35,7 +33,12 @@ if __name__ == '__main__':
         for line in helpTxt.split('\n'):
             match = re.search(subcommandRegex, line)
             if match:
-                print match.groupdict()
+                commands[commandKey]["subcommands"].append(match.groupdict())
+
+    print commands
+
+if __name__ == '__main__':
+    parseCommands()
         
 # At this point we have a list of all the commands and sub commands
 # for each command create a Bash function
