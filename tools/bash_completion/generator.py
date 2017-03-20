@@ -8,7 +8,7 @@ import subprocess
 
 # Top level --version is a pain to deal with so ignoring for now
 # This one extracts single commands and the help txt
-commandRegex = r"^\s+(?P<command>\w+)\s+(?P<helptxt>[a-zA-Z ]*)$"  
+commandRegex = r"^\s+(?P<command>\w+)\s+(?P<helptxt>[a-zA-Z ]*)$"
 
 # Why the hell do spaces get regexed in command1 ?
 subcommandRegex = r"^\s+(?P<command1>-+[a-zA-Z_\-]+(?P<modifier1>\s+[A-Z_\-]+)?)"\
@@ -70,29 +70,32 @@ def parseCommands():
                     command2.strip()
                     command2 = command2.split()[0]
 
-                # Not sure why the cleaning is even necessary, the regex looks correct
+                # Not sure why the cleaning is even necessary,
+                # the regex looks correct
                 commandMatch["command1"] = command1
                 commandMatch["command2"] = command2
-                
+
                 commands[commandKey]["subcommands"].append(commandMatch)
-                
+
                 # Push format for mustache
                 if command1 and '--' in command1:
-                    commands[commandKey]["DDASH_COMMANDS"].append({"name": command1})
+                    commands[commandKey]["DDASH_COMMANDS"].append(
+                        {"name": command1})
                 if command2 and '--' in command2:
-                    commands[commandKey]["DDASH_COMMANDS"].append({"name": command2})
+                    commands[commandKey]["DDASH_COMMANDS"].append(
+                        {"name": command2})
 
                 if command1:
                     m = re.match("^-[a-zA-Z]{1,2}", command1)
                     if m:
-                        commands[commandKey]["DASH_COMMANDS"].append({"name": command1})
-                
+                        commands[commandKey]["DASH_COMMANDS"].append(
+                            {"name": command1})
+
                 if command2:
                     m = re.match("^-[a-zA-Z]{1,2}", command2)
                     if m:
-                        commands[commandKey]["DASH_COMMANDS"].append({"name": command2})
-
-                #print command1, command2
+                        commands[commandKey]["DASH_COMMANDS"].append(
+                            {"name": command2})
 
     return commands
 
@@ -126,7 +129,6 @@ def generateCompleters(commands):
 
 
 def generateBoilerPlate(commands):
-    tmplt = ""
     txt = []
 
     with open("templates/boilerplate.tmplt") as fp:
@@ -150,8 +152,7 @@ def generateScript(commands):
 if __name__ == '__main__':
     commands = parseCommands()
 
+    # At this point we have a list of all the commands and sub commands
+    # for each command create a Bash function
+    # register each subcommand
     generateScript(commands)
-        
-# At this point we have a list of all the commands and sub commands
-# for each command create a Bash function
-# register each subcommand
