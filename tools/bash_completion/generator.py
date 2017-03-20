@@ -1,16 +1,20 @@
 #!/usr/bin/env python
+# Michael Bartling (michael.bartling@arm.com)
 
 from collections import defaultdict
+import pystache
 import re
 import subprocess
-import pystache
-import pprint
 
-commandRegex = r"^\s+(?P<command>(--)?\w+)\s+(?P<helptxt>[a-zA-Z ]*)$"  # This one extracts single commands and the help txt
+# Top level --version is a pain to deal with so ignoring for now
+# This one extracts single commands and the help txt
+commandRegex = r"^\s+(?P<command>\w+)\s+(?P<helptxt>[a-zA-Z ]*)$"  
+
 # Why the hell do spaces get regexed in command1 ?
-subcommandRegex = r"^\s+(?P<command1>-+[a-zA-Z_\-]+(?P<modifier1>\s+[A-Z_\-]+)?)(?P<command2>,\s+-+[a-zA-Z_-]+(?P<modifier2>\s+[A-Z_-]+)?)?\s+(?P<helptxt>.*)$" # Gets just about everything
+subcommandRegex = r"^\s+(?P<command1>-+[a-zA-Z_\-]+(?P<modifier1>\s+[A-Z_\-]+)?)"\
+    r"(?P<command2>,\s+-+[a-zA-Z_-]+(?P<modifier2>\s+[A-Z_-]+)?)?"\
+    r"\s+(?P<helptxt>.*)$"
 
-pp = pprint.PrettyPrinter(indent=2)
 
 def getHelpTxt(command=None):
     if command:
@@ -20,11 +24,12 @@ def getHelpTxt(command=None):
     out, err = p.communicate()
     return out
 
+
 def parseCommands():
     commands = defaultdict(defaultdict)
     commands["COMMAND"] = []
     helpTxt = getHelpTxt()
-    #print helpTxt
+    # print helpTxt
     for line in helpTxt.split('\n'):
         match = re.search(commandRegex, line)
         if match:
@@ -41,6 +46,10 @@ def parseCommands():
             commands["COMMAND"].append({"name": g["command"]})
 
     for commandKey in commands:
+        # Skip
+        if commandKey == "COMMAND":
+            continue
+
         command = commands[commandKey]
         helpTxt = getHelpTxt(commandKey)
         for line in helpTxt.split('\n'):
@@ -87,18 +96,61 @@ def parseCommands():
 
     return commands
 
+
 def generateMain(commands):
     tmplt = ""
+
+    txt = []
 
     with open("templates/mbed.tmplt") as fp:
         tmplt = fp.read()
 
-    print pystache.render(tmplt, commands)
+    txt.append(pystache.render(tmplt, commands))
+
+    return txt
+
+
+def generateCompleters(commands):
+    tmplt = ""
+    txt = []
+
+    with open("templates/command.tmplt") as fp:
+        tmplt = fp.read()
+
+    for commandKey in commands:
+        txt.append(pystache.render(tmplt, commands[commandKey]))
+
+        # if need to add hacks add them here
+
+    return txt
+
+
+def generateBoilerPlate(commands):
+    tmplt = ""
+    txt = []
+
+    with open("templates/boilerplate.tmplt") as fp:
+        txt.append(fp.read())
+
+    return txt
+
+
+def generateScript(commands):
+    txt = []
+
+    txt.extend(generateBoilerPlate(commands))
+    txt.extend(generateCompleters(commands))
+    txt.extend(generateMain(commands))
+
+    with open("mbed-completion", "w") as fp:
+        for x in txt:
+            fp.write("%s\n" % x)
+
 
 if __name__ == '__main__':
     commands = parseCommands()
 
-    generateMain(commands)
+    generateScript(commands)
         
 # At this point we have a list of all the commands and sub commands
 # for each command create a Bash function
