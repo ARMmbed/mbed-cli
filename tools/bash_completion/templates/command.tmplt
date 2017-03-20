@@ -1,0 +1,34 @@
+__mbed_complete_{{COMMAND}}() {
+    
+    local cur="${COMP_WORDS[COMP_CWORD]}"
+    local prev="${COMP_WORDS[COMP_CWORD-1]}"
+    case "$cur" in 
+        --*)
+            __mbedcomp "
+                {{#DDASH_COMMANDS}}
+                {{name}}
+                {{/DDASH_COMMANDS}}
+                "
+
+            return
+            ;;
+        -*)
+            __mbedcomp "
+                {{#DASH_COMMANDS}}
+                {{name}}
+                {{/DASH_COMMANDS}}
+                "
+            return
+            ;;
+    esac
+
+    # Right now prev is not supported
+    #case "$prev" in 
+    #    toolchain|-G|--global|-v|--verbose|-vv|--very_verbose)
+    #        declare TOOLCHAINS=$(mbed target --supported | head -n 2 | tail -n 1 | tr '|' '\n' | sed -n '/^ Target/!p' | sed -n '/^ mbed/!p')
+    #        __mbedcomp "${TOOLCHAINS}"
+    #        return
+    #        ;;
+    #esac
+
+}

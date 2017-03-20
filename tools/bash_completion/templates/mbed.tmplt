@@ -1,0 +1,51 @@
+
+_mbed () {
+    local i=1 cmd prev
+
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+# find the subcommand
+     while [[ "$i" -lt "$COMP_CWORD" ]]
+     do
+         local s="${COMP_WORDS[i]}"
+         case "$s" in 
+             --*)
+                 cmd="$s"
+                 break
+                 ;;
+             -*)
+                 ;;
+             *)
+                 cmd="$s"
+                 break
+                 ;;
+         esac
+
+         i="$((++i))"
+     done
+
+    # Handle the main command completions
+    if [[ "$i" -eq "$COMP_CWORD" ]]
+    then
+    local cmds="
+        {{#COMMAND}}
+        {{name}}
+        {{/COMMAND}}
+        "
+
+       __mbedcomp "${cmds}"
+    fi
+
+    # Each subcommand has a completion function based on the parent
+    case "$cmd" in 
+        {{#COMMAND}}
+        {{name}}) __mbed_complete_{{name}} ;;
+        {{/COMMAND}}
+         *) ;;
+         esac
+
+}
+
+complete -o bashdefault -o default -F _mbed mbed
+complete -o bashdefault -o default -F _mbed mbed-cli
+
