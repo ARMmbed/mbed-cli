@@ -2169,7 +2169,7 @@ def status_(ignore=False):
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
     dict(name=['-f', '--flash'], action='store_true', help='Flash the built firmware onto a connected target.'),
     dict(name=['-N', '--artifact-name'], help='Name of the built program or library'),
-    dict(name=['-S', '--supported'], dest='supported', action='store_true', help='Shows supported matrix of targets and toolchains'),
+    dict(name=['-S', '--supported'], dest='supported', const="matrix", choices=["matrix", "toolchains", "targets"], nargs="?", help='Shows supported matrix of targets and toolchains'),
     dict(name='--app-config', dest="app_config", help="Path of an app configuration file (Default is to look for 'mbed_app.json')"),
     help='Compile code using the mbed build tools',
     description=("Compile this program using the mbed build tools."))
@@ -2192,8 +2192,8 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
         source = [os.path.relpath(program.path, orig_path)]
 
     if supported:
-        popen([python_cmd, '-u', os.path.join(tools_dir, 'make.py')]
-              + (['-S'] if supported else []) + (['-v'] if very_verbose else [])
+        popen(['python', '-u', os.path.join(tools_dir, 'make.py')]
+              + (['-S', supported] if supported else []) + (['-v'] if very_verbose else [])
               + (['--app-config', app_config] if app_config else [])
               + args,
               env=env)
