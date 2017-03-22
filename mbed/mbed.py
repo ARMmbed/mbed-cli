@@ -2383,7 +2383,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
     dict(name=['-m', '--target'], help='Export for target MCU. Example: K64F, NUCLEO_F401RE, NRF51822...'),
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
-    dict(name=['-S', '--supported'], dest='supported', action='store_true', help='Shows supported matrix of targets and toolchains'),
+    dict(name=['-S', '--supported'], dest='supported', const="matrix", choices=["matrix", "ides"], nargs="?", help='Shows supported matrix of targets and toolchains'),
     dict(name='--app-config', dest="app_config", help="Path of an app configuration file (Default is to look for 'mbed_app.json')"),
     help='Generate an IDE project',
     description=(
@@ -2404,8 +2404,8 @@ def export(ide=None, target=None, source=False, clean=False, supported=False, ap
     env = program.get_env()
 
     if supported:
-        popen([python_cmd, '-u', os.path.join(tools_dir, 'project.py')]
-              + (['-S'] if supported else []) + (['-v'] if very_verbose else []),
+        popen(['python', '-u', os.path.join(tools_dir, 'project.py')]
+              + (['-S', supported] if supported else []) + (['-v'] if very_verbose else []),
               env=env)
         return
 
