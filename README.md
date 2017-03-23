@@ -105,6 +105,12 @@ To uninstall mbed CLI, simply run:
 pip uninstall mbed-cli
 ```
 
+### Adding Bash tab completion
+
+To install mbed-cli bash tab completion navigate to the `tools/bash_completion` directory. Then copy the `mbed` script into your `/etc/bash_completion.d/` or `/usr/local/etc/bash_completion.d` directory and reload your terminal.  
+
+[Full documentation here](tools/bash_completion/install.md)
+
 ## Quickstart video
 
 <span class="images">[![Video tutorial](http://img.youtube.com/vi/PI1Kq9RSN_Y/0.jpg)](https://www.youtube.com/watch?v=PI1Kq9RSN_Y)</span>
