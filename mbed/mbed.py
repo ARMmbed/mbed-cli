@@ -587,8 +587,17 @@ class Git(object):
 
     def cleanup():
         info("Cleaning up Git index")
-        if os.path.exists(os.path.join('.git', 'logs')):
-            rmtree_readonly(os.path.join('.git', 'logs'))
+        pquery([git_cmd, 'checkout', '--detach', 'HEAD'] + ([] if very_verbose else ['-q'])) # detach head so local branches are deletable
+        branches = []
+        lines = pquery([git_cmd, 'branch']).strip().splitlines() # fetch all local branches
+        for line in lines:
+            if re.match(r'^\*?\s+\((.+)\)$', line):
+                continue
+            line = re.sub(r'\s+', '', line)
+            branches.append(line)
+
+        for branch in branches: # delete all local branches so the new repo clone is not poluted
+            pquery([git_cmd, 'branch', '-D', branch])
 
     def clone(url, name=None, depth=None, protocol=None):
         popen([git_cmd, 'clone', formaturl(url, protocol), name] + (['--depth', depth] if depth else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
