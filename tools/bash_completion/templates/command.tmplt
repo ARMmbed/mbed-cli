@@ -22,13 +22,16 @@ __mbed_complete_{{COMMAND}}() {
             ;;
     esac
 
-    # Right now prev is not supported
-    #case "$prev" in 
-    #    toolchain|-G|--global|-v|--verbose|-vv|--very_verbose)
-    #        declare TOOLCHAINS=$(mbed target --supported | head -n 2 | tail -n 1 | tr '|' '\n' | sed -n '/^ Target/!p' | sed -n '/^ mbed/!p')
-    #        __mbedcomp "${TOOLCHAINS}"
-    #        return
-    #        ;;
-    #esac
+    # Handle the dependent commands
+    {{#HAVE_PREV}}
+    case "$prev" in 
+        {{#PREV_CASE}}
+        {{case}})
+            {{code}}
+            return
+            ;;
+        {{/PREV_CASE}}
+    esac
+    {{/HAVE_PREV}}
 
 }

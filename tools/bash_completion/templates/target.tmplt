@@ -1,0 +1,2 @@
+declare TARGETS=$(mbed compile --supported targets)
+            __mbedcomp "${TARGETS}"

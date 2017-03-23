@@ -24,6 +24,35 @@ def getHelpTxt(command=None):
     out, err = p.communicate()
     return out
 
+def getTargetCode():
+    txt = ''
+    with open("templates/target.tmplt") as fp:
+        txt = fp.read()
+    return txt
+
+def getToolchainCode():
+    txt = ''
+    with open("templates/toolchain.tmplt") as fp:
+        txt = fp.read()
+    return txt
+
+def getSCMCode():
+    txt = ''
+    with open("templates/scm.tmplt") as fp:
+        txt = fp.read()
+    return txt
+
+def getIDECode():
+    txt = ''
+    with open("templates/ide.tmplt") as fp:
+        txt = fp.read()
+    return txt
+
+def getProtocolCode():
+    txt = ''
+    with open("templates/protocol.tmplt") as fp:
+        txt = fp.read()
+    return txt
 
 def parseCommands():
     commands = defaultdict(defaultdict)
@@ -42,6 +71,8 @@ def parseCommands():
             commands[g["command"]]["DASH_COMMANDS"] = []
             commands[g["command"]]["COMMAND"] = g["command"]
 
+            commands[g["command"]]["HAVE_PREV"] = {"PREV_CASE": []}
+
             # Main function generation
             commands["COMMAND"].append({"name": g["command"]})
 
@@ -50,7 +81,6 @@ def parseCommands():
         if commandKey == "COMMAND":
             continue
 
-        command = commands[commandKey]
         helpTxt = getHelpTxt(commandKey)
         for line in helpTxt.split('\n'):
             match = re.search(subcommandRegex, line)
@@ -90,12 +120,40 @@ def parseCommands():
                     if m:
                         commands[commandKey]["DASH_COMMANDS"].append(
                             {"name": command1})
+                else:
+                    command1 = ""
 
                 if command2:
                     m = re.match("^-[a-zA-Z]{1,2}", command2)
                     if m:
                         commands[commandKey]["DASH_COMMANDS"].append(
                             {"name": command2})
+                else:
+                    command2 = ""
+
+                # Adding the dependent command handlers
+                if "target" in command1 or "target" in command2:
+                    commands[commandKey]["HAVE_PREV"]["PREV_CASE"].append({"case": "|".join(filter(None, [command1, command2])), "code": getTargetCode()})
+
+                if "toolchain" in command1 or "toolchain" in command2:
+                    commands[commandKey]["HAVE_PREV"]["PREV_CASE"].append({"case": "|".join(filter(None, [command1, command2])), "code": getToolchainCode()})
+                
+
+                if "--ide" in command1 or "--ide" in command2:
+                    commands[commandKey]["HAVE_PREV"]["PREV_CASE"].append({"case": "|".join(filter(None, [command1, command2])), "code": getIDECode()})
+
+                if "scm" in command1 or "scm" in command2:
+                    commands[commandKey]["HAVE_PREV"]["PREV_CASE"].append({"case": "|".join(filter(None, [command1, command2])), "code": getSCMCode()})
+                
+                if "protocol" in command1 or "protocol" in command2:
+                    commands[commandKey]["HAVE_PREV"]["PREV_CASE"].append({"case": "|".join(filter(None, [command1, command2])), "code": getProtocolCode()})
+                
+        # Adding the dependent command handlers for target and toolchain
+        if "target" in commandKey:
+            commands[commandKey]["HAVE_PREV"]["PREV_CASE"].append({"case": commandKey, "code": getTargetCode()})
+                
+        if "toolchain" in commandKey:
+            commands[commandKey]["HAVE_PREV"]["PREV_CASE"].append({"case": commandKey, "code": getToolchainCode()})
 
     return commands
 
@@ -117,11 +175,13 @@ def generateCompleters(commands):
     tmplt = ""
     txt = []
 
+    renderer = pystache.Renderer(escape=lambda u: u)
+
     with open("templates/command.tmplt") as fp:
         tmplt = fp.read()
 
     for commandKey in commands:
-        txt.append(pystache.render(tmplt, commands[commandKey]))
+        txt.append(renderer.render(tmplt, commands[commandKey]))
 
         # if need to add hacks add them here
 
