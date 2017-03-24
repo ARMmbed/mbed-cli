@@ -1,6 +1,6 @@
 ## Introduction
 
-*mbed CLI* is the name of the ARM mbed command-line tool, packaged as `mbed-cli`, which enables the full mbed workflow.
+mbed CLI is the name of the ARM mbed command-line tool, packaged as mbed-cli. mbed CLI enables Git- and Mercurial-based version control, dependencies management, code publishing, support for remotely hosted repositories (GitHub, GitLab and mbed.org), use of the ARM mbed OS build system and export functions and other operations.
 
 This document covers the installation and usage of mbed CLI.
 
