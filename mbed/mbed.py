@@ -1731,6 +1731,7 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
     global cwd_root
 
     # translate 'mbed-os' to https://github.com/ARMmbed/mbed-os
+    orig_url = url
     if not Repo.isurl(url) and not os.path.exists(url):
         url = mbed_base_url+'/'+url
 
@@ -1745,6 +1746,9 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
 
     if os.path.isdir(repo.path) and len(os.listdir(repo.path)) > 1:
         error("Directory \"%s\" is not empty. Please ensure that the destination folder is empty." % repo.path, 1)
+
+    if not Repo.isurl(orig_url) and os.path.exists(orig_url):
+            warning("Importing from a local folder \"%s\", not from a URL" % orig_url)
 
     text = "Importing program" if top else "Adding library"
     action("%s \"%s\" from \"%s\"%s" % (text, relpath(cwd_root, repo.path), formaturl(repo.url, protocol), ' at '+(repo.revtype(repo.rev, True))))
