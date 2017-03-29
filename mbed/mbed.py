@@ -254,7 +254,7 @@ def scm(name):
 @staticclass
 class Bld(object):
     name = 'bld'
-    def_branch = 'default'
+    default_branch = 'default'
 
     def isurl(url):
         m_url = re.match(regex_url_ref, url.strip().replace('\\', '/'))
@@ -374,7 +374,7 @@ class Bld(object):
 @staticclass
 class Hg(object):
     name = 'hg'
-    def_branch = 'default'
+    default_branch = 'default'
     ignore_file = os.path.join('.hg', 'hgignore')
 
     def isurl(url):
@@ -575,7 +575,7 @@ class Hg(object):
 @staticclass
 class Git(object):
     name = 'git'
-    def_branch = 'master'
+    default_branch = 'master'
     ignore_file = os.path.join('.git', 'info', 'exclude')
 
     def isurl(url):
@@ -1082,7 +1082,7 @@ class Repo(object):
                         scm.cleanup()
                         info("Update cached copy from remote repository")
                         if not rev:
-                            rev = scm.def_branch
+                            rev = scm.default_branch
                         scm.update(rev, True)
                         main = False
                 except (ProcessException, IOError):
