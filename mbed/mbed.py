@@ -1443,11 +1443,11 @@ class Program(object):
     def detect_target(self, info=None):
         targets = self.get_detected_targets()
         if targets == False:
-            error("The target detection requires that the 'mbed-ls' python module is installed.\nYou can install mbed-ls by running 'pip install mbed-ls'.")
+            error("The target detection requires that the 'mbed-ls' python module is installed.\nYou can install mbed-ls by running 'pip install mbed-ls'.", 1)
         elif len(targets) > 1:
-            error("Multiple targets were detected.\nOnly 1 target board should be connected to your system.")
+            error("Multiple targets were detected.\nOnly 1 target board should be connected to your system.", 1)
         elif len(targets) == 0:
-            error("No targets were detected.\nPlease make sure a target board is connected to this system.")
+            error("No targets were detected.\nPlease make sure a target board is connected to this system.", 1)
         else:
             action("Detected \"%s\" connected to \"%s\" and using com port \"%s\"" % (targets[0]['name'], targets[0]['mount'], targets[0]['serial']))
             info = {'msd': targets[0]['mount'], 'port': targets[0]['serial'], 'name': targets[0]['name']}
@@ -2231,23 +2231,25 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                   + (['-v'] if verbose else [])
                   + args,
                   env=env)
-            
+ 
             if flash:
                 fw_name = artifact_name if artifact_name else program.name
                 fw_fbase = os.path.join(build_path, fw_name)
                 fw_file = fw_fbase + ('.hex' if os.path.exists(fw_fbase+'.hex') else '.bin')
-                if not fw_file:
-                    error("Firmware file not found \"%s\"" % fw_file)
+                if not os.path.exists(fw_file):
+                    error("Build program file (firmware) not found \"%s\"" % fw_file, 1)
                 detected = program.detect_target()
 
                 try:
                     from mbed_host_tests.host_tests_toolbox import flash_dev, reset_dev
                 except (IOError, ImportError, OSError):
-                    error("The '-f' option requires that the 'mbed-greentea' python module is installed.\nYou can install mbed-ls by running 'pip install mbed-greentea'.")
-                    return False
+                    error("The '-f/--flash' option requires that the 'mbed-greentea' python module is installed.\nYou can install mbed-ls by running 'pip install mbed-greentea'.", 1)
 
-                flash_dev(detected['msd'], fw_file, program_cycle_s=0)
-                reset_dev(detected['port'])
+                if not flash_dev(detected['msd'], fw_file, program_cycle_s=2):
+                    error("Unable to flash the target board connected to your system.", 1)
+
+                if not reset_dev(detected['port']):
+                    error("Unable to reset the target board connected to your system.", 1)
 
     program.set_defaults(target=target, toolchain=tchain)
 
