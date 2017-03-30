@@ -254,6 +254,7 @@ def scm(name):
 @staticclass
 class Bld(object):
     name = 'bld'
+    default_branch = 'default'
 
     def isurl(url):
         m_url = re.match(regex_url_ref, url.strip().replace('\\', '/'))
@@ -373,6 +374,7 @@ class Bld(object):
 @staticclass
 class Hg(object):
     name = 'hg'
+    default_branch = 'default'
     ignore_file = os.path.join('.hg', 'hgignore')
 
     def isurl(url):
@@ -573,6 +575,7 @@ class Hg(object):
 @staticclass
 class Git(object):
     name = 'git'
+    default_branch = 'master'
     ignore_file = os.path.join('.git', 'info', 'exclude')
 
     def isurl(url):
@@ -587,8 +590,17 @@ class Git(object):
 
     def cleanup():
         info("Cleaning up Git index")
-        if os.path.exists(os.path.join('.git', 'logs')):
-            rmtree_readonly(os.path.join('.git', 'logs'))
+        pquery([git_cmd, 'checkout', '--detach', 'HEAD'] + ([] if very_verbose else ['-q'])) # detach head so local branches are deletable
+        branches = []
+        lines = pquery([git_cmd, 'branch']).strip().splitlines() # fetch all local branches
+        for line in lines:
+            if re.match(r'^\*?\s+\((.+)\)$', line):
+                continue
+            line = re.sub(r'\s+', '', line)
+            branches.append(line)
+
+        for branch in branches: # delete all local branches so the new repo clone is not poluted
+            pquery([git_cmd, 'branch', '-D', branch])
 
     def clone(url, name=None, depth=None, protocol=None):
         popen([git_cmd, 'clone', formaturl(url, protocol), name] + (['--depth', depth] if depth else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
@@ -1069,6 +1081,8 @@ class Repo(object):
                         scm.seturl(formaturl(url, protocol))
                         scm.cleanup()
                         info("Update cached copy from remote repository")
+                        if not rev:
+                            rev = scm.default_branch
                         scm.update(rev, True)
                         main = False
                 except (ProcessException, IOError):
