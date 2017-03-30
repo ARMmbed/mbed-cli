@@ -2243,7 +2243,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                 try:
                     from mbed_host_tests.host_tests_toolbox import flash_dev, reset_dev
                 except (IOError, ImportError, OSError):
-                    error("The target programing requires that the 'mbed-greentea' python module is installed.\nYou can install mbed-ls by running 'pip install mbed-greentea'.")
+                    error("The '-f' option requires that the 'mbed-greentea' python module is installed.\nYou can install mbed-ls by running 'pip install mbed-greentea'.")
                     return False
 
                 flash_dev(detected['msd'], fw_file, program_cycle_s=0)
