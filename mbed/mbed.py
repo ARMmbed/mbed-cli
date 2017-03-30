@@ -1400,16 +1400,9 @@ class Program(object):
         target = target if target else target_cfg
 
         if target and (target.lower() == 'detect' or target.lower() == 'auto'):
-            targets = self.get_detected_targets()
-            if targets == False:
-                error("The target detection requires that the 'mbed-ls' python module is installed.\nYou can install mbed-ls by running 'pip install mbed-ls'.")
-            elif len(targets) > 1:
-                error("Multiple targets were detected.\nOnly 1 target board should be connected to your system when you use the '-m auto' switch.")
-            elif len(targets) == 0:
-                error("No targets were detected.\nPlease make sure a target board is connected to this system.")
-            else:
-                action("Detected \"%s\" connected to \"%s\" and using com port \"%s\"" % (targets[0]['name'], targets[0]['mount'], targets[0]['serial']))
-                target = targets[0]['name']
+            detected = self.detect_target()
+            if detected:
+                target = detected['name']
 
         if target is None:
             error("Please specify target using the -m switch or set default target using command 'mbed target'", 1)
@@ -1446,6 +1439,22 @@ class Program(object):
                     f.write('*\n')
             except IOError:
                 error("Unable to write build ignore file in \"%s\"" % os.path.join(build_path, '.mbedignore'), 1)
+
+    def detect_target(self, info=None):
+        targets = self.get_detected_targets()
+        if targets == False:
+            error("The target detection requires that the 'mbed-ls' python module is installed.\nYou can install mbed-ls by running 'pip install mbed-ls'.")
+        elif len(targets) > 1:
+            error("Multiple targets were detected.\nOnly 1 target board should be connected to your system.")
+        elif len(targets) == 0:
+            error("No targets were detected.\nPlease make sure a target board is connected to this system.")
+        else:
+            action("Detected \"%s\" connected to \"%s\" and using com port \"%s\"" % (targets[0]['name'], targets[0]['mount'], targets[0]['serial']))
+            info = {'msd': targets[0]['mount'], 'port': targets[0]['serial'], 'name': targets[0]['name']}
+
+        if info is None:
+            error("The detected target doesn't support Mass Storage Device capability (MSD)", 1)
+        return info
 
     def get_detected_targets(self):
         targets = []
@@ -2137,12 +2146,13 @@ def status_(ignore=False):
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
     dict(name='--build', help='Build directory. Default: build/'),
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
+    dict(name=['-f', '--flash'], action='store_true', help='Flash the built firmware onto a connected target.'),
     dict(name=['-N', '--artifact-name'], help='Name of the built program or library'),
     dict(name=['-S', '--supported'], dest='supported', action='store_true', help='Shows supported matrix of targets and toolchains'),
     dict(name='--app-config', dest="app_config", help="Path of an app configuration file (Default is to look for 'mbed_app.json')"),
     help='Compile code using the mbed build tools',
     description=("Compile this program using the mbed build tools."))
-def compile_(toolchain=None, target=None, profile=False, compile_library=False, compile_config=False, config_prefix=None, source=False, build=False, clean=False, artifact_name=None, supported=False, app_config=None):
+def compile_(toolchain=None, target=None, profile=False, compile_library=False, compile_config=False, config_prefix=None, source=False, build=False, clean=False, flash=False, artifact_name=None, supported=False, app_config=None):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
@@ -2221,6 +2231,23 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                   + (['-v'] if verbose else [])
                   + args,
                   env=env)
+            
+            if flash:
+                fw_name = artifact_name if artifact_name else program.name
+                fw_fbase = os.path.join(build_path, fw_name)
+                fw_file = fw_fbase + ('.hex' if os.path.exists(fw_fbase+'.hex') else '.bin')
+                if not fw_file:
+                    error("Firmware file not found \"%s\"" % fw_file)
+                detected = program.detect_target()
+
+                try:
+                    from mbed_host_tests.host_tests_toolbox import flash_dev, reset_dev
+                except (IOError, ImportError, OSError):
+                    error("The target programing requires that the 'mbed-greentea' python module is installed.\nYou can install mbed-ls by running 'pip install mbed-greentea'.")
+                    return False
+
+                flash_dev(detected['msd'], fw_file, program_cycle_s=0)
+                reset_dev(detected['port'])
 
     program.set_defaults(target=target, toolchain=tchain)
 
