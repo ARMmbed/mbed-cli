@@ -366,6 +366,7 @@ The arguments for *compile* are:
 * `--library` to compile the code as a [static .a/.ar library](#compiling-static-libraries).
 * `--config` to inspect the runtime compile configuration (see below).
 * `-S` or `--supported` shows a matrix of the supported targets and toolchains.
+* `-f` or `--flash` to flash/program a connected target after successful compile.
 * `-c ` to build from scratch, a clean build or rebuild.
 * `-j <jobs>` to control the compile processes on your machine. The default value is 0, which infers the number of processes from the number of cores on your machine. You can use `-j 1` to trigger a sequential compile of source code.
 * `-v` or `--verbose` for verbose diagnostic output.
