@@ -2249,7 +2249,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                     error("Unable to flash the target board connected to your system.", 1)
 
                 if not reset_dev(detected['port']):
-                    error("Unable to reset the target board connected to your system.", 1)
+                    error("Unable to reset the target board connected to your system.\nThis might be caused by an old interface firmware.\nPlease check the board page for new firmware.", 1)
 
     program.set_defaults(target=target, toolchain=tchain)
 
