@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 # Copyright (c) 2016 ARM Limited, All Rights Reserved
 # SPDX-License-Identifier: Apache-2.0
@@ -42,6 +42,7 @@ ver = '1.0.0'
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
 git_cmd = 'git'
+python_cmd = sys.executable
 
 ignores = [
     # Version control folders
@@ -916,7 +917,7 @@ class Repo(object):
 
         repo.path = os.path.abspath(path)
         repo.name = os.path.basename(repo.path)
-        
+
         cache_cfg = Global().get_cfg('CACHE', '')
         if cache_repositories and cache_cfg and cache_cfg != 'none' and cache_cfg != 'off' and cache_cfg != 'disabled':
             loc = cache_cfg if (cache_cfg and cache_cfg != 'on' and cache_cfg != 'enabled') else None
@@ -2175,7 +2176,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
         source = [os.path.relpath(program.path, orig_path)]
 
     if supported:
-        popen(['python', '-u', os.path.join(tools_dir, 'make.py')]
+        popen([python_cmd, '-u', os.path.join(tools_dir, 'make.py')]
               + (['-S'] if supported else []) + (['-v'] if very_verbose else [])
               + (['--app-config', app_config] if app_config else [])
               + args,
@@ -2188,7 +2189,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
 
     if compile_config:
         # Compile configuration
-        popen(['python', os.path.join(tools_dir, 'get_config.py')]
+        popen([python_cmd, os.path.join(tools_dir, 'get_config.py')]
               + ['-t', tchain, '-m', target]
               + list(chain.from_iterable(izip(repeat('--profile'), profile or [])))
               + list(chain.from_iterable(izip(repeat('--source'), source)))
@@ -2199,7 +2200,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
         # If the user hasn't supplied a build directory, ignore the default build directory
         if not build:
             program.ignore_build_dir()
-        
+
         build_path = build
 
         if compile_library:
@@ -2207,7 +2208,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
             if not build_path:
                 build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, 'libraries', os.path.basename(orig_path), target, tchain)
 
-            popen(['python', '-u', os.path.join(tools_dir, 'build.py')]
+            popen([python_cmd, '-u', os.path.join(tools_dir, 'build.py')]
                   + list(chain.from_iterable(izip(repeat('-D'), macros)))
                   + ['-t', tchain, '-m', target]
                   + list(chain.from_iterable(izip(repeat('--profile'), profile or [])))
@@ -2223,7 +2224,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
             if not build_path:
                 build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, target, tchain)
 
-            popen(['python', '-u', os.path.join(tools_dir, 'make.py')]
+            popen([python_cmd, '-u', os.path.join(tools_dir, 'make.py')]
                   + list(chain.from_iterable(izip(repeat('-D'), macros)))
                   + ['-t', tchain, '-m', target]
                   + list(chain.from_iterable(izip(repeat('--profile'), profile or [])))
@@ -2292,7 +2293,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
             test_spec = os.path.join(build_path, 'test_spec.json')
 
         if compile_list:
-            popen(['python', '-u', os.path.join(tools_dir, 'test.py'), '--list']
+            popen([python_cmd, '-u', os.path.join(tools_dir, 'test.py'), '--list']
                   + list(chain.from_iterable(izip(repeat('--profile'), profile or [])))
                   + ['-t', tchain, '-m', target]
                   + list(chain.from_iterable(izip(repeat('--source'), source)))
@@ -2307,7 +2308,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
             if not build:
                 program.ignore_build_dir()
 
-            popen(['python', '-u', os.path.join(tools_dir, 'test.py')]
+            popen([python_cmd, '-u', os.path.join(tools_dir, 'test.py')]
                   + list(chain.from_iterable(izip(repeat('-D'), macros)))
                   + list(chain.from_iterable(izip(repeat('--profile'), profile or [])))
                   + ['-t', tchain, '-m', target]
@@ -2364,7 +2365,7 @@ def export(ide=None, target=None, source=False, clean=False, supported=False):
     env = program.get_env()
 
     if supported:
-        popen(['python', '-u', os.path.join(tools_dir, 'project.py')]
+        popen([python_cmd, '-u', os.path.join(tools_dir, 'project.py')]
               + (['-S'] if supported else []) + (['-v'] if very_verbose else []),
               env=env)
         return
@@ -2377,10 +2378,10 @@ def export(ide=None, target=None, source=False, clean=False, supported=False):
 
     if not source or len(source) == 0:
         source = [os.path.relpath(program.path, orig_path)]
-    
+
     program.ignore_build_dir()
 
-    popen(['python', '-u', os.path.join(tools_dir, 'project.py')]
+    popen([python_cmd, '-u', os.path.join(tools_dir, 'project.py')]
           + list(chain.from_iterable(izip(repeat('-D'), macros)))
           + ['-i', ide.lower()]
           + ['-m', target]
@@ -2412,7 +2413,7 @@ def detect():
         # Prepare environment variables
         env = program.get_env()
 
-        popen(['python', '-u', os.path.join(tools_dir, 'detect_targets.py')]
+        popen([python_cmd, '-u', os.path.join(tools_dir, 'detect_targets.py')]
               + args,
               env=env)
     else:
