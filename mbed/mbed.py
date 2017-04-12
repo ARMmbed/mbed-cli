@@ -1120,7 +1120,6 @@ class Repo(object):
                     # skip the import of mbed-os: the app will have already
                     # imported mbed-os.
                     if (f == 'mbed-os.lib') and (root != cwd_root):
-                        action("Skipping redundant import of mbed-os in \"%s\"" % self.path)
                         continue
                     repo = Repo.fromlib(os.path.join(root, f))
                     if repo:
