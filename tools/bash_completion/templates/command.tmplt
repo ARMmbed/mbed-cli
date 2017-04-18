@@ -1,0 +1,37 @@
+__mbed_complete_{{COMMAND}}() {
+    
+    local cur="${COMP_WORDS[COMP_CWORD]}"
+    local prev="${COMP_WORDS[COMP_CWORD-1]}"
+    case "$cur" in 
+        --*)
+            __mbedcomp "
+                {{#DDASH_COMMANDS}}
+                {{name}}
+                {{/DDASH_COMMANDS}}
+                "
+
+            return
+            ;;
+        -*)
+            __mbedcomp "
+                {{#DASH_COMMANDS}}
+                {{name}}
+                {{/DASH_COMMANDS}}
+                "
+            return
+            ;;
+    esac
+
+    # Handle the dependent commands
+    {{#HAVE_PREV}}
+    case "$prev" in 
+        {{#PREV_CASE}}
+        {{case}})
+            {{code}}
+            return
+            ;;
+        {{/PREV_CASE}}
+    esac
+    {{/HAVE_PREV}}
+
+}

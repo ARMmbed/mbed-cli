@@ -1,0 +1,43 @@
+# Note this file is generated
+# Based on mbed auto complete scripts
+
+__mbedcomp_words_include() {
+    local i=1
+    while [[ "$i" -lt "$COMP_CWORD" ]]
+    do
+        if [[ "${COMP_WORDS[i]}" = "$1" ]]
+        then
+            return 0
+        fi
+            i="$((++i))"
+    done
+    return 1
+}
+
+# Find the previous non-switch word
+__mbedcomp_prev() {
+    local idx="$((COMP_CWORD - 1))"
+    local prv="${COMP_WORDS[idx]}"
+    while [[ "$prv" = -* ]]
+    do
+        idx="$((--idx))"
+        prv="${COMP_WORDS[idx]}"
+    done
+    echo "$prv"
+}
+
+__mbedcomp() {
+# break $1 on space, tab, and newline characters,
+# and turn it into a newline separated list of words
+    local list s sep=$'\n' IFS=$' '$'\t'$'\n'
+    local cur="${COMP_WORDS[COMP_CWORD]}"
+
+    for s in $1
+    do
+        __mbedcomp_words_include "$s" && continue
+        list="$list$s$sep"
+    done
+
+    IFS="$sep"
+    COMPREPLY=($(compgen -W "$list" -- "$cur"))
+}

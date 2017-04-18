@@ -1,0 +1,2 @@
+declare IDES=$(mbed export --supported ides)
+            __mbedcomp "${IDES}"
