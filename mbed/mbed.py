@@ -37,7 +37,7 @@ import tempfile
 
 
 # Application version
-ver = '1.0.0'
+ver = '1.1.0'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
