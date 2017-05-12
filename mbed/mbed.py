@@ -2562,9 +2562,14 @@ def help_():
 
 def main():
     global verbose, very_verbose, remainder, cwd_root
+    status = -1
 
     # Help messages adapt based on current dir
-    cwd_root = os.getcwd()
+    try:
+        cwd_root = os.getcwd()
+    except Exception as e:
+        error("Unable to get current directory: %s" % e, status)
+    sys.exit(status or -1)
 
     if sys.version_info[0] != 2 or sys.version_info[1] < 7:
         error(
