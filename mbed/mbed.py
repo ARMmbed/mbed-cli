@@ -28,12 +28,35 @@ import shutil
 import stat
 import errno
 import ctypes
-from itertools import chain, izip, repeat
-from urlparse import urlparse
-import urllib2
+from itertools import chain, repeat
+try:
+    from itertools import izip
+except ImportError:
+    izip = zip
+try:
+    from urlparse import urlparse
+except ImportError:
+    from urllib.parse import urlparse
+try:
+    from urllib2 import urlopen
+except ImportError:
+    from urllib.request import urlopen
 import zipfile
 import argparse
 import tempfile
+
+
+is_python_3 = sys.version_info >= (3, )
+basestring = str if is_python_3 else basestring
+
+
+def decode_if_possible(str_or_bytes):
+    """
+    Will attempt to decode the string if using Python 3 and
+    expecting a string type object
+    """
+
+    return str_or_bytes.decode() if is_python_3 and hasattr(str_or_bytes, 'decode') else str_or_bytes
 
 
 # Application version
@@ -164,14 +187,15 @@ def progress_cursor():
 progress_spinner = progress_cursor()
 
 def progress():
-    sys.stdout.write(progress_spinner.next())
+    sys.stdout.write(next(progress_spinner) if is_python_3 else progress_spinner.next())
     sys.stdout.flush()
     sys.stdout.write('\b')
 
 
 # Process execution
 class ProcessException(Exception):
-    pass
+    def __getitem__(self, item):
+        return self.args[item]
 
 def popen(command, stdin=None, **kwargs):
     # print for debugging
@@ -210,7 +234,7 @@ def pquery(command, stdin=None, **kwargs):
     if proc.returncode != 0:
         raise ProcessException(proc.returncode, command[0], ' '.join(command), os.getcwd())
 
-    return stdout
+    return decode_if_possible(stdout)
 
 def rmtree_readonly(directory):
     def remove_readonly(func, path, _):
@@ -505,7 +529,7 @@ class Hg(object):
     def getrev():
         if os.path.isfile(os.path.join('.hg', 'dirstate')):
             with open(os.path.join('.hg', 'dirstate'), 'rb') as f:
-                return ''.join('%02x'%ord(i) for i in f.read(6))
+                return ''.join('%02x' % (i if isinstance(i, int) else ord(i)) for i in f.read(6))
         else:
             return ""
 
@@ -686,7 +710,7 @@ class Git(object):
             branch = Git.getbranch()
             if remote and branch:
                 try:
-                    Git.merge('%s/%s' % (remote, branch))
+                    Git.merge('%s/%s' % (decode_if_possible(remote), decode_if_possible(branch)))
                 except ProcessException:
                     pass
             else:
@@ -1019,7 +1043,7 @@ class Repo(object):
                 pass
 
             try:
-                self.rev = self.getrev()
+                self.rev = decode_if_possible(self.getrev())
             except ProcessException:
                 pass
 
@@ -1062,7 +1086,7 @@ class Repo(object):
     def clone(self, url, path, rev=None, depth=None, protocol=None, **kwargs):
         # Sorted so repositories that match urls are attempted first
         sorted_scms = [(scm.isurl(url), scm) for scm in scms.values()]
-        sorted_scms = sorted(sorted_scms, key=lambda (m, _): not m)
+        sorted_scms = sorted(sorted_scms, key=lambda m: not m)
 
         for _, scm in sorted_scms:
             main = True
@@ -1130,20 +1154,21 @@ class Repo(object):
                         and (lib_repo.rev == self.rev                              # match revs, even if rev is None (valid for repos with no revisions)
                              or (lib_repo.rev and self.rev
                                  and lib_repo.rev == self.rev[0:len(lib_repo.rev)]))):  # match long and short rev formats
-                    #print self.name, 'unmodified'
+                    #print(self.name, 'unmodified')
                     return
 
-        ref = (formaturl(self.url, 'https').rstrip('/') + '/' +
-              (('' if self.is_build else '#') +
-                self.rev if self.rev else ''))
-        action("Updating reference \"%s\" -> \"%s\"" % (relpath(cwd_root, self.path) if cwd_root != self.path else self.name, ref))
+        ref = (formaturl(self.url, 'https').rstrip('/') + '/' + (
+            ('' if self.is_build else '#') + self.rev if self.rev else ''))
+        action("Updating reference \"%s\" -> \"%s\"" % (
+            relpath(cwd_root, self.path) if cwd_root != self.path else self.name, ref))
         with open(self.lib, 'wb') as f:
-            f.write(ref + '\n')
+            ref_line = ref.encode() + b'\n' if is_python_3 else ref + '\n'
+            f.write(ref_line)
 
     def rm_untracked(self):
         untracked = self.scm.untracked()
         for f in untracked:
-            if re.match(r'(.+)\.(lib|bld)$', f) and os.path.isfile(f):
+            if re.match(r'(.+)\.(lib|bld)$', decode_if_possible(f)) and os.path.isfile(f):
                 action("Remove untracked library reference \"%s\"" % f)
                 os.remove(f)
 
@@ -2118,7 +2143,11 @@ def sync(recursive=True, keep_refs=False, top=True):
 def list_(detailed=False, prefix='', p_path=None, ignore=False):
     repo = Repo.fromrepo()
 
-    print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if detailed else str(repo.rev)[:12]) or 'no revision'))
+    repo_name = prefix + (relpath(p_path, repo.path) if p_path else repo.name)
+    repo_rev = decode_if_possible(
+        (repo.url+('#'+repo.rev[:12] if repo.rev else '') if detailed else repo.rev[:12]) or 'no revision')
+
+    print("%s (%s)" % (repo_name, repo_rev))
 
     for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.path)):
         if prefix:
@@ -2566,9 +2595,9 @@ def main():
     # Help messages adapt based on current dir
     cwd_root = os.getcwd()
 
-    if sys.version_info[0] != 2 or sys.version_info[1] < 7:
+    if not sys.version_info >= (2, 7):
         error(
-            "mbed CLI is compatible with Python version >= 2.7 and < 3.0\n"
+            "mbed CLI is compatible with Python version >= 2.7\n"
             "Please refer to the online guide available at https://github.com/ARMmbed/mbed-cli")
 
     # Parse/run command
@@ -2605,6 +2634,7 @@ def main():
     except Exception as e:
         if very_verbose:
             traceback.print_exc(file=sys.stdout)
+        raise
         error("Unknown Error: %s" % e, 255)
     sys.exit(status or 0)
 
