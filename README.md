@@ -74,7 +74,7 @@ $ sudo apt-get update
 $ sudo apt-get install libc6:i386 libncurses5:i386 libstdc++6:i386
 ```
 
-### Video tutorial for manual installation 
+### Video tutorial for manual installation
 
 <span class="images">[![Video tutorial](http://img.youtube.com/vi/cM0dFoTuU14/0.jpg)](https://www.youtube.com/watch?v=cM0dFoTuU14)</span>
 
@@ -142,7 +142,7 @@ mbed CLI can create and import programs based on both mbed OS 2 and mbed OS 5.
 
 ### Creating a new program for mbed OS 5
 
-When you create a new program, mbed CLI automatically imports the latest [mbed OS release](https://github.com/ARMmbed/mbed-os/). Each release includes all the components: code, build tools and IDE exporters. 
+When you create a new program, mbed CLI automatically imports the latest [mbed OS release](https://github.com/ARMmbed/mbed-os/). Each release includes all the components: code, build tools and IDE exporters.
 
 With this in mind, let's create a new program (we'll call it `mbed-os-program`):
 
@@ -208,13 +208,13 @@ $ cd mbed-os-example-blinky
 ```
 
 You can use the "import" command without specifying a full URL; mbed CLI adds a prefix (https://github.com/ARMmbed) to the URL if one is not present. For example, this command:
- 
+
 ```
 $ mbed import mbed-os-example-blinky
 ```
 
 is equivalent to this command:
- 
+
 ```
 $ mbed import https://github.com/ARMmbed/mbed-os-example-blinky
 ```
@@ -236,7 +236,7 @@ $ mbed new .
 
 ## Adding and removing libraries
 
-While working on your code, you may need to add another library to your application or remove existing libraries. 
+While working on your code, you may need to add another library to your application or remove existing libraries.
 
 Adding a new library to your program is not the same as cloning the repository. Don't clone a library using `hg` or `git`; use `mbed add` to add the library. This ensures that all libraries and sublibraries are populated as well.
 
@@ -281,7 +281,7 @@ $ mbed remove text-lcd
 After importing a program or creating a new one, you need to tell mbed CLI where to find the toolchains that you want to use for compiling your source tree.
 
 There are multiple ways to configure toolchain locations:
-* `mbed_settings.py` file in the root of your program. The tools will automatically create this file if it doesn't already exist. 
+* `mbed_settings.py` file in the root of your program. The tools will automatically create this file if it doesn't already exist.
 * The mbed CLI configuration.
 * Setting an environment variable.
 * Adding directory of the compiler binary to your PATH.
@@ -293,10 +293,10 @@ Methods for configuring toolchains that appear earlier in the above list overrid
 Edit `mbed_settings.py` to set your toolchain:
 
 * To use the [ARM Compiler toolchain](https://developer.arm.com/products/software-development-tools/compilers/arm-compiler-5/downloads), set `ARM_PATH` to the *base* directory of your ARM Compiler installation (example: C:\Program Files\ARM\armcc5.06). The recommended version of the ARM Compiler toolchain is 5.06.
-* To use the [GNU ARM Embedded toolchain (GCC) version 6](https://developer.arm.com/open-source/gnu-toolchain/gnu-rm/downloads), set `GCC_ARM_PATH` to the *binary* directory of your GCC ARM installation (example: C:\Program Files\GNU Tools ARM Embedded\6 2017q2\bin). Use version 6 of GCC ARM Embedded; version 5.0 or any older version might be incompatible with the tools.
-* To use the [IAR EWARM toolhain](https://www.iar.com/iar-embedded-workbench/#!?architecture=ARM), set `IAR_PATH` to the *base* directory of your IAR installation. Use versions 7.80 of IAR EWARM; prior versions might be incompatible with the tools.
+* To use the [GCC ARM Embedded toolchain](https://launchpad.net/gcc-arm-embedded), set `GCC_ARM_PATH` to the *binary* directory of your GCC ARM installation (example: C:\Program Files\GNU Tools ARM Embedded\6 2017q2\bin). Use version 6 of GCC ARM Embedded; version 5.0 or any older version might be incompatible with the tools.
+* To use the [IAR EWARM toolchain](https://www.iar.com/iar-embedded-workbench/#!?architecture=ARM), set `IAR_PATH` to the *base* directory of your IAR installation (example: C:\Program Files (x86)\IAR Systems\Embedded Workbench 7.5\arm). Use version 7.80.x of the IAR EWARM; newer (or older) versions might be incompatible with the tools.
 
-Because `mbed_settings.py` contains local settings (possibly relevant only to a single OS on a single machine), you should not check it into version control. 
+Because `mbed_settings.py` contains local settings (possibly relevant only to a single OS on a single machine), you should not check it into version control.
 
 #### Through mbed CLI configuration
 
@@ -651,7 +651,7 @@ As shown above, tests exist inside `TESTS\testgroup\testcase\` directories. Plea
 
 ### Checking status
 
-As you develop your program, you'll edit parts of it. You can get the status of all the repositories in your program (recursively) by running `mbed status`. If a repository has uncommitted changes, this command displays these changes. 
+As you develop your program, you'll edit parts of it. You can get the status of all the repositories in your program (recursively) by running `mbed status`. If a repository has uncommitted changes, this command displays these changes.
 
 Here's an example:
 
@@ -677,7 +677,7 @@ You can then commit or discard these changes through that repository's version c
 
 ### Pushing upstream
 
-To push the changes in your local tree upstream, run `mbed publish`. `mbed publish` works recursively, pushing the leaf dependencies first, then updating the dependents and pushing them too. 
+To push the changes in your local tree upstream, run `mbed publish`. `mbed publish` works recursively, pushing the leaf dependencies first, then updating the dependents and pushing them too.
 
 Let's assume that the list of dependencies of your program (obtained by running `mbed ls`) looks like this:
 
@@ -696,12 +696,12 @@ Let's assume that you make changes to `iot-client`. `mbed publish` detects the c
 When you create a new (local) version control managed program or library, its revision history exists only locally. The repository is not associated with the remote one. To publish the local repository, please follow these steps:
 
 1. Create a new empty repository on the remote site. This can be on a public repository hosting service (GitHub, Bitbucket, mbed.org), your own service or a different location on your system.
-1. Copy the URL/location of the new repository in your clipboard. 
+1. Copy the URL/location of the new repository in your clipboard.
 1. Open command-line in the local repository directory (for example, change directory to `mbed-os-example/local-lib`).
 1. To associate the local repository:
  * For Git, run `git remote add origin <url-or-paht-to-your-remote-repo>`.
  * For Mercurial, edit .hg/hgrc and add (or replace if exists):
- 
+
             ```
             [paths]
             default = <url-or-paht-to-your-remote-repo>
@@ -725,7 +725,7 @@ Through the workflow explained above, mbed CLI maintains association to the orig
 
 ## Updating programs and libraries
 
-You can update programs and libraries on your local machine so that they pull in changes from the remote sources (Git or Mercurial). 
+You can update programs and libraries on your local machine so that they pull in changes from the remote sources (Git or Mercurial).
 
 As with any mbed CLI command, `mbed update` uses the current directory as a working context. Before calling `mbed update`, you should change your working directory to the one you want to update. For example, if you're updating mbed-os, use `cd mbed-os` before you begin updating.
 
@@ -808,7 +808,7 @@ Here is a list of configuration settings and their defaults:
  * `protocol` - defines the default protocol used for importing or cloning of programs and libraries. The possible values are `https`, `http` and `ssh`. Use `ssh` if you have generated and registered SSH keys (Public Key Authentication) with a service such as GitHub, GitLab, Bitbucket and so on. Read more about SSH keys [here](https://help.github.com/articles/generating-an-ssh-key/). Default: `https`.
  * `depth` - defines the *clone* depth for importing or cloning and applies only to *Git* repositories. Note that though this option may improve cloning speed, it may also prevent you from correctly checking out a dependency tree when the reference revision hash is older than the clone depth. Read more about shallow clones [here](https://git-scm.com/docs/git-clone). Default: none.
  * `cache` - defines the local path that stores small copies of the imported or cloned repositories, and mbed CLI uses it to minimize traffic and speed up future imports of the same repositories. Use `on` or `enabled` to turn on caching in the system temp path. Use `none` to turn caching off. Default: none (disabled).
- 
+
 ## Troubleshooting
 
 ### Unable to import Mercurial (mbed.org) programs or libraries.
