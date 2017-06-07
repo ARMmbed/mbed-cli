@@ -66,6 +66,14 @@ The directories of Git and Mercurial executables (`git` and `hg`) need to be in 
     * Compilers: GCC ARM, ARM Compiler 5, IAR.
     * IDE: Keil uVision, DS-5, IAR Workbench.
 
+<span class="tips">**Note:** When installing the ARM Compiler 5 on a 64-bit Linux machine, you may need to also install the i386 architecture package:</span>
+
+```
+$ sudo dpkg --add-architecture i386
+$ sudo apt-get update
+$ sudo apt-get install libc6:i386 libncurses5:i386 libstdc++6:i386
+```
+
 ### Video tutorial for manual installation 
 
 <span class="images">[![Video tutorial](http://img.youtube.com/vi/cM0dFoTuU14/0.jpg)](https://www.youtube.com/watch?v=cM0dFoTuU14)</span>
