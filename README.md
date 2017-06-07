@@ -696,12 +696,12 @@ When you create a new (local) version control managed program or library, its re
 1. Copy the URL/location of the new repository in your clipboard. 
 1. Open command-line in the local repository directory (for example, change directory to `mbed-os-example/local-lib`).
 1. To associate the local repository:
- * For Git, run `git remote add origin <url-or-paht-to-your-remote-repo>`.
+ * For Git, run `git remote add origin <url-or-path-to-your-remote-repo>`.
  * For Mercurial, edit .hg/hgrc and add (or replace if exists):
  
             ```
             [paths]
-            default = <url-or-paht-to-your-remote-repo>
+            default = <url-or-path-to-your-remote-repo>
             ```
 
 1. Run `mbed publish` to publish your changes.
@@ -742,7 +742,7 @@ To update your program to another upstream version, go to the root folder of the
 $ mbed update [branch|tag|revision]
 ```
 
-This fetches new revisions from the remote repository, updating the program to the specified branch, tag or revision. If you don't specificy any of these, then `mbed update` updates to the latest revision of the current branch. `mbed update` performs this series of actions recursively against all dependencies in the program tree.
+This fetches new revisions from the remote repository, updating the program to the specified branch, tag or revision. If you don't specify any of these, then `mbed update` updates to the latest revision of the current branch. `mbed update` performs this series of actions recursively against all dependencies in the program tree.
 
 #### Updating a library
 
