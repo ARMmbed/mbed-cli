@@ -285,7 +285,7 @@ Methods for configuring toolchains that appear earlier in the above list overrid
 Edit `mbed_settings.py` to set your toolchain:
 
 * To use the [ARM Compiler toolchain](https://developer.arm.com/products/software-development-tools/compilers/arm-compiler-5/downloads), set `ARM_PATH` to the *base* directory of your ARM Compiler installation (example: C:\Program Files\ARM\armcc5.06). The recommended version of the ARM Compiler toolchain is 5.06.
-* To use the [GCC ARM Embedded toolchain](https://launchpad.net/gcc-arm-embedded), set `GCC_ARM_PATH` to the *binary* directory of your GCC ARM installation (example: C:\Program Files\GNU Tools ARM Embedded\6 2017q2\bin). Use version 6 of GCC ARM Embedded; version 5.0 or any older version might be incompatible with the tools.
+* To use the [GNU ARM Embedded toolchain (GCC) version 6](https://developer.arm.com/open-source/gnu-toolchain/gnu-rm/downloads), set `GCC_ARM_PATH` to the *binary* directory of your GCC ARM installation (example: C:\Program Files\GNU Tools ARM Embedded\6 2017q2\bin). Use version 6 of GCC ARM Embedded; version 5.0 or any older version might be incompatible with the tools.
 * To use the [IAR EWARM toolhain](https://www.iar.com/iar-embedded-workbench/#!?architecture=ARM), set `IAR_PATH` to the *base* directory of your IAR installation. Use versions 7.80 of IAR EWARM; prior versions might be incompatible with the tools.
 
 Because `mbed_settings.py` contains local settings (possibly relevant only to a single OS on a single machine), you should not check it into version control. 
