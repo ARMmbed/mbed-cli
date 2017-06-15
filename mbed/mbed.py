@@ -1943,12 +1943,13 @@ def publish(all_refs=None, msg=None, top=True):
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to unpublished libraries, unpublished or uncommitted changes, and attempt to update from associated remote repository URLs.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
+    dict(name=['-l', '--latest-deps'], action='store_true', help='Update all dependencies to the latest revision of their current branch. WARNING: Ignores lib files'),
     help='Update to branch, tag, revision or latest',
     description=(
         "Updates the current program or library and its dependencies to specified\nbranch, tag or revision.\n"
         "Alternatively fetches from associated remote repository URL and updates to the\n"
         "latest revision in the current branch."))
-def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=False, top=True, depth=None, protocol=None):
+def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=False, top=True, depth=None, protocol=None, latest_deps=False):
     if top and clean:
         sync()
 
@@ -2037,7 +2038,7 @@ def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=Fa
             repo.ignore(relpath(repo.path, lib.path))
         else:
             with cd(lib.path):
-                update(lib.rev, clean=clean, clean_files=clean_files, clean_deps=clean_deps, ignore=ignore, top=False)
+                update(None if latest_deps else lib.rev, clean=clean, clean_files=clean_files, clean_deps=clean_deps, ignore=ignore, top=False, latest_deps=latest_deps)
 
     if top:
         program = Program(repo.path)
