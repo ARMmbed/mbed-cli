@@ -1965,6 +1965,11 @@ def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=Fa
             "This %s is in detached HEAD state, and you won't be able to receive updates from the remote repository until you either checkout a branch or create a new one.\n"
             "You can checkout a branch using \"%s checkout <branch_name>\" command before running \"mbed update\"." % (cwd_type, repo.scm.name), 1)
 
+    if repo.isdetached() and latest_deps:
+        warning(
+            "The repo %s is in detached HEAD state, and you won't be able to receive updates from the remote repository until you either checkout a branch or create a new one.\n"
+            "You can checkout a branch using \"%s checkout <branch_name>\" command before running \"mbed update\"." % (repo.name, repo.scm.name))
+
     if repo.is_local and not repo.rev:
         action("Skipping unpublished empty %s \"%s\"" % (
             cwd_type if top else cwd_dest,
