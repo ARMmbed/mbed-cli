@@ -79,7 +79,7 @@ ignores = [
     "*.eww",
 
     # GCC make
-    "Makefile",
+    "/Makefile",
     "Debug",
 
     # HTML files
