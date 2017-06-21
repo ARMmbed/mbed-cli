@@ -1943,12 +1943,13 @@ def publish(all_refs=None, msg=None, top=True):
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to unpublished libraries, unpublished or uncommitted changes, and attempt to update from associated remote repository URLs.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
+    dict(name=['-l', '--latest-deps'], action='store_true', help='Update all dependencies to the latest revision of their current branch. WARNING: Ignores lib files'),
     help='Update to branch, tag, revision or latest',
     description=(
         "Updates the current program or library and its dependencies to specified\nbranch, tag or revision.\n"
         "Alternatively fetches from associated remote repository URL and updates to the\n"
         "latest revision in the current branch."))
-def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=False, top=True, depth=None, protocol=None):
+def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=False, top=True, depth=None, protocol=None, latest_deps=False):
     if top and clean:
         sync()
 
@@ -1963,6 +1964,11 @@ def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=Fa
         error(
             "This %s is in detached HEAD state, and you won't be able to receive updates from the remote repository until you either checkout a branch or create a new one.\n"
             "You can checkout a branch using \"%s checkout <branch_name>\" command before running \"mbed update\"." % (cwd_type, repo.scm.name), 1)
+
+    if repo.isdetached() and latest_deps:
+        warning(
+            "The repo %s is in detached HEAD state, and you won't be able to receive updates from the remote repository until you either checkout a branch or create a new one.\n"
+            "You can checkout a branch using \"%s checkout <branch_name>\" command before running \"mbed update\"." % (repo.name, repo.scm.name))
 
     if repo.is_local and not repo.rev:
         action("Skipping unpublished empty %s \"%s\"" % (
@@ -2037,7 +2043,7 @@ def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=Fa
             repo.ignore(relpath(repo.path, lib.path))
         else:
             with cd(lib.path):
-                update(lib.rev, clean=clean, clean_files=clean_files, clean_deps=clean_deps, ignore=ignore, top=False)
+                update(None if latest_deps else lib.rev, clean=clean, clean_files=clean_files, clean_deps=clean_deps, ignore=ignore, top=False, latest_deps=latest_deps)
 
     if top:
         program = Program(repo.path)
@@ -2246,7 +2252,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                   + (['-v'] if verbose else [])
                   + args,
                   env=env)
- 
+
             if flash:
                 fw_name = artifact_name if artifact_name else program.name
                 fw_fbase = os.path.join(build_path, fw_name)
@@ -2375,10 +2381,11 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
     dict(name=['-S', '--supported'], dest='supported', action='store_true', help='Shows supported matrix of targets and toolchains'),
+    dict(name='--app-config', dest="app_config", help="Path of an app configuration file (Default is to look for 'mbed_app.json')"),
     help='Generate an IDE project',
     description=(
         "Generate IDE project files for the current program."))
-def export(ide=None, target=None, source=False, clean=False, supported=False):
+def export(ide=None, target=None, source=False, clean=False, supported=False, app_config=None):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
@@ -2416,6 +2423,7 @@ def export(ide=None, target=None, source=False, clean=False, supported=False):
           + ['-m', target]
           + (['-c'] if clean else [])
           + list(chain.from_iterable(izip(repeat('--source'), source)))
+          + (['--app-config', app_config] if app_config else [])
           + args,
           env=env)
 

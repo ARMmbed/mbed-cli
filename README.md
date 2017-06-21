@@ -66,6 +66,14 @@ The directories of Git and Mercurial executables (`git` and `hg`) need to be in 
     * Compilers: GCC ARM, ARM Compiler 5, IAR.
     * IDE: Keil uVision, DS-5, IAR Workbench.
 
+<span class="tips">**Note:** When installing the ARM Compiler 5 on a 64-bit Linux machine, you may need to also install the i386 architecture package:</span>
+
+```
+$ sudo dpkg --add-architecture i386
+$ sudo apt-get update
+$ sudo apt-get install libc6:i386 libncurses5:i386 libstdc++6:i386
+```
+
 ### Video tutorial for manual installation
 
 <span class="images">[![Video tutorial](http://img.youtube.com/vi/cM0dFoTuU14/0.jpg)](https://www.youtube.com/watch?v=cM0dFoTuU14)</span>
@@ -286,7 +294,7 @@ Edit `mbed_settings.py` to set your toolchain:
 
 * To use the [ARM Compiler toolchain](https://developer.arm.com/products/software-development-tools/compilers/arm-compiler-5/downloads), set `ARM_PATH` to the *base* directory of your ARM Compiler installation (example: C:\Program Files\ARM\armcc5.06). The recommended version of the ARM Compiler toolchain is 5.06.
 * To use the [GNU ARM Embedded toolchain (GCC) version 6](https://developer.arm.com/open-source/gnu-toolchain/gnu-rm/downloads), set `GCC_ARM_PATH` to the *binary* directory of your GCC ARM installation (example: C:\Program Files\GNU Tools ARM Embedded\6 2017q2\bin). Use version 6 of GCC ARM Embedded; version 5.0 or any older version might be incompatible with the tools.
-* To use the [IAR EWARM toolhain](https://www.iar.com/iar-embedded-workbench/#!?architecture=ARM), set `IAR_PATH` to the *base* directory of your IAR installation. Use versions 7.80 of IAR EWARM; prior versions might be incompatible with the tools.
+* To use the [IAR EWARM toolchain](https://www.iar.com/iar-embedded-workbench/#!?architecture=ARM), set `IAR_PATH` to the *base* directory of your IAR installation (example: C:\Program Files (x86)\IAR Systems\Embedded Workbench 7.5\arm). Use version 7.80.x of the IAR EWARM; newer (or older) versions might be incompatible with the tools.
 
 Because `mbed_settings.py` contains local settings (possibly relevant only to a single OS on a single machine), you should not check it into version control.
 
