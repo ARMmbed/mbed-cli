@@ -2252,7 +2252,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                   + (['-v'] if verbose else [])
                   + args,
                   env=env)
- 
+
             if flash:
                 fw_name = artifact_name if artifact_name else program.name
                 fw_fbase = os.path.join(build_path, fw_name)
@@ -2381,10 +2381,11 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
     dict(name=['-S', '--supported'], dest='supported', action='store_true', help='Shows supported matrix of targets and toolchains'),
+    dict(name='--app-config', dest="app_config", help="Path of an app configuration file (Default is to look for 'mbed_app.json')"),
     help='Generate an IDE project',
     description=(
         "Generate IDE project files for the current program."))
-def export(ide=None, target=None, source=False, clean=False, supported=False):
+def export(ide=None, target=None, source=False, clean=False, supported=False, app_config=None):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
@@ -2422,6 +2423,7 @@ def export(ide=None, target=None, source=False, clean=False, supported=False):
           + ['-m', target]
           + (['-c'] if clean else [])
           + list(chain.from_iterable(izip(repeat('--source'), source)))
+          + (['--app-config', app_config] if app_config else [])
           + args,
           env=env)
 
