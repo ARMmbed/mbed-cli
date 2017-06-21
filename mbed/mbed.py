@@ -1441,6 +1441,10 @@ class Program(object):
         if os.path.isfile('MACROS.txt'):
             with open('MACROS.txt') as f:
                 macros = f.read().splitlines()
+        if os.path.isdir(self.path) and Repo.isrepo(self.path):
+            repo = Repo.fromrepo(self.path)
+            if repo and repo.rev:
+                macros.append('MBED_APP_COMMIT=\"'+repo.rev+'\"')
         return macros
 
 
