@@ -80,13 +80,19 @@ $ sudo apt-get install libc6:i386 libncurses5:i386 libstdc++6:i386
 
 ### Installing mbed CLI
 
+#### Windows Installer
+The [mbed CLI for Windows Installer](https://mbed-media.mbed.com/filer_public/7f/46/7f46e205-52f5-48e2-be64-8f30d52f6d75/mbed_installer_v041.exe) will install all pre-requisites required and works on windows 7 and above. More details on the instaler can be found [here](https://docs.mbed.com/docs/mbed-os-handbook/en/latest/dev_tools/cli_install/)
+
+#### OSX / Linux
+
 You can get the latest stable version of mbed CLI through pip by running:
 
 ```
 $ pip install mbed-cli
 ```
+Note: you may need to run with `sudo`.
 
-On Linux or Mac, you may need to run with `sudo`.
+#### Development Version
 
 Alternatively, you can get the development version of mbed CLI by cloning the development repository [https://github.com/ARMmbed/mbed-cli](https://github.com/ARMmbed/mbed-cli):
 
