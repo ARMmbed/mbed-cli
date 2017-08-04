@@ -116,7 +116,7 @@ pip uninstall mbed-cli
 
 To install mbed-cli bash tab completion navigate to the `tools/bash_completion` directory. Then copy the `mbed` script into your `/etc/bash_completion.d/` or `/usr/local/etc/bash_completion.d` directory and reload your terminal.  
 
-[Full documentation here](tools/bash_completion/install.md)
+[Full documentation here](https://github.com/ARMmbed/mbed-cli/blob/master/tools/bash_completion/install.md)
 
 ## Quickstart video
 
