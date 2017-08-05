@@ -1842,7 +1842,7 @@ def add(url, path=None, ignore=False, depth=None, protocol=None, top=True):
     help='Remove library',
     description=(
         "Remove specified library, its dependencies and references from the current\n"
-        "You can re-add the library from it's URL via 'mbed add <library URL>'."))
+        "You can re-add the library from its URL via 'mbed add <library URL>'."))
 def remove(path):
     repo = Repo.fromrepo()
     if not Repo.isrepo(path):
