@@ -2158,8 +2158,8 @@ def status_(ignore=False):
 
 # Compile command which invokes the mbed OS native build system
 @subcommand('compile',
-    dict(name=['-t', '--toolchain'], help='Compile toolchain. Example: ARM, GCC_ARM, IAR'),
-    dict(name=['-m', '--target'], help='Compile target MCU. Example: K64F, NUCLEO_F401RE, NRF51822...'),
+    dict(name=['-t', '--toolchain'], help='Compile toolchain. Example: ARM, GCC_ARM, IAR', type=lambda s: s.upper()),
+    dict(name=['-m', '--target'], help='Compile target MCU. Example: K64F, NUCLEO_F401RE, NRF51822...', type=lambda s: s.upper()),
     dict(name=['--profile'], action='append', help='Path of a build profile configuration file. Example: mbed-os/tools/profiles/debug.json'),
     dict(name='--library', dest='compile_library', action='store_true', help='Compile the current program or library as a static library.'),
     dict(name='--config', dest='compile_config', action='store_true', help='Show run-time compile configuration'),
@@ -2277,8 +2277,8 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
 
 # Test command
 @subcommand('test',
-    dict(name=['-t', '--toolchain'], help='Compile toolchain. Example: ARM, GCC_ARM, IAR'),
-    dict(name=['-m', '--target'], help='Compile target MCU. Example: K64F, NUCLEO_F401RE, NRF51822...'),
+    dict(name=['-t', '--toolchain'], help='Compile toolchain. Example: ARM, GCC_ARM, IAR', type=lambda s: s.upper()),
+    dict(name=['-m', '--target'], help='Compile target MCU. Example: K64F, NUCLEO_F401RE, NRF51822...', type=lambda s: s.upper()),
     dict(name='--compile-list', dest='compile_list', action='store_true', help='List all tests that can be built'),
     dict(name='--run-list', dest='run_list', action='store_true', help='List all built tests that can be ran'),
     dict(name='--compile', dest='compile_only', action='store_true', help='Only compile tests'),
@@ -2377,7 +2377,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
 # Export command
 @subcommand('export',
     dict(name=['-i', '--ide'], help='IDE to create project files for. Example: UVISION4, UVISION5, GCC_ARM, IAR, COIDE'),
-    dict(name=['-m', '--target'], help='Export for target MCU. Example: K64F, NUCLEO_F401RE, NRF51822...'),
+    dict(name=['-m', '--target'], help='Export for target MCU. Example: K64F, NUCLEO_F401RE, NRF51822...', type=lambda s: s.upper()),
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
     dict(name=['-S', '--supported'], dest='supported', action='store_true', help='Shows supported matrix of targets and toolchains'),
