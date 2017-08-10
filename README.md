@@ -76,7 +76,7 @@ $ sudo apt-get install libc6:i386 libncurses5:i386 libstdc++6:i386
 
 ### Video tutorial for manual installation
 
-<span class="images">[![Video tutorial](http://img.youtube.com/vi/cM0dFoTuU14/0.jpg)](https://www.youtube.com/watch?v=cM0dFoTuU14)</span>
+<span class="images">[![Video tutorial](https://img.youtube.com/vi/cM0dFoTuU14/0.jpg)](https://www.youtube.com/watch?v=cM0dFoTuU14)</span>
 
 ### Installing mbed CLI
 
@@ -120,7 +120,7 @@ To install mbed-cli bash tab completion navigate to the `tools/bash_completion` 
 
 ## Quickstart video
 
-<span class="images">[![Video tutorial](http://img.youtube.com/vi/PI1Kq9RSN_Y/0.jpg)](https://www.youtube.com/watch?v=PI1Kq9RSN_Y)</span>
+<span class="images">[![Video tutorial](https://img.youtube.com/vi/PI1Kq9RSN_Y/0.jpg)](https://www.youtube.com/watch?v=PI1Kq9RSN_Y)</span>
 
 ## Before you begin: understanding the working context and program root
 
