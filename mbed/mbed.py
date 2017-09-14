@@ -1403,7 +1403,7 @@ class Program(object):
     def get_env(self):
         env = os.environ.copy()
         env['PYTHONPATH'] = os.path.abspath(self.path)
-        compilers = ['ARM', 'GCC_ARM', 'IAR']
+        compilers = ['ARM', 'GCC_ARM', 'IAR', 'ARMC6']
         for c in compilers:
             if self.get_cfg(c+'_PATH'):
                 env['MBED_'+c+'_PATH'] = self.get_cfg(c+'_PATH')
