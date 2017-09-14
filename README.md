@@ -63,7 +63,7 @@ Windows, Linux and Mac OS X support Mbed CLI. We're keen to learn about your exp
 The directories of Git and Mercurial executables (`git` and `hg`) need to be in your system's PATH.
 
 * **Command-line compiler or IDE toolchain** - Mbed CLI invokes the [Mbed OS 5](https://github.com/ARMmbed/mbed-os) tools for various features, such as compiling, testing and exporting to industry standard toolchains. To compile your code, you need either a compiler or an IDE:
-    * Compilers: GCC ARM, Arm Compiler 5, IAR.
+    * Compilers: GCC ARM, Arm Compiler 5, Arm Compiler 6, IAR.
     * IDE: Keil uVision, DS-5, IAR Workbench.
 
 <span class="tips">**Note:** When installing the Arm Compiler 5 on a 64-bit Linux machine, you may need to also install the i386 architecture package:</span>
@@ -294,7 +294,8 @@ Methods for configuring toolchains that appear earlier in the above list overrid
 
 Edit `mbed_settings.py` to set your toolchain:
 
-* To use the [Arm Compiler toolchain](https://developer.arm.com/products/software-development-tools/compilers/arm-compiler-5/downloads), set `ARM_PATH` to the *base* directory of your Arm Compiler installation (example: C:\Program Files\ARM\armcc5.06). The recommended version of the Arm Compiler toolchain is 5.06.
+* To use [Arm Compiler 5](https://developer.arm.com/products/software-development-tools/compilers/arm-compiler-5/downloads), set `ARM_PATH` to the *base* directory of your Arm Compiler installation (example: C:\Program Files\ARM\armcc5.06). Use version 5.06 of Arm Compiler 5.
+* To use [Arm Compiler 6](https://developer.arm.com/products/software-development-tools/compilers/arm-compiler-6/downloads), set `ARMC6_PATH` to the *binary* directory of your Arm Compiler installation (example: C:\Program Files\ARM\armcc6.8\bin). Use version 6.8 of Arm Compiler 6.
 * To use the [GNU Arm Embedded toolchain (GCC) version 6](https://developer.arm.com/open-source/gnu-toolchain/gnu-rm/downloads), set `GCC_ARM_PATH` to the *binary* directory of your GCC Arm installation (example: C:\Program Files\GNU Tools ARM Embedded\6 2017q2\bin). Use version 6 of GCC Arm Embedded; version 5.0 or any older version might be incompatible with the tools.
 * To use the [IAR EWARM toolchain](https://www.iar.com/iar-embedded-workbench/#!?architecture=ARM), set `IAR_PATH` to the *base* directory of your IAR installation (example: C:\Program Files (x86)\IAR Systems\Embedded Workbench 7.5\arm). Use versions 7.70 to 7.80.x of the IAR EWARM; newer (or older) versions might be incompatible with the tools.
 
@@ -311,7 +312,7 @@ $ mbed config -G ARM_PATH "C:\Program Files\ARM"
 
 The `-G` switch tells Mbed CLI to set this as a global setting, rather than local for the current program.
 
-Supported settings for toolchain paths are `ARM_PATH`, `GCC_ARM_PATH` and `IAR_PATH`.
+Supported settings for toolchain paths are `ARM_PATH`, `ARMC6_PATH`, `GCC_ARM_PATH` and `IAR_PATH`.
 
 You can see the active Mbed CLI configuration via:
 
@@ -331,6 +332,7 @@ More information about Mbed CLI configuration is available in the [configuration
 
 For each of the compilers, `mbed compile` checks a corresponding environment variable for the compiler's location. The environment variables are as follows:
 * `MBED_ARM_PATH`: The path to the *base* directory of your Arm Compiler installation. This should be the directory containing the directory containing the binaries for `armcc` and friends.
+* `MBED_ARMC6_PATH`: The path to the *binary* directory of your Arm Compiler installation. This should be the directory containing the binaries for `armclang` and friends.
 * `MBED_IAR_PATH`: The path to the *base* directory of your IAR EWARM Compiler installation. This should be one directory containing the directory containing the binaries for `iccarm` and friends.
 * `MBED_GCC_ARM_PATH`: The path to the *binary* directory of your GCC Arm Embedded Compiler installation. This should be the directory containing the binaries for `arm-none-eabi-gcc` and friends.
 
@@ -807,7 +809,7 @@ Here is a list of configuration settings and their defaults:
 
  * `target` - defines the default target for `compile`, `test` and `export`; an alias of `mbed target`. Default: none.
  * `toolchain` - defines the default toolchain for `compile` and `test`; can be set through `mbed toolchain`. Default: none.
- * `ARM_PATH`, `GCC_ARM_PATH`, `IAR_PATH` - defines the path to Arm Compiler, GCC Arm and IAR Workbench toolchains. Default: none.
+ * `ARM_PATH`, `ARMC6_PATH`, `GCC_ARM_PATH`, `IAR_PATH` - defines the path to Arm Compiler 5 and 6, GCC Arm and IAR Workbench toolchains. Default: none.
  * `protocol` - defines the default protocol used for importing or cloning of programs and libraries. The possible values are `https`, `http` and `ssh`. Use `ssh` if you have generated and registered SSH keys (Public Key Authentication) with a service such as GitHub, GitLab, Bitbucket and so on. Read more about SSH keys [here](https://help.github.com/articles/generating-an-ssh-key/). Default: `https`.
  * `depth` - defines the *clone* depth for importing or cloning and applies only to *Git* repositories. Note that though this option may improve cloning speed, it may also prevent you from correctly checking out a dependency tree when the reference revision hash is older than the clone depth. Read more about shallow clones [here](https://git-scm.com/docs/git-clone). Default: none.
  * `cache` - defines the local path that stores small copies of the imported or cloned repositories, and Mbed CLI uses it to minimize traffic and speed up future imports of the same repositories. Use `on` or `enabled` to turn on caching in the system temp path. Use `none` to turn caching off. Default: none (disabled).
