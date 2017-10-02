@@ -37,7 +37,7 @@ import tempfile
 
 
 # Application version
-ver = '1.2.1'
+ver = '1.2.2'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
@@ -2192,7 +2192,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
         source = [os.path.relpath(program.path, orig_path)]
 
     if supported:
-        popen(['python', '-u', os.path.join(tools_dir, 'make.py')]
+        popen([python_cmd, '-u', os.path.join(tools_dir, 'make.py')]
               + (['-S', supported] if supported else []) + (['-v'] if very_verbose else [])
               + (['--app-config', app_config] if app_config else [])
               + args,
@@ -2404,7 +2404,7 @@ def export(ide=None, target=None, source=False, clean=False, supported=False, ap
     env = program.get_env()
 
     if supported:
-        popen(['python', '-u', os.path.join(tools_dir, 'project.py')]
+        popen([python_cmd, '-u', os.path.join(tools_dir, 'project.py')]
               + (['-S', supported] if supported else []) + (['-v'] if very_verbose else []),
               env=env)
         return
