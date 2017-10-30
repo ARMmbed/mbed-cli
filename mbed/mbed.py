@@ -42,7 +42,11 @@ ver = '1.2.2'
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
 git_cmd = 'git'
+
+# override python command when running standalone Mbed CLI
 python_cmd = sys.executable
+if os.path.basename(python_cmd).startswith('mbed'):
+    python_cmd = 'python'
 
 ignores = [
     # Version control folders
