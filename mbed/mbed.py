@@ -45,8 +45,10 @@ git_cmd = 'git'
 
 # override python command when running standalone Mbed CLI
 python_cmd = sys.executable
+is_standalone = False
 if os.path.basename(python_cmd).startswith('mbed'):
     python_cmd = 'python'
+    is_standalone = True
 
 ignores = [
     # Version control folders
@@ -179,7 +181,6 @@ class ProcessException(Exception):
 
 def popen(command, stdin=None, **kwargs):
     # print for debugging
-    info('Exec "'+' '.join(command)+'" in '+os.getcwd())
     try:
         proc = subprocess.Popen(command, **kwargs)
     except OSError as e:
@@ -1294,6 +1295,14 @@ class Program(object):
 
         return self._find_file_paths(paths, 'make.py')
 
+    def get_tools_command(self, script):
+        if os.name != 'nt' \
+           or not is_standalone \
+           or not os.path.exists(os.path.join(self.get_tools_dir(), 'dist', 'win32')):
+            return [python_cmd, '-u', os.path.join(self.get_tools_dir(), script + '.py')]
+
+        return [os.path.join(self.get_tools_dir(), 'dist', 'win32', script + '.exe')]
+
     def get_requirements(self):
         paths = []
         mbed_os_path = self.get_os_dir()
@@ -2196,7 +2205,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
         source = [os.path.relpath(program.path, orig_path)]
 
     if supported:
-        popen([python_cmd, '-u', os.path.join(tools_dir, 'make.py')]
+        popen(program.get_tools_command('make')
               + (['-S', supported] if supported else []) + (['-v'] if very_verbose else [])
               + (['--app-config', app_config] if app_config else [])
               + args,
@@ -2209,7 +2218,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
 
     if compile_config:
         # Compile configuration
-        popen([python_cmd, os.path.join(tools_dir, 'get_config.py')]
+        popen(program.get_tools_command('get_config')
               + ['-t', tchain, '-m', target]
               + list(chain.from_iterable(izip(repeat('--profile'), profile or [])))
               + list(chain.from_iterable(izip(repeat('--source'), source)))
@@ -2244,7 +2253,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
             if not build_path:
                 build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, target, tchain)
 
-            popen([python_cmd, '-u', os.path.join(tools_dir, 'make.py')]
+            popen(program.get_tools_command('make')
                   + list(chain.from_iterable(izip(repeat('-D'), macros)))
                   + ['-t', tchain, '-m', target]
                   + list(chain.from_iterable(izip(repeat('--profile'), profile or [])))
@@ -2333,7 +2342,8 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
             test_spec = os.path.join(build_path, 'test_spec.json')
 
         if compile_list:
-            popen([python_cmd, '-u', os.path.join(tools_dir, 'test.py'), '--list']
+            popen(program.get_tools_command('test')
+                  + ['--list']
                   + list(chain.from_iterable(izip(repeat('--profile'), profile or [])))
                   + ['-t', tchain, '-m', target]
                   + list(chain.from_iterable(izip(repeat('--source'), source)))
@@ -2408,7 +2418,7 @@ def export(ide=None, target=None, source=False, clean=False, supported=False, ap
     env = program.get_env()
 
     if supported:
-        popen([python_cmd, '-u', os.path.join(tools_dir, 'project.py')]
+        popen(program.get_tools_command('program')
               + (['-S', supported] if supported else []) + (['-v'] if very_verbose else []),
               env=env)
         return
@@ -2424,7 +2434,7 @@ def export(ide=None, target=None, source=False, clean=False, supported=False, ap
 
     program.ignore_build_dir()
 
-    popen([python_cmd, '-u', os.path.join(tools_dir, 'project.py')]
+    popen(program.get_tools_command('project')
           + list(chain.from_iterable(izip(repeat('-D'), macros)))
           + ['-i', ide.lower()]
           + ['-m', target]
@@ -2457,7 +2467,7 @@ def detect():
         # Prepare environment variables
         env = program.get_env()
 
-        popen([python_cmd, '-u', os.path.join(tools_dir, 'detect_targets.py')]
+        popen(program.get_tools_command('detect_targets')
               + args,
               env=env)
     else:
