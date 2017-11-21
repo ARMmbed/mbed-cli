@@ -608,7 +608,20 @@ class Git(object):
             pquery([git_cmd, 'branch', '-D', branch])
 
     def clone(url, name=None, depth=None, protocol=None):
-        popen([git_cmd, 'clone', formaturl(url, protocol), name] + (['--depth', depth] if depth else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
+        if depth:
+            repo_name = url.split('/')[-1]
+            if '.git' in repo_name:
+                repo_name = repo_name[:-4]
+
+            os.mkdir(repo_name)
+            
+            with cd(repo_name):
+                Git.init()
+                Git.fetch(url=url, branch='latest', depth=depth)
+                Git.checkout('FETCH_HEAD')
+                popen([git_cmd, 'remote', 'add', 'origin', url])
+        else:
+            popen([git_cmd, 'clone', formaturl(url, protocol), name] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def add(dest):
         info("Adding reference "+dest)
@@ -642,9 +655,9 @@ class Git(object):
                 if not branch:
                     error(err+"Working set is not on a branch.", 1)
 
-    def fetch():
+    def fetch(url=None, branch=None, depth=None):
         info("Fetching revisions from remote repository to \"%s\"" % os.path.basename(os.getcwd()))
-        popen([git_cmd, 'fetch', '--all', '--tags'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
+        popen([git_cmd, 'fetch', '--tags'] + ([url] if url else []) + ([branch] if branch else ['--all']) + (['--depth', depth] if depth else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def discard(clean_files=False):
         info("Discarding local changes in \"%s\"" % os.path.basename(os.getcwd()))
@@ -1724,11 +1737,13 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
         p.path = cwd_root
         p.set_root()
         if not create_only and not p.get_os_dir() and not p.get_mbedlib_dir():
-            url = mbed_lib_url if mbedlib else mbed_os_url+'#latest'
+            url = mbed_lib_url if mbedlib else mbed_os_url+"#latest"
+            print(url)
             d = 'mbed' if mbedlib else 'mbed-os'
             try:
                 with cd(d_path):
                     add(url, depth=depth, protocol=protocol, top=False)
+
             except Exception as e:
                 if os.path.isdir(os.path.join(d_path, d)):
                     rmtree_readonly(os.path.join(d_path, d))
@@ -1784,7 +1799,7 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
         with cd(repo.path):
             Program(repo.path).set_root()
             try:
-                if repo.rev and repo.getrev() != repo.rev:
+                if repo.rev and repo.getrev() != repo.rev and not depth:
                     repo.checkout(repo.rev, True)
             except ProcessException as e:
                 err = "Unable to update \"%s\" to %s" % (repo.name, repo.revtype(repo.rev, True))
@@ -1800,17 +1815,19 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
             warning(err)
         else:
             error(err, 1)
-
-    repo.sync()
+   
+    action("Syncing repo.");
+    #repo.sync()
 
     if top: # This helps sub-commands to display relative paths to the imported program
         cwd_root = repo.path
 
-    with cd(repo.path):
-        deploy(ignore=ignore, depth=depth, protocol=protocol, top=False)
+    #with cd(repo.path):
+        #deploy(ignore=ignore, depth=depth, protocol=protocol, top=False)
 
     if top:
-        Program(repo.path).post_action()
+        action("Post action.");
+        #Program(repo.path).post_action()
 
 
 # Add library command
@@ -1836,8 +1853,8 @@ def add(url, path=None, ignore=False, depth=None, protocol=None, top=True):
     lib.write()
     repo.add(lib.lib)
 
-    if top:
-        Program(repo.path).post_action()
+    #if top:
+    #    Program(repo.path).post_action()
 
 
 # Remove library
