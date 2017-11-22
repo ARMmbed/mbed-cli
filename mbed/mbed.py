@@ -607,21 +607,24 @@ class Git(object):
         for branch in branches: # delete all local branches so the new repo clone is not poluted
             pquery([git_cmd, 'branch', '-D', branch])
 
-    def clone(url, name=None, depth=None, protocol=None):
-        if depth:
+    def clone(url, path, rev=None, depth=None, protocol=None, name=None):
+        result = pquery([git_cmd, "ls-remote", url, (rev if rev else "HEAD")])
+        
+        if result:
             repo_name = url.split('/')[-1]
             if '.git' in repo_name:
                 repo_name = repo_name[:-4]
 
             os.mkdir(repo_name)
-            
+
             with cd(repo_name):
                 Git.init()
-                Git.fetch(url=url, branch='latest', depth=depth)
+                Git.fetch(url=url, rev=rev, depth=depth)
                 Git.checkout('FETCH_HEAD')
                 popen([git_cmd, 'remote', 'add', 'origin', url])
+            
         else:
-            popen([git_cmd, 'clone', formaturl(url, protocol), name] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
+            popen([git_cmd, 'clone', formaturl(url, protocol), path] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def add(dest):
         info("Adding reference "+dest)
@@ -655,9 +658,9 @@ class Git(object):
                 if not branch:
                     error(err+"Working set is not on a branch.", 1)
 
-    def fetch(url=None, branch=None, depth=None):
+    def fetch(url=None, rev=None, depth=None):
         info("Fetching revisions from remote repository to \"%s\"" % os.path.basename(os.getcwd()))
-        popen([git_cmd, 'fetch', '--tags'] + ([url] if url else []) + ([branch] if branch else ['--all']) + (['--depth', depth] if depth else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
+        popen([git_cmd, 'fetch', '--tags'] + ([url] if url else []) + ([rev] if rev else ['--all']) + (['--depth', depth] if depth else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def discard(clean_files=False):
         info("Discarding local changes in \"%s\"" % os.path.basename(os.getcwd()))
@@ -1111,7 +1114,7 @@ class Repo(object):
             # Main clone routine if the clone with cache ref failed (might occur if cache ref is dirty)
             if main:
                 try:
-                    scm.clone(url, path, depth=depth, protocol=protocol, **kwargs)
+                    scm.clone(url, path, rev=rev, depth=depth, protocol=protocol, **kwargs)
                 except ProcessException:
                     if os.path.isdir(path):
                         rmtree_readonly(path)
@@ -1816,18 +1819,17 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
         else:
             error(err, 1)
    
-    action("Syncing repo.");
-    #repo.sync()
+    repo.sync()
 
     if top: # This helps sub-commands to display relative paths to the imported program
         cwd_root = repo.path
 
-    #with cd(repo.path):
-        #deploy(ignore=ignore, depth=depth, protocol=protocol, top=False)
+    with cd(repo.path):
+        deploy(ignore=ignore, depth=depth, protocol=protocol, top=False)
 
     if top:
         action("Post action.");
-        #Program(repo.path).post_action()
+        Program(repo.path).post_action()
 
 
 # Add library command
