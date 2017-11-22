@@ -1741,7 +1741,6 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
         p.set_root()
         if not create_only and not p.get_os_dir() and not p.get_mbedlib_dir():
             url = mbed_lib_url if mbedlib else mbed_os_url+"#latest"
-            print(url)
             d = 'mbed' if mbedlib else 'mbed-os'
             try:
                 with cd(d_path):
@@ -1828,7 +1827,6 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
         deploy(ignore=ignore, depth=depth, protocol=protocol, top=False)
 
     if top:
-        action("Post action.");
         Program(repo.path).post_action()
 
 
