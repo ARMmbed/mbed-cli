@@ -281,7 +281,7 @@ class Bld(object):
                 else:
                     shutil.rmtree(fl)
 
-    def clone(url, path=None, depth=None, protocol=None):
+    def clone(url, path=None, rev=None, depth=None, protocol=None):
         m = Bld.isurl(url)
         if not m:
             raise ProcessException(1, "Not a library build URL")
@@ -395,7 +395,7 @@ class Hg(object):
     def cleanup():
         return True
 
-    def clone(url, name=None, depth=None, protocol=None):
+    def clone(url, name=None, rev=None, depth=None, protocol=None):
         popen([hg_cmd, 'clone', formaturl(url, protocol), name] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def add(dest):
