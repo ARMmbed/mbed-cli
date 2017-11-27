@@ -610,7 +610,7 @@ class Git(object):
     def clone(url, path, rev=None, depth=None, protocol=None, name=None):
         result = pquery([git_cmd, "ls-remote", url, (rev if rev else "HEAD")])
         
-        if result:
+        if result and rev:
             repo_name = url.split('/')[-1]
             if '.git' in repo_name:
                 repo_name = repo_name[:-4]
@@ -624,6 +624,7 @@ class Git(object):
                 popen([git_cmd, 'remote', 'add', 'origin', url])
             
         else:
+            print("Cloning...")
             popen([git_cmd, 'clone', formaturl(url, protocol), path] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def add(dest):
@@ -660,7 +661,10 @@ class Git(object):
 
     def fetch(url=None, rev=None, depth=None):
         info("Fetching revisions from remote repository to \"%s\"" % os.path.basename(os.getcwd()))
-        popen([git_cmd, 'fetch', '--tags'] + ([url] if url else []) + ([rev] if rev else ['--all']) + (['--depth', depth] if depth else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
+        if url:
+            popen([git_cmd, 'fetch', '--tags'] + ([url] if url else []) + ([rev] if rev else []) + (["--depth", depth] if depth else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
+        else:
+            popen([git_cmd, 'fetch', '--tags', '--all'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def discard(clean_files=False):
         info("Discarding local changes in \"%s\"" % os.path.basename(os.getcwd()))
