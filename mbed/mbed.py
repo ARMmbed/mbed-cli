@@ -1142,7 +1142,9 @@ class Repo(object):
                 self.rev if self.rev else ''))
         action("Updating reference \"%s\" -> \"%s\"" % (relpath(cwd_root, self.path) if cwd_root != self.path else self.name, ref))
         with open(self.lib, 'wb') as f:
-            f.write(re.sub(r'://.*@', '://', ref) + '\n')
+            with_auth = urlparse(ref)
+            f.write(with_auth._repalce(netloc=with_auth.hostname).geturl())
+            f.write("\n")
 
     def rm_untracked(self):
         untracked = self.scm.untracked()
