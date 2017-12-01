@@ -2218,7 +2218,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
 
     if supported:
         popen([python_cmd, '-u', os.path.join(tools_dir, 'make.py')]
-              + (['-S', supported] if supported else []) + (['-v'] if very_verbose else [])
+              + (['-S', supported]) + (['-v'] if very_verbose else [])
               + (['--app-config', app_config] if app_config else [])
               + args,
               env=env)
@@ -2574,7 +2574,7 @@ def config_(var=None, value=None, global_cfg=False, unset=False, list_config=Fal
         "This is an alias to 'mbed config [--global] target [name]'\n"))
 def target_(name=None, global_cfg=False, supported=False):
     if supported:
-        return compile_(supported=supported)
+        return compile_(supported='matrix')
     return config_('target', name, global_cfg=global_cfg)
 
 @subcommand('toolchain',
@@ -2587,7 +2587,7 @@ def target_(name=None, global_cfg=False, supported=False):
         "This is an alias to 'mbed config [--global] toolchain [name]'\n"))
 def toolchain_(name=None, global_cfg=False, supported=False):
     if supported:
-        return compile_(supported=supported)
+        return compile_(supported='matrix')
     return config_('toolchain', name, global_cfg=global_cfg)
 
 @subcommand('help',
