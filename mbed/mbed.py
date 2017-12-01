@@ -624,7 +624,6 @@ class Git(object):
                 popen([git_cmd, 'remote', 'add', 'origin', url])
             
         else:
-            print("Cloning...")
             popen([git_cmd, 'clone', formaturl(url, protocol), path] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def add(dest):
@@ -1744,12 +1743,11 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
         p.path = cwd_root
         p.set_root()
         if not create_only and not p.get_os_dir() and not p.get_mbedlib_dir():
-            url = mbed_lib_url if mbedlib else mbed_os_url+"#latest"
+            url = mbed_lib_url if mbedlib else mbed_os_url+'#latest'
             d = 'mbed' if mbedlib else 'mbed-os'
             try:
                 with cd(d_path):
                     add(url, depth=depth, protocol=protocol, top=False)
-
             except Exception as e:
                 if os.path.isdir(os.path.join(d_path, d)):
                     rmtree_readonly(os.path.join(d_path, d))
@@ -1821,7 +1819,7 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
             warning(err)
         else:
             error(err, 1)
-   
+
     repo.sync()
 
     if top: # This helps sub-commands to display relative paths to the imported program
@@ -1857,8 +1855,8 @@ def add(url, path=None, ignore=False, depth=None, protocol=None, top=True):
     lib.write()
     repo.add(lib.lib)
 
-    #if top:
-    #    Program(repo.path).post_action()
+    if top:
+        Program(repo.path).post_action()
 
 
 # Remove library
