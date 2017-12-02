@@ -213,11 +213,13 @@ def pquery(command, stdin=None, **kwargs):
     return stdout
 
 def rmtree_readonly(directory):
-    def remove_readonly(func, path, _):
-        os.chmod(path, stat.S_IWRITE)
-        func(path)
-
-    shutil.rmtree(directory, onerror=remove_readonly)
+    if os.path.islink(directory):
+        os.remove(directory)
+    else:
+        def remove_readonly(func, path, _):
+            os.chmod(path, stat.S_IWRITE)
+            func(path)
+        shutil.rmtree(directory, onerror=remove_readonly)
 
 
 # Directory navigation
