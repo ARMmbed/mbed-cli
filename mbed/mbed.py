@@ -110,6 +110,11 @@ regex_mbed_url = r'^(https?)://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/(
 # mbed sdk builds url
 regex_build_url = r'^(https?://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+))/builds/?([\w\-]{6,40}|tip)?/?$'
 
+# match official release tags
+regex_rels_official = r'^((mbed-os-\d+.\d+.\d+)|([rv]?\.?\d+(\.\d+)*))$'
+# match rc/beta/alpha release tags
+regex_rels_all = r'^(mbed-os-\d+.\d+.\d+|[rv]?\.?\d+(\.\d+)?)(\-?[a-z0-9]+)?$'
+
 # base url for all mbed related repos (used as sort of index)
 mbed_base_url = 'https://github.com/ARMmbed'
 # default mbed OS url
@@ -369,6 +374,9 @@ class Bld(object):
     def getbranch():
         return "default"
 
+    def gettags(rev=None):
+        return []
+
 
 # pylint: disable=no-self-argument, no-method-argument, no-member, no-self-use, unused-argument
 @scm('hg')
@@ -511,6 +519,9 @@ class Hg(object):
 
     def getbranch():
         return pquery([hg_cmd, 'branch']).strip() or ""
+
+    def gettags(rev=None):
+        return []
 
     def remoteid(url, rev=None):
         return pquery([hg_cmd, 'id', '--id', url] + (['-r', rev] if rev else [])).strip() or ""
@@ -657,7 +668,7 @@ class Git(object):
             return
         info("Checkout \"%s\" in %s" % (rev, os.path.basename(os.getcwd())))
         branch = None
-        refs = Git.getrefs(rev)
+        refs = Git.getbranches(rev)
         for ref in refs: # re-associate with a local or remote branch (rev is the same)
             m = re.match(r'^(.*?)\/(.*?)$', ref)
             if m and m.group(2) != "HEAD": # matches origin/<branch> and isn't HEAD ref
@@ -774,16 +785,41 @@ class Git(object):
             branch = "master"
         return branch if branch != "HEAD" else ""
 
-    # Finds refs (local or remote branches). Will match rev if specified
-    def getrefs(rev=None, ret_rev=False):
+    # Get all refs
+    def getrefs():
+        try:
+            return pquery([git_cmd, 'show-ref', '--dereference']).strip().splitlines()
+        except ProcessException:
+            return []
+
+    # Finds branches (local or remote). Will match rev if specified
+    def getbranches(rev=None, ret_rev=False):
         result = []
-        lines = pquery([git_cmd, 'show-ref']).strip().splitlines()
-        for line in lines:
-            m = re.match(r'^(.+)\s+(.+)$', line)
+        refs = Git.getrefs()
+        for ref in refs:
+            m = re.match(r'^(.+)\s+(.+)$', ref)
             if m and (not rev or m.group(1).startswith(rev)):
                 if re.match(r'refs\/(heads|remotes)\/', m.group(2)): # exclude tags
                     result.append(m.group(1) if ret_rev else re.sub(r'refs\/(heads|remotes)\/', '', m.group(2)))
         return result
+
+    # Finds tags. Will match rev if specified
+    def gettags(rev=None):
+        tags = []
+        refs = Git.getrefs()
+        for ref in refs:
+            m = re.match(r'^(.+)\s+(.+)$', ref)
+            if m and (not rev or m.group(1).startswith(rev)):
+                if re.match(r'refs\/tags\/', m.group(2)): # only tags
+                    t = re.sub(r'refs\/tags\/', '', m.group(2))
+                    if re.match(r'^(.+)\^\{\}$', t): # detect tag "symlink"
+                        t = re.sub(r'\^\{\}$', '', t) # remove "symlink" chars, e.g. some-tag^{}
+                        for tag in tags:
+                            if tag[1] == t:
+                                tags.remove(tag)
+                        #tags = {key:tag for key, tag in tags.items() if tag != t} # remove duplicate 
+                    tags.append(t if rev else [m.group(1), t])
+        return tags
 
     # Finds branches a rev belongs to
     def revbranches(rev):
@@ -2123,8 +2159,10 @@ def sync(recursive=True, keep_refs=False, top=True):
         "View the dependency tree of the current program or library."))
 def list_(detailed=False, prefix='', p_path=None, ignore=False):
     repo = Repo.fromrepo()
+    revtags = repo.scm.gettags(repo.rev) if repo.rev else []
+    rev = ', '.join(revtags[0:3]) if len(revtags) else str(repo.rev)[:12] if repo.rev else ''
 
-    print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if detailed else str(repo.rev)[:12]) or 'no revision'))
+    print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if detailed else rev) or 'no revision'))
 
     for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.path)):
         if prefix:
@@ -2137,6 +2175,37 @@ def list_(detailed=False, prefix='', p_path=None, ignore=False):
             with cd(lib.path):
                 list_(detailed, nprefix, repo.path, ignore=ignore)
 
+
+# Command status for cross-SCM status of repositories
+@subcommand('releases',
+    dict(name=['-a', '--all'], dest='all_refs', action='store_true', help='Show all, e.g. release candidates, alpha, betas'),
+    dict(name=['-r', '--recursive'], action='store_true', help='Show releases for all libraries and sub-libraries as well'),
+    help='Shows release tags\n\n',
+    description=(
+        "Show release tags for the current program or library."))
+def releases_(all_refs=False, recursive=False):
+    repo = Repo.fromrepo()
+    tags = repo.scm.gettags()
+    revtags = repo.scm.gettags(repo.rev) # associated tags with current commit
+
+    action("Releases in %s \"%s\"\n" % (repo.pathtype(repo.path), repo.name))
+    regex = regex_rels_all if all_refs else regex_rels_official
+    rels = []
+    for tag in tags:
+        if re.match(regex, tag[1]):
+            rels.append(tag[1] + " %s%s" % (tag[0] if verbose else "", " <- current" if tag[1] in revtags else ""))
+
+    if len(rels):
+        for rel in rels:
+            log(rel+"\n")
+    else:
+        log("None\n")
+    log("\n")
+
+    if recursive:
+        for lib in repo.libs:
+            with cd(lib.path):
+                releases_(all_refs, recursive)
 
 # Command status for cross-SCM status of repositories
 @subcommand('status',
