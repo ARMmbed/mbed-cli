@@ -2181,26 +2181,27 @@ def list_(detailed=False, prefix='', p_path=None, ignore=False):
 
 # Command status for cross-SCM status of repositories
 @subcommand('releases',
-    dict(name=['-a', '--all'], dest='all_refs', action='store_true', help='Show all releases, including release candidates, alphas, betas, etc'),
+    dict(name=['-a', '--all'], dest='detailed', action='store_true', help='Show revision hashes'),
+    dict(name=['-u', '--unstable'], dest='unstable', action='store_true', help='Show unstable releases well, e.g. release candidates, alphas, betas, etc'),
     dict(name=['-r', '--recursive'], action='store_true', help='Show release tags for all libraries and sub-libraries as well'),
     help='Show release tags',
     description=(
         "Show release tags for the current program or library."))
-def releases_(all_refs=False, recursive=False, prefix='', p_path=None):
+def releases_(detailed=False, unstable=False, recursive=False, prefix='', p_path=None):
     repo = Repo.fromrepo()
     tags = repo.scm.gettags()
     revtags = repo.scm.gettags(repo.rev)  if repo.rev else [] # associated tags with current commit
     revstr = ('#'+repo.rev[:12]+(', tags:'+', '.join(revtags[0:2]) if len(revtags) else '')) if repo.rev else ''
-    regex_rels = regex_rels_all if all_refs else regex_rels_official
+    regex_rels = regex_rels_all if unstable else regex_rels_official
 
     # Generate list of tags
     rels = []
     for tag in tags:
         if re.match(regex_rels, tag[1]):
-            rels.append(tag[1] + " %s%s" % (tag[0] if verbose else "", " <- current" if tag[1] in revtags else ""))
+            rels.append(tag[1] + " %s%s" % (tag[0] if detailed else "", " <- current" if tag[1] in revtags else ""))
 
     # print header
-    print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if verbose else revstr) or 'no revision'))
+    print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if detailed else revstr) or 'no revision'))
 
     # print list of tags
     rprefix = (prefix[:-3] + ('|  ' if prefix[-3] == '|' else '   ')) if recursive and prefix else ''
@@ -2218,7 +2219,7 @@ def releases_(all_refs=False, recursive=False, prefix='', p_path=None):
 
             if lib.check_repo():
                 with cd(lib.path):
-                    releases_(all_refs, recursive, nprefix, repo.path)
+                    releases_(detailed, unstable, recursive, nprefix, repo.path)
 
 
 # Command status for cross-SCM status of repositories
