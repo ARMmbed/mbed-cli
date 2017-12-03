@@ -823,7 +823,6 @@ class Git(object):
                         for tag in tags:
                             if tag[1] == t:
                                 tags.remove(tag)
-                        #tags = {key:tag for key, tag in tags.items() if tag != t} # remove duplicate 
                     tags.append(t if rev else [m.group(1), t])
         return tags
 
@@ -2179,7 +2178,7 @@ def list_(detailed=False, prefix='', p_path=None, ignore=False):
                 list_(detailed, nprefix, repo.path, ignore=ignore)
 
 
-# Command status for cross-SCM status of repositories
+# Command release for cross-SCM release tags of repositories
 @subcommand('releases',
     dict(name=['-a', '--all'], dest='detailed', action='store_true', help='Show revision hashes'),
     dict(name=['-u', '--unstable'], dest='unstable', action='store_true', help='Show unstable releases well, e.g. release candidates, alphas, betas, etc'),
@@ -2200,10 +2199,10 @@ def releases_(detailed=False, unstable=False, recursive=False, prefix='', p_path
         if re.match(regex_rels, tag[1]):
             rels.append(tag[1] + " %s%s" % ('#'+tag[0] if detailed else "", " <- current" if tag[1] in revtags else ""))
 
-    # print header
+    # Print header
     print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if detailed else revstr) or 'no revision'))
 
-    # print list of tags
+    # Print list of tags
     rprefix = (prefix[:-3] + ('|  ' if prefix[-3] == '|' else '   ')) if recursive and prefix else ''
     rprefix += '| ' if recursive and len(repo.libs)>1 else '  '
     if len(rels):
