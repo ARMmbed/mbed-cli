@@ -111,9 +111,9 @@ regex_mbed_url = r'^(https?)://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/(
 regex_build_url = r'^(https?://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+))/builds/?([\w\-]{6,40}|tip)?/?$'
 
 # match official release tags
-regex_rels_official = r'^((mbed-os-\d+.\d+.\d+)|([rv]?\.?\d+(\.\d+)*))$'
+regex_rels_official = r'^(release|rel|mbed-os|[rv]+)?[.-]?\d+(\.\d+)*$'
 # match rc/beta/alpha release tags
-regex_rels_all = r'^(mbed-os-\d+.\d+.\d+|[rv]?\.?\d+(\.\d+)?)(\-?[a-z0-9]+)?$'
+regex_rels_all = r'^(release|rel|mbed-os|[rv]+)?[.-]?\d+(\.\d+)*([a-z0-9.-]+)?$'
 
 # base url for all mbed related repos (used as sort of index)
 mbed_base_url = 'https://github.com/ARMmbed'
@@ -521,7 +521,13 @@ class Hg(object):
         return pquery([hg_cmd, 'branch']).strip() or ""
 
     def gettags(rev=None):
-        return []
+        tags = []
+        refs = pquery([hg_cmd, 'tags']).strip().splitlines() or []
+        for ref in refs:
+            m = re.match(r'^(.+?)\s+(\d+)\:([a-f0-9]+)$', ref)
+            if m and (not rev or m.group(1).startswith(rev)):
+                tags.append(t if rev else [m.group(3), m.group(1)])
+        return tags
 
     def remoteid(url, rev=None):
         return pquery([hg_cmd, 'id', '--id', url] + (['-r', rev] if rev else [])).strip() or ""
@@ -2160,9 +2166,9 @@ def sync(recursive=True, keep_refs=False, top=True):
 def list_(detailed=False, prefix='', p_path=None, ignore=False):
     repo = Repo.fromrepo()
     revtags = repo.scm.gettags(repo.rev) if repo.rev else []
-    rev = ', '.join(revtags[0:3]) if len(revtags) else str(repo.rev)[:12] if repo.rev else ''
+    revstr = ('#'+repo.rev[:12]+(', tags:'+', '.join(revtags[0:2]) if len(revtags) else '')) if repo.rev else ''
 
-    print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if detailed else rev) or 'no revision'))
+    print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if detailed else revstr) or 'no revision'))
 
     for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.path)):
         if prefix:
