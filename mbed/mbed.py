@@ -526,7 +526,7 @@ class Hg(object):
         for ref in refs:
             m = re.match(r'^(.+?)\s+(\d+)\:([a-f0-9]+)$', ref)
             if m and (not rev or m.group(1).startswith(rev)):
-                tags.append(t if rev else [m.group(3), m.group(1)])
+                tags.append(m.group(1) if rev else [m.group(3), m.group(1)])
         return tags
 
     def remoteid(url, rev=None):
@@ -2204,7 +2204,7 @@ def releases_(detailed=False, unstable=False, recursive=False, prefix='', p_path
 
     # Print list of tags
     rprefix = (prefix[:-3] + ('|  ' if prefix[-3] == '|' else '   ')) if recursive and prefix else ''
-    rprefix += '| ' if recursive and len(repo.libs)>1 else '  '
+    rprefix += '| ' if recursive and len(repo.libs) > 1 else '  '
     if len(rels):
         for rel in rels:
             print rprefix+'* '+rel
