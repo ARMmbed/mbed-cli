@@ -2198,7 +2198,7 @@ def releases_(detailed=False, unstable=False, recursive=False, prefix='', p_path
     rels = []
     for tag in tags:
         if re.match(regex_rels, tag[1]):
-            rels.append(tag[1] + " %s%s" % (tag[0] if detailed else "", " <- current" if tag[1] in revtags else ""))
+            rels.append(tag[1] + " %s%s" % ('#'+tag[0] if detailed else "", " <- current" if tag[1] in revtags else ""))
 
     # print header
     print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if detailed else revstr) or 'no revision'))
