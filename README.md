@@ -756,7 +756,7 @@ The update command fails if there are changes in your program or library that `m
 
 ### Updating to an upstream version
 
-Before updating a program or a library, it's good to know the names of the stable releases, usually marked with a tag using a common format, e.g. 1.2, v1.0.1, r5.6, mbed-os-5.6, etc.
+Before updating a program or a library, it's good to know the names of the stable releases, usually marked with a tag using a common format, such as `1.2`, `v1.0.1`, `r5.6`, `mbed-os-5.6` and so on.
 
 You can find stable release versions of a program or a library using the `mbed releases` command:
 
@@ -773,9 +773,10 @@ mbed-os (#182bbd51bc8d, tags:latest, mbed-os-5.6.5)
   * mbed-os-5.6.5  <- current
 ```
 
-You can also recursively list stable releases for your program and libraries using the `-r` switch, e.g. `mbed releases -r`. The output of this command is usually long, thus it's not included in this documentation.
+You can also recursively list stable releases for your program and libraries using the `-r` switch, for example `mbed releases -r`.
 
-Lastly, you can list unstable releases, like release candidates, alphas, betas, using the `-u` switch.
+Lastly, you can list unstable releases, such as release candidates, alphas and betas by using the `-u` switch.
+
 ```
 $ cd mbed-client
 $ mbed releases -u
@@ -789,8 +790,7 @@ mbed-client (#31e5ce203cc0, tags:v3.0.0)
   * v3.0.0  <- current
 ```
 
-You can use the `-a` switch to print out release and revision hash pairs.
-
+You can use the `-a` switch to print release and revision hash pairs.
 
 #### Updating a program
 
