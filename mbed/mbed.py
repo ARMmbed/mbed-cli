@@ -814,16 +814,14 @@ class Git(object):
         tags = []
         refs = Git.getrefs()
         for ref in refs:
-            m = re.match(r'^(.+)\s+(.+)$', ref)
+            m = re.match(r'^(.+)\s+refs\/tags\/(.+)$', ref)
             if m and (not rev or m.group(1).startswith(rev)):
-                if re.match(r'refs\/tags\/', m.group(2)): # only tags
-                    t = re.sub(r'refs\/tags\/', '', m.group(2))
-                    if re.match(r'^(.+)\^\{\}$', t): # detect tag "symlink"
-                        t = re.sub(r'\^\{\}$', '', t) # remove "symlink" chars, e.g. some-tag^{}
-                        for tag in tags:
-                            if tag[1] == t:
-                                tags.remove(tag)
-                    tags.append(t if rev else [m.group(1), t])
+                if re.match(r'^(.+)\^\{\}$', t): # detect tag "pointer"
+                    t = re.sub(r'\^\{\}$', '', t) # remove "pointer" chars, e.g. some-tag^{}
+                    for tag in tags:
+                        if tag[1] == t:
+                            tags.remove(tag)
+                tags.append(t if rev else [m.group(1), t])
         return tags
 
     # Finds branches a rev belongs to
