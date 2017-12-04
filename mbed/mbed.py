@@ -2163,7 +2163,7 @@ def sync(recursive=True, keep_refs=False, top=True):
 def list_(detailed=False, prefix='', p_path=None, ignore=False):
     repo = Repo.fromrepo()
     revtags = repo.scm.gettags(repo.rev) if repo.rev else []
-    revstr = ('#'+repo.rev[:12]+(', tags:'+', '.join(revtags[0:2]) if len(revtags) else '')) if repo.rev else ''
+    revstr = ('#'+repo.rev[:12]+(', tags: '+', '.join(revtags[0:2]) if len(revtags) else '')) if repo.rev else ''
 
     print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if detailed else revstr) or 'no revision'))
 
@@ -2188,7 +2188,7 @@ def releases_(detailed=False, unstable=False, recursive=False, prefix='', p_path
     repo = Repo.fromrepo()
     tags = repo.scm.gettags()
     revtags = repo.scm.gettags(repo.rev)  if repo.rev else [] # associated tags with current commit
-    revstr = ('#'+repo.rev[:12]+(', tags:'+', '.join(revtags[0:2]) if len(revtags) else '')) if repo.rev else ''
+    revstr = ('#'+repo.rev[:12]+(', tags: '+', '.join(revtags[0:2]) if len(revtags) else '')) if repo.rev else ''
     regex_rels = regex_rels_all if unstable else regex_rels_official
 
     # Generate list of tags
