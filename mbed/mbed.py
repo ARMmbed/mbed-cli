@@ -803,10 +803,9 @@ class Git(object):
         result = []
         refs = Git.getrefs()
         for ref in refs:
-            m = re.match(r'^(.+)\s+(.+)$', ref)
+            m = re.match(r'^(.+)\s+refs\/(heads|remotes)\/(.+)$', ref)
             if m and (not rev or m.group(1).startswith(rev)):
-                if re.match(r'refs\/(heads|remotes)\/', m.group(2)): # exclude tags
-                    result.append(m.group(1) if ret_rev else re.sub(r'refs\/(heads|remotes)\/', '', m.group(2)))
+                result.append(m.group(1) if ret_rev else m.group(3))
         return result
 
     # Finds tags. Will match rev if specified
@@ -2164,9 +2163,9 @@ def sync(recursive=True, keep_refs=False, top=True):
 def list_(detailed=False, prefix='', p_path=None, ignore=False):
     repo = Repo.fromrepo()
     revtags = repo.scm.gettags(repo.rev) if repo.rev else []
-    revstr = ('#'+repo.rev[:12]+(', tags: '+', '.join(revtags[0:2]) if len(revtags) else '')) if repo.rev else ''
+    revstr = ('#' + repo.rev[:12] + (', tags: ' + ', '.join(revtags[0:2]) if len(revtags) else '')) if repo.rev else ''
 
-    print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if detailed else revstr) or 'no revision'))
+    print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url + ('#' + str(repo.rev)[:12] if repo.rev else '') if detailed else revstr) or 'no revision'))
 
     for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.path)):
         nprefix = (prefix[:-3] + ('|  ' if prefix[-3] == '|' else '   ')) if prefix else ''
@@ -2189,26 +2188,26 @@ def releases_(detailed=False, unstable=False, recursive=False, prefix='', p_path
     repo = Repo.fromrepo()
     tags = repo.scm.gettags()
     revtags = repo.scm.gettags(repo.rev)  if repo.rev else [] # associated tags with current commit
-    revstr = ('#'+repo.rev[:12]+(', tags: '+', '.join(revtags[0:2]) if len(revtags) else '')) if repo.rev else ''
+    revstr = ('#' + repo.rev[:12] + (', tags: ' + ', '.join(revtags[0:2]) if len(revtags) else '')) if repo.rev else ''
     regex_rels = regex_rels_all if unstable else regex_rels_official
 
     # Generate list of tags
     rels = []
     for tag in tags:
         if re.match(regex_rels, tag[1]):
-            rels.append(tag[1] + " %s%s" % ('#'+tag[0] if detailed else "", " <- current" if tag[1] in revtags else ""))
+            rels.append(tag[1] + " %s%s" % ('#' + tag[0] if detailed else "", " <- current" if tag[1] in revtags else ""))
 
     # Print header
-    print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url+('#'+str(repo.rev)[:12] if repo.rev else '') if detailed else revstr) or 'no revision'))
+    print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url + ('#' + str(repo.rev)[:12] if repo.rev else '') if detailed else revstr) or 'no revision'))
 
     # Print list of tags
     rprefix = (prefix[:-3] + ('|  ' if prefix[-3] == '|' else '   ')) if recursive and prefix else ''
     rprefix += '| ' if recursive and len(repo.libs) > 1 else '  '
     if len(rels):
         for rel in rels:
-            print rprefix+'* '+rel
+            print rprefix + '* ' + rel
     else:
-        print rprefix+'No release tags detected'
+        print rprefix + 'No release tags detected'
 
     if recursive:
         for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.path)):
