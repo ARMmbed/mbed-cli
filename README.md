@@ -165,7 +165,7 @@ Use `mbed ls` to list all the libraries imported to your program:
 $ cd mbed-os-program
 $ mbed ls
 mbed-os-program (no revision)
-`- mbed-os (#182bbd51bc8d, tags:latest, mbed-os-5.6.5)
+`- mbed-os (#182bbd51bc8d, tags: latest, mbed-os-5.6.5)
 ```
 
 Use `mbed releases` to list all releases in a program or library:
@@ -173,7 +173,7 @@ Use `mbed releases` to list all releases in a program or library:
 ```
 $ cd mbed-os
 $ mbed releases
-mbed-os (#182bbd51bc8d, tags:latest, mbed-os-5.6.5)
+mbed-os (#182bbd51bc8d, tags: latest, mbed-os-5.6.5)
   ...
   * mbed-os-5.6.0 
   * mbed-os-5.6.1 
@@ -702,7 +702,7 @@ Let's assume that the list of dependencies of your program (obtained by running 
 
 ```
 my-mbed-os-example (#a5ac4bf2e468)
-|- mbed-os (#182bbd51bc8d, tags:latest, mbed-os-5.6.5)
+|- mbed-os (#182bbd51bc8d, tags: latest, mbed-os-5.6.5)
 `- my-libs (#e39199afa2da)
    |- my-libs/iot-client (#571cfef17dd0)
    `- my-libs/test-framework (#cd18b5a50df4)
@@ -756,14 +756,14 @@ The update command fails if there are changes in your program or library that `m
 
 ### Updating to an upstream version
 
-Before updating a program or a library, it's good to know the names of the stable releases, usually marked with a tag using a common format, such as `1.2`, `v1.0.1`, `r5.6`, `mbed-os-5.6` and so on.
+Before updating a program or a library, it's good to know the names of the stable releases, usually marked with a tag using a common format, such as `1.2`, `v1.0.1`, `r5.6`, `mbed-os-5.6` and so on. 
 
 You can find stable release versions of a program or a library using the `mbed releases` command:
 
 ```
 $ cd mbed-os
 $ mbed releases
-mbed-os (#182bbd51bc8d, tags:latest, mbed-os-5.6.5)
+mbed-os (#182bbd51bc8d, tags: latest, mbed-os-5.6.5)
   ...
   * mbed-os-5.6.0 
   * mbed-os-5.6.1 
@@ -780,7 +780,7 @@ Lastly, you can list unstable releases, such as release candidates, alphas and b
 ```
 $ cd mbed-client
 $ mbed releases -u
-mbed-client (#31e5ce203cc0, tags:v3.0.0)
+mbed-client (#31e5ce203cc0, tags: v3.0.0)
   * mbed-os-5.0-rc1 
   * mbed-os-5.0-rc2 
   * r0.5-rc4 
@@ -791,6 +791,8 @@ mbed-client (#31e5ce203cc0, tags:v3.0.0)
 ```
 
 You can use the `-a` switch to print release and revision hash pairs.
+
+Mbed CLI recognizes stable release if the tags are in standard versioning format, such as `MAJOR[.MINOR][.PATCH][.BUILD]`, and optionally prefixed with either `v`, `r` or `mbed-os`. Unstable releases can be suffixed with any letter/number/hyphen/dot combination.
 
 #### Updating a program
 
