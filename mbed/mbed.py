@@ -816,6 +816,7 @@ class Git(object):
         for ref in refs:
             m = re.match(r'^(.+)\s+refs\/tags\/(.+)$', ref)
             if m and (not rev or m.group(1).startswith(rev)):
+                t = m.group(2)
                 if re.match(r'^(.+)\^\{\}$', t): # detect tag "pointer"
                     t = re.sub(r'\^\{\}$', '', t) # remove "pointer" chars, e.g. some-tag^{}
                     for tag in tags:
