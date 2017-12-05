@@ -2459,15 +2459,29 @@ def detect():
         # Prepare environment variables
         env = program.get_env()
 
-        popen([python_cmd, '-u', os.path.join(tools_dir, 'detect_targets.py')]
-              + args,
-              env=env)
+        try:
+            pquery([python_cmd, '-u', os.path.join(tools_dir, 'detect_targets.py')]
+                  + args,
+                  env=env)
+        except ProcessException as e:
+            error("Failed to correctly detect all targets (run with '-vv' for more information)")
+            if very_verbose:
+                error(str(e))
     else:
         warning("The mbed tools were not found in \"%s\". \nLimited information will be shown about connected mbed targets/boards" % program.path)
         targets = program.get_detected_targets()
         if targets:
+            unknown_found = False
             for target in targets:
-                action("Detected \"%s\" connected to \"%s\" and using com port \"%s\"" % (target['name'], target['mount'], target['serial']))
+                if target['name'] is None:
+                    unknown_found = True
+                    action("Detected unknown target connected to \"%s\" and using com port \"%s\"" % (target['mount'], target['serial']))
+                else:
+                    action("Detected \"%s\" connected to \"%s\" and using com port \"%s\"" % (target['name'], target['mount'], target['serial']))
+
+            if unknown_found:
+                warning("If you're developing a new target, you can mock the device to continue your development. "
+                        "Use 'mbedls --mock ID:NAME' to do so (see 'mbedls --help' for more information)")
 
 
 # Generic config command
