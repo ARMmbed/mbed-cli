@@ -2194,7 +2194,7 @@ def status_(ignore=False):
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
     dict(name=['-f', '--flash'], action='store_true', help='Flash the built firmware onto a connected target.'),
     dict(name=['-N', '--artifact-name'], help='Name of the built program or library'),
-    dict(name=['-S', '--supported'], dest='supported', const="matrix", choices=["matrix", "toolchains", "targets"], nargs="?", help='Shows supported matrix of targets and toolchains'),
+    dict(name=['-S', '--supported'], dest='supported', const=True, choices=["matrix", "toolchains", "targets"], nargs="?", help='Shows supported matrix of targets and toolchains'),
     dict(name='--app-config', dest="app_config", help="Path of an app configuration file (Default is to look for 'mbed_app.json')"),
     help='Compile code using the mbed build tools',
     description=("Compile this program using the mbed build tools."))
@@ -2218,7 +2218,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
 
     if supported:
         popen([python_cmd, '-u', os.path.join(tools_dir, 'make.py')]
-              + (['-S', supported]) + (['-v'] if very_verbose else [])
+              + (['-S', supported] if (supported is not True) else ['-S']) + (['-v'] if very_verbose else [])
               + (['--app-config', app_config] if app_config else [])
               + args,
               env=env)
@@ -2408,7 +2408,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
     dict(name=['-m', '--target'], help='Export for target MCU. Example: K64F, NUCLEO_F401RE, NRF51822...'),
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
-    dict(name=['-S', '--supported'], dest='supported', const="matrix", choices=["matrix", "ides"], nargs="?", help='Shows supported matrix of targets and toolchains'),
+    dict(name=['-S', '--supported'], dest='supported', const=True, choices=['matrix', 'ides'], nargs='?', help='Shows supported matrix of targets and toolchains'),
     dict(name='--app-config', dest="app_config", help="Path of an app configuration file (Default is to look for 'mbed_app.json')"),
     help='Generate an IDE project',
     description=(
@@ -2430,7 +2430,7 @@ def export(ide=None, target=None, source=False, clean=False, supported=False, ap
 
     if supported:
         popen([python_cmd, '-u', os.path.join(tools_dir, 'project.py')]
-              + (['-S', supported] if supported else []) + (['-v'] if very_verbose else []),
+              + (['-S', supported] if (supported is not True) else ['-S']) + (['-v'] if very_verbose else []),
               env=env)
         return
 
@@ -2574,7 +2574,7 @@ def config_(var=None, value=None, global_cfg=False, unset=False, list_config=Fal
         "This is an alias to 'mbed config [--global] target [name]'\n"))
 def target_(name=None, global_cfg=False, supported=False):
     if supported:
-        return compile_(supported='matrix')
+        return compile_(supported=supported)
     return config_('target', name, global_cfg=global_cfg)
 
 @subcommand('toolchain',
@@ -2587,7 +2587,7 @@ def target_(name=None, global_cfg=False, supported=False):
         "This is an alias to 'mbed config [--global] toolchain [name]'\n"))
 def toolchain_(name=None, global_cfg=False, supported=False):
     if supported:
-        return compile_(supported='matrix')
+        return compile_(supported=supported)
     return config_('toolchain', name, global_cfg=global_cfg)
 
 @subcommand('help',
