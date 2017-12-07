@@ -127,7 +127,7 @@ cache_repositories = True
 
 # stores current working directory for recursive operations
 cwd_root = ""
-
+_cwd = os.getcwd()
 
 # Logging and output
 def log(msg):
@@ -175,7 +175,7 @@ class ProcessException(Exception):
 
 def popen(command, stdin=None, **kwargs):
     # print for debugging
-    info('Exec "'+' '.join(command)+'" in '+os.getcwd())
+    info('Exec "'+' '.join(command)+'" in '+getcwd())
     try:
         proc = subprocess.Popen(command, **kwargs)
     except OSError as e:
@@ -187,11 +187,11 @@ def popen(command, stdin=None, **kwargs):
             raise e
 
     if proc.wait() != 0:
-        raise ProcessException(proc.returncode, command[0], ' '.join(command), os.getcwd())
+        raise ProcessException(proc.returncode, command[0], ' '.join(command), getcwd())
 
 def pquery(command, stdin=None, **kwargs):
     if very_verbose:
-        info('Query "'+' '.join(command)+'" in '+os.getcwd())
+        info('Query "'+' '.join(command)+'" in '+getcwd())
     try:
         proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
     except OSError as e:
@@ -208,7 +208,7 @@ def pquery(command, stdin=None, **kwargs):
         log(str(stdout).strip()+"\n")
 
     if proc.returncode != 0:
-        raise ProcessException(proc.returncode, command[0], ' '.join(command), os.getcwd())
+        raise ProcessException(proc.returncode, command[0], ' '.join(command), getcwd())
 
     return stdout
 
@@ -225,12 +225,19 @@ def rmtree_readonly(directory):
 # Directory navigation
 @contextlib.contextmanager
 def cd(newdir):
-    prevdir = os.getcwd()
+    global _cwd
+    prevdir = getcwd()
     os.chdir(newdir)
+    _cwd = newdir
     try:
         yield
     finally:
         os.chdir(prevdir)
+        _cwd = prevdir
+
+def getcwd():
+    global _cwd
+    return _cwd
 
 def relpath(root, path):
     return path[len(root)+1:]
@@ -309,12 +316,12 @@ class Bld(object):
         rev_file = os.path.join('.'+Bld.name, '.rev-' + rev + '.zip')
         try:
             with zipfile.ZipFile(rev_file) as zf:
-                action("Unpacking library build \"%s\" in \"%s\"" % (rev, os.getcwd()))
+                action("Unpacking library build \"%s\" in \"%s\"" % (rev, getcwd()))
                 zf.extractall('.')
         except:
             if os.path.isfile(rev_file):
                 os.remove(rev_file)
-            raise Exception(128, "An error occurred while unpacking library archive \"%s\" in \"%s\"" % (rev_file, os.getcwd()))
+            raise Exception(128, "An error occurred while unpacking library archive \"%s\" in \"%s\"" % (rev_file, getcwd()))
 
     def checkout(rev, clean=False):
         url = Bld.geturl()
@@ -331,7 +338,7 @@ class Bld(object):
         if rev != Bld.getrev() or clean:
             Bld.cleanup()
 
-            info("Checkout \"%s\" in %s" % (rev, os.path.basename(os.getcwd())))
+            info("Checkout \"%s\" in %s" % (rev, os.path.basename(getcwd())))
             try:
                 Bld.unpack_rev(rev)
                 Bld.seturl(url+'/'+rev)
@@ -345,7 +352,7 @@ class Bld(object):
         return ""
 
     def seturl(url):
-        info("Setting url to \"%s\" in %s" % (url, os.getcwd()))
+        info("Setting url to \"%s\" in %s" % (url, getcwd()))
         if not os.path.exists('.'+Bld.name):
             os.mkdir('.'+Bld.name)
 
@@ -417,15 +424,15 @@ class Hg(object):
         popen([hg_cmd, 'push'] + (['--new-branch'] if all_refs else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def fetch():
-        info("Fetching revisions from remote repository to \"%s\"" % os.path.basename(os.getcwd()))
+        info("Fetching revisions from remote repository to \"%s\"" % os.path.basename(getcwd()))
         popen([hg_cmd, 'pull'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def discard():
-        info("Discarding local changes in \"%s\"" % os.path.basename(os.getcwd()))
+        info("Discarding local changes in \"%s\"" % os.path.basename(getcwd()))
         popen([hg_cmd, 'update', '-C'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def checkout(rev, clean=False, clean_files=False):
-        info("Checkout \"%s\" in %s" % (rev if rev else "latest", os.path.basename(os.getcwd())))
+        info("Checkout \"%s\" in %s" % (rev if rev else "latest", os.path.basename(getcwd())))
         if clean_files:
             files = pquery([hg_cmd, 'status', '--no-status', '-ui']).splitlines()
             for f in files:
@@ -457,7 +464,7 @@ class Hg(object):
             return 0
 
     def seturl(url):
-        info("Setting url to \"%s\" in %s" % (url, os.getcwd()))
+        info("Setting url to \"%s\" in %s" % (url, getcwd()))
         hgrc = os.path.join('.hg', 'hgrc')
         tagpaths = '[paths]'
         remote = 'default'
@@ -540,7 +547,7 @@ class Hg(object):
             with open(Hg.ignore_file, 'w') as f:
                 f.write("syntax: glob\n"+'\n'.join(ignores)+'\n')
         except IOError:
-            error("Unable to write ignore file in \"%s\"" % os.path.join(os.getcwd(), Hg.ignore_file), 1)
+            error("Unable to write ignore file in \"%s\"" % os.path.join(getcwd(), Hg.ignore_file), 1)
 
     def ignore(dest):
         Hg.hgrc()
@@ -555,7 +562,7 @@ class Hg(object):
                 with open(Hg.ignore_file, 'a') as f:
                     f.write(dest + '\n')
             except IOError:
-                error("Unable to write ignore file in \"%s\"" % os.path.join(os.getcwd(), Hg.ignore_file), 1)
+                error("Unable to write ignore file in \"%s\"" % os.path.join(getcwd(), Hg.ignore_file), 1)
 
     def unignore(dest):
         Hg.ignore_file = os.path.join('.hg', 'hgignore')
@@ -571,7 +578,7 @@ class Hg(object):
                 with open(Hg.ignore_file, 'w') as f:
                     f.write('\n'.join(lines) + '\n')
             except IOError:
-                error("Unable to write ignore file in \"%s\"" % os.path.join(os.getcwd(), Hg.ignore_file), 1)
+                error("Unable to write ignore file in \"%s\"" % os.path.join(getcwd(), Hg.ignore_file), 1)
 
 # pylint: disable=no-self-argument, no-method-argument, no-member, no-self-use, unused-argument
 @scm('git')
@@ -634,30 +641,30 @@ class Git(object):
             if remote and branch:
                 popen([git_cmd, 'push', remote, branch] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
             else:
-                err = "Unable to publish outgoing changes for \"%s\" in \"%s\".\n" % (os.path.basename(os.getcwd()), os.getcwd())
+                err = "Unable to publish outgoing changes for \"%s\" in \"%s\".\n" % (os.path.basename(getcwd()), getcwd())
                 if not remote:
                     error(err+"The local repository is not associated with a remote one.", 1)
                 if not branch:
                     error(err+"Working set is not on a branch.", 1)
 
     def fetch():
-        info("Fetching revisions from remote repository to \"%s\"" % os.path.basename(os.getcwd()))
+        info("Fetching revisions from remote repository to \"%s\"" % os.path.basename(getcwd()))
         popen([git_cmd, 'fetch', '--all', '--tags'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def discard(clean_files=False):
-        info("Discarding local changes in \"%s\"" % os.path.basename(os.getcwd()))
+        info("Discarding local changes in \"%s\"" % os.path.basename(getcwd()))
         pquery([git_cmd, 'reset', 'HEAD'] + ([] if very_verbose else ['-q'])) # unmarks files for commit
         pquery([git_cmd, 'checkout', '.'] + ([] if very_verbose else ['-q'])) # undo  modified files
         pquery([git_cmd, 'clean', '-fd'] + (['-x'] if clean_files else []) + (['-q'] if very_verbose else ['-q'])) # cleans up untracked files and folders
 
     def merge(dest):
-        info("Merging \"%s\" with \"%s\"" % (os.path.basename(os.getcwd()), dest))
+        info("Merging \"%s\" with \"%s\"" % (os.path.basename(getcwd()), dest))
         popen([git_cmd, 'merge', dest] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def checkout(rev, clean=False):
         if not rev:
             return
-        info("Checkout \"%s\" in %s" % (rev, os.path.basename(os.getcwd())))
+        info("Checkout \"%s\" in %s" % (rev, os.path.basename(getcwd())))
         branch = None
         refs = Git.getrefs(rev)
         for ref in refs: # re-associate with a local or remote branch (rev is the same)
@@ -692,7 +699,7 @@ class Git(object):
                 except ProcessException:
                     pass
             else:
-                err = "Unable to update \"%s\" in \"%s\"." % (os.path.basename(os.getcwd()), os.getcwd())
+                err = "Unable to update \"%s\" in \"%s\"." % (os.path.basename(getcwd()), getcwd())
                 if not remote:
                     info(err+" The local repository is not associated with a remote one.")
                 if not branch:
@@ -753,7 +760,7 @@ class Git(object):
         return result
 
     def seturl(url):
-        info("Setting url to \"%s\" in %s" % (url, os.getcwd()))
+        info("Setting url to \"%s\" in %s" % (url, getcwd()))
         return pquery([git_cmd, 'remote', 'set-url', 'origin', url]).strip()
 
     def geturl():
@@ -807,7 +814,7 @@ class Git(object):
             with open(Git.ignore_file, 'w') as f:
                 f.write('\n'.join(ignores)+'\n')
         except IOError:
-            error("Unable to write ignore file in \"%s\"" % os.path.join(os.getcwd(), Git.ignore_file), 1)
+            error("Unable to write ignore file in \"%s\"" % os.path.join(getcwd(), Git.ignore_file), 1)
 
     def ignore(dest):
         try:
@@ -825,7 +832,7 @@ class Git(object):
                 with open(Git.ignore_file, 'a') as f:
                     f.write(dest.replace("\\", "/") + '\n')
             except IOError:
-                error("Unable to write ignore file in \"%s\"" % os.path.join(os.getcwd(), Git.ignore_file), 1)
+                error("Unable to write ignore file in \"%s\"" % os.path.join(getcwd(), Git.ignore_file), 1)
     def unignore(dest):
         try:
             with open(Git.ignore_file) as f:
@@ -843,7 +850,7 @@ class Git(object):
                 with open(Git.ignore_file, 'w') as f:
                     f.write('\n'.join(lines) + '\n')
             except IOError:
-                error("Unable to write ignore file in \"%s\"" % os.path.join(os.getcwd(), Git.ignore_file), 1)
+                error("Unable to write ignore file in \"%s\"" % os.path.join(getcwd(), Git.ignore_file), 1)
 
 # Repository object
 class Repo(object):
@@ -865,19 +872,19 @@ class Repo(object):
         m_bld_url = re.match(regex_build_url, url.strip().replace('\\', '/'))
         if m_local:
             repo.name = os.path.basename(path or m_local.group(1))
-            repo.path = os.path.abspath(path or os.path.join(os.getcwd(), m_local.group(1)))
+            repo.path = os.path.abspath(path or os.path.join(getcwd(), m_local.group(1)))
             repo.url = m_local.group(1)
             repo.rev = m_local.group(2)
             repo.is_local = True
         elif m_bld_url:
             repo.name = os.path.basename(path or m_bld_url.group(7))
-            repo.path = os.path.abspath(path or os.path.join(os.getcwd(), repo.name))
+            repo.path = os.path.abspath(path or os.path.join(getcwd(), repo.name))
             repo.url = m_bld_url.group(1)+'/builds'
             repo.rev = m_bld_url.group(8)
             repo.is_build = True
         elif m_repo_url:
             repo.name = os.path.basename(path or m_repo_url.group(2))
-            repo.path = os.path.abspath(path or os.path.join(os.getcwd(), repo.name))
+            repo.path = os.path.abspath(path or os.path.join(getcwd(), repo.name))
             repo.url = formaturl(m_repo_url.group(1))
             repo.rev = m_repo_url.group(3)
             if repo.rev and repo.rev != 'latest' and not re.match(r'^([a-fA-F0-9]{6,40})$', repo.rev):
@@ -911,11 +918,11 @@ class Repo(object):
     def fromrepo(cls, path=None):
         repo = cls()
         if path is None:
-            path = Repo.findparent(os.getcwd())
+            path = Repo.findparent(getcwd())
             if path is None:
                 error(
                     "Could not find mbed program in current path \"%s\".\n"
-                    "You can fix this by calling \"mbed new .\" or \"mbed config root .\" in the root of your program." % os.getcwd())
+                    "You can fix this by calling \"mbed new .\" or \"mbed config root .\" in the root of your program." % getcwd())
 
         repo.path = os.path.abspath(path)
         repo.name = os.path.basename(repo.path)
@@ -944,7 +951,7 @@ class Repo(object):
 
     @classmethod
     def findparent(cls, path=None):
-        path = os.path.abspath(path or os.getcwd())
+        path = os.path.abspath(path or getcwd())
 
         while cd(path):
             if os.path.isfile(os.path.join(path, Cfg.file)) or Repo.isrepo(path):
@@ -959,7 +966,7 @@ class Repo(object):
 
     @classmethod
     def pathtype(cls, path=None):
-        path = os.path.abspath(path or os.getcwd())
+        path = os.path.abspath(path or getcwd())
 
         depth = 0
         while cd(path):
@@ -1220,7 +1227,7 @@ class Program(object):
     build_dir = "BUILD"
 
     def __init__(self, path=None, print_warning=False):
-        path = os.path.abspath(path or os.getcwd())
+        path = os.path.abspath(path or getcwd())
         self.path = path
         self.is_cwd = True
 
@@ -1391,6 +1398,8 @@ class Program(object):
             with cd(os.path.join(path, tools_dir)):
                 try:
                     action("Updating the mbed 2.0 SDK tools...")
+                    print path
+                    print os.path.join(path, tools_dir)
                     repo = Repo.fromrepo()
                     repo.update()
                 except Exception:
@@ -1675,7 +1684,7 @@ def subcommand(name, *args, **kwargs):
 def new(name, scm='git', program=False, library=False, mbedlib=False, create_only=False, depth=None, protocol=None):
     global cwd_root
 
-    d_path = os.path.abspath(name or os.getcwd())
+    d_path = os.path.abspath(name or getcwd())
     p_path = os.path.dirname(d_path)
     if program and library:
         error("Cannot use both --program and --library options.", 1)
@@ -1884,7 +1893,7 @@ def deploy(ignore=False, depth=None, protocol=None, top=True):
         program = Program(repo.path)
         program.post_action()
         if program.is_classic:
-            program.update_tools('.temp')
+            program.update_tools(os.path.join(getcwd(), '.temp'))
 
 # Publish command
 @subcommand('publish',
@@ -2052,7 +2061,7 @@ def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=Fa
         program.set_root()
         program.post_action()
         if program.is_classic:
-            program.update_tools('.temp')
+            program.update_tools(os.path.join(getcwd(), '.temp'))
 
 
 # Synch command
@@ -2179,10 +2188,10 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
-    program = Program(os.getcwd(), True)
+    program = Program(getcwd(), True)
     program.check_requirements(True)
     # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
-    orig_path = os.getcwd()
+    orig_path = getcwd()
 
     with cd(program.path):
         tools_dir = os.path.abspath(program.get_tools())
@@ -2299,10 +2308,10 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
-    program = Program(os.getcwd(), True)
+    program = Program(getcwd(), True)
     program.check_requirements(True)
     # Save original working directory
-    orig_path = os.getcwd()
+    orig_path = getcwd()
 
     target = program.get_target(target)
     tchain = program.get_toolchain(toolchain)
@@ -2394,10 +2403,10 @@ def export(ide=None, target=None, source=False, clean=False, supported=False, ap
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
-    program = Program(os.getcwd(), True)
+    program = Program(getcwd(), True)
     program.check_requirements(True)
     # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
-    orig_path = os.getcwd()
+    orig_path = getcwd()
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
         tools_dir = program.get_tools()
@@ -2445,7 +2454,7 @@ def detect():
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
-    program = Program(os.getcwd(), False)
+    program = Program(getcwd(), False)
     program.check_requirements(True)
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
@@ -2494,7 +2503,7 @@ def config_(var=None, value=None, global_cfg=False, unset=False, list_config=Fal
             log("No global configuration is set\n")
         log("\n")
 
-        p = Program(os.getcwd())
+        p = Program(getcwd())
         action("Local config (%s):" % p.path)
         if not p.is_cwd:
             p_vars = p.list_cfg().items()
@@ -2521,7 +2530,7 @@ def config_(var=None, value=None, global_cfg=False, unset=False, list_config=Fal
                 action(('%s' % value) if value else 'No global %s set' % (name))
         else:
             # Find the root of the program
-            program = Program(os.getcwd())
+            program = Program(getcwd())
             if program.is_cwd and not var == 'ROOT':
                 error(
                     "Could not find mbed program in current path \"%s\".\n"
@@ -2577,7 +2586,7 @@ def main():
     global verbose, very_verbose, remainder, cwd_root
 
     # Help messages adapt based on current dir
-    cwd_root = os.getcwd()
+    cwd_root = getcwd()
 
     if sys.version_info[0] != 2 or sys.version_info[1] < 7:
         error(
@@ -2599,7 +2608,7 @@ def main():
     try:
         very_verbose = pargs.very_verbose
         verbose = very_verbose or pargs.verbose
-        info('Working path \"%s\" (%s)' % (os.getcwd(), Repo.pathtype(cwd_root)))
+        info('Working path \"%s\" (%s)' % (getcwd(), Repo.pathtype(cwd_root)))
         status = pargs.command(pargs)
     except ProcessException as e:
         error(
