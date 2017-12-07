@@ -163,9 +163,24 @@ Use `mbed ls` to list all the libraries imported to your program:
 
 ```
 $ cd mbed-os-program
-$ mbed ls -a
-mbed-os-program (mbed-os-program)
-`- mbed-os (https://github.com/ARMmbed/mbed-os#89962277c207)
+$ mbed ls
+mbed-os-program (no revision)
+`- mbed-os (#182bbd51bc8d, tags: latest, mbed-os-5.6.5)
+```
+
+Use `mbed releases` to list all releases in a program or library:
+
+```
+$ cd mbed-os
+$ mbed releases
+mbed-os (#182bbd51bc8d, tags: latest, mbed-os-5.6.5)
+  ...
+  * mbed-os-5.6.0 
+  * mbed-os-5.6.1 
+  * mbed-os-5.6.2 
+  * mbed-os-5.6.3 
+  * mbed-os-5.6.4 
+  * mbed-os-5.6.5  <- current
 ```
 
 <span class="notes">**Note**: If you want to start from an existing folder in your workspace, you can use `mbed new .`, which initializes an Mbed program, as well as a new Git or Mercurial repository in that folder. </span>
@@ -686,11 +701,11 @@ To push the changes in your local tree upstream, run `mbed publish`. `mbed publi
 Let's assume that the list of dependencies of your program (obtained by running `mbed ls`) looks like this:
 
 ```
-my-mbed-os-example (a5ac4bf2e468)
-|- mbed-os (5fea6e69ec1a)
-`- my-libs (e39199afa2da)
-   |- my-libs/iot-client (571cfef17dd0)
-   `- my-libs/test-framework (cd18b5a50df4)
+my-mbed-os-example (#a5ac4bf2e468)
+|- mbed-os (#182bbd51bc8d, tags: latest, mbed-os-5.6.5)
+`- my-libs (#e39199afa2da)
+   |- my-libs/iot-client (#571cfef17dd0)
+   `- my-libs/test-framework (#cd18b5a50df4)
 ```
 
 Let's assume that you make changes to `iot-client`. `mbed publish` detects the change on the leaf `iot-client` dependency and asks you to commit it. Then `mbed publish` detects that `my-libs` depends on `iot-client`, updates the `my-libs` dependency on `iot-client` to its latest version by updating the `iot-client.lib` file and asks you to commit it. This propagates up to `my-libs` and finally to your program, `my-mbed-os-example`.
@@ -741,6 +756,44 @@ The update command fails if there are changes in your program or library that `m
 
 ### Updating to an upstream version
 
+Before updating a program or a library, it's good to know the names of the stable releases, usually marked with a tag using a common format, such as `1.2`, `v1.0.1`, `r5.6`, `mbed-os-5.6` and so on. 
+
+You can find stable release versions of a program or a library using the `mbed releases` command:
+
+```
+$ cd mbed-os
+$ mbed releases
+mbed-os (#182bbd51bc8d, tags: latest, mbed-os-5.6.5)
+  ...
+  * mbed-os-5.6.0 
+  * mbed-os-5.6.1 
+  * mbed-os-5.6.2 
+  * mbed-os-5.6.3 
+  * mbed-os-5.6.4 
+  * mbed-os-5.6.5  <- current
+```
+
+You can also recursively list stable releases for your program and libraries using the `-r` switch, for example `mbed releases -r`.
+
+Lastly, you can list unstable releases, such as release candidates, alphas and betas by using the `-u` switch.
+
+```
+$ cd mbed-client
+$ mbed releases -u
+mbed-client (#31e5ce203cc0, tags: v3.0.0)
+  * mbed-os-5.0-rc1 
+  * mbed-os-5.0-rc2 
+  * r0.5-rc4 
+  ...
+  * v2.2.0 
+  * v2.2.1 
+  * v3.0.0  <- current
+```
+
+You can use the `-a` switch to print release and revision hash pairs.
+
+Mbed CLI recognizes stable release if the tags are in standard versioning format, such as `MAJOR[.MINOR][.PATCH][.BUILD]`, and optionally prefixed with either `v`, `r` or `mbed-os`. Unstable releases can be suffixed with any letter/number/hyphen/dot combination.
+
 #### Updating a program
 
 To update your program to another upstream version, go to the root folder of the program, and run:
@@ -750,6 +803,7 @@ $ mbed update [branch|tag|revision]
 ```
 
 This fetches new revisions from the remote repository, updating the program to the specified branch, tag or revision. If you don't specify any of these, then `mbed update` updates to the latest revision of the current branch. `mbed update` performs this series of actions recursively against all dependencies in the program tree.
+
 
 #### Updating a library
 
@@ -769,11 +823,11 @@ There are two main scenarios when updating:
 
 * Update with local uncommitted changes: *dirty* update.
 
-Run `mbed update [branch|revision|tag_name]`. You might have to commit or stash your changes if the source control tool (Git or Mercurial) throws an error that the update will overwrite local changes.
+Run `mbed update [branch|tag|revision]`. You might have to commit or stash your changes if the source control tool (Git or Mercurial) throws an error that the update will overwrite local changes.
 
 * Discard local uncommitted changes: *clean* update.
 
-Run `mbed update [branch|revision|tag_name] --clean`
+Run `mbed update [branch|tag|revision] --clean`
 
 Specifying a branch to `mbed update` will only check out that branch and won't automatically merge or fast-forward to the remote/upstream branch. You can run `mbed update` to merge (fast-forward) your local branch with the latest remote branch. On Git, you can do `git pull`.
 
