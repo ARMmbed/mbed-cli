@@ -1911,23 +1911,27 @@ def remove(path):
         "Use 'mbed import <URL>' and 'mbed add <URL>' instead of cloning manually and\n"
         "then running 'mbed deploy'"))
 def deploy(ignore=False, depth=None, protocol=None, top=True):
+    global cwd_root
+
     repo = Repo.fromrepo()
     repo.ignores()
+    cwd_root = repo.path
 
-    for lib in repo.libs:
-        if os.path.isdir(lib.path):
-            if lib.check_repo():
-                with cd(lib.path):
-                    update(lib.rev, ignore=ignore, depth=depth, protocol=protocol, top=False)
-        else:
-            import_(lib.fullurl, lib.path, ignore=ignore, depth=depth, protocol=protocol, top=False)
-            repo.ignore(relpath(repo.path, lib.path))
+    with cd(cwd_root):
+        for lib in repo.libs:
+            if os.path.isdir(lib.path):
+                if lib.check_repo():
+                    with cd(lib.path):
+                        update(lib.rev, ignore=ignore, depth=depth, protocol=protocol, top=False)
+            else:
+                import_(lib.fullurl, lib.path, ignore=ignore, depth=depth, protocol=protocol, top=False)
+                repo.ignore(relpath(repo.path, lib.path))
 
-    if top:
-        program = Program(repo.path)
-        program.post_action()
-        if program.is_classic:
-            program.update_tools('.temp')
+        if top:
+            program = Program(repo.path)
+            program.post_action()
+            if program.is_classic:
+                program.update_tools('.temp')
 
 # Publish command
 @subcommand('publish',
