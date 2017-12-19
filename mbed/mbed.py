@@ -995,10 +995,9 @@ class Repo(object):
         else:
             error('Invalid repository (%s)' % url.strip(), -1)
 
-        cache_cfg = Global().get_cfg('CACHE', '')
-        if cache_repositories and cache_cfg and cache_cfg != 'none' and cache_cfg != 'off' and cache_cfg != 'disabled':
-            loc = cache_cfg if (cache_cfg and cache_cfg != 'on' and cache_cfg != 'enabled') else None
-            repo.cache = loc or os.path.join(tempfile.gettempdir(), 'mbed-repo-cache')
+        cache_cfg = Global().cache_cfg()
+        if cache_repositories and cache_cfg['cache'] == 'enabled':
+            repo.cache = cache_cfg['cache_dir']
 
         return repo
 
@@ -1030,10 +1029,9 @@ class Repo(object):
         repo.path = os.path.abspath(path)
         repo.name = os.path.basename(repo.path)
 
-        cache_cfg = Global().get_cfg('CACHE', '')
-        if cache_repositories and cache_cfg and cache_cfg != 'none' and cache_cfg != 'off' and cache_cfg != 'disabled':
-            loc = cache_cfg if (cache_cfg and cache_cfg != 'on' and cache_cfg != 'enabled') else None
-            repo.cache = loc or os.path.join(tempfile.gettempdir(), 'mbed-repo-cache')
+        cache_cfg = Global().cache_cfg()
+        if cache_repositories and cache_cfg['cache'] == 'enabled':
+            repo.cache = cache_cfg['cache_dir']
 
         repo.sync()
 
@@ -1636,6 +1634,10 @@ class Global(object):
     def list_cfg(self, *args, **kwargs):
         return Cfg(self.path).list(*args, **kwargs)
 
+    def cache_cfg(self, *args, **kwargs):
+        return Cfg(self.path).cache(*args, **kwargs)
+
+
 # Cfg classed used for handling the config backend
 class Cfg(object):
     path = None
@@ -1700,6 +1702,16 @@ class Cfg(object):
             if m and m.group(1) and m.group(1) != 'ROOT':
                 vars[m.group(1)] = m.group(2)
         return vars
+
+    # Get cache configuration
+    def cache(self):
+        cache_cfg = self.get('CACHE', None)
+        cache_val = 'enabled' if cache_repositories and cache_cfg and cache_cfg != 'none' and cache_cfg != 'off' and cache_cfg != 'disabled' else 'disabled'
+
+        cache_dir_cfg = self.get('CACHE_DIR', None)
+        loc = cache_dir_cfg if cache_dir_cfg != 'default' else (cache_cfg if (cache_cfg and cache_cfg != 'on' and cache_cfg != 'off' and cache_cfg != 'none' and cache_cfg != 'enabled' and cache_cfg != 'disabled') else None)
+        cache_base = loc or tempfile.gettempdir()
+        return {'cache': cache_val, 'cache_base': cache_base, 'cache_dir': os.path.join(cache_base, 'mbed-cache')}
 
 
 def formaturl(url, format="default"):
@@ -2746,11 +2758,12 @@ def target_(name=None, global_cfg=False, supported=False):
         return compile_(supported=supported)
     return config_('target', name, global_cfg=global_cfg)
 
+
 @subcommand('toolchain',
     dict(name='name', nargs='?', help='Default toolchain name. Example: ARM, GCC_ARM, IAR'),
     dict(name=['-G', '--global'], dest='global_cfg', action='store_true', help='Use global settings, not local'),
     dict(name=['-S', '--supported'], dest='supported', action='store_true', help='Shows supported matrix of targets and toolchains'),
-    help='Set or get default toolchain\n\n',
+    help='Set or get default toolchain',
     description=(
         "Set or get default toolchain\n"
         "This is an alias to 'mbed config [--global] toolchain [name]'\n"))
@@ -2758,6 +2771,54 @@ def toolchain_(name=None, global_cfg=False, supported=False):
     if supported:
         return compile_(supported=supported)
     return config_('toolchain', name, global_cfg=global_cfg)
+
+
+@subcommand('cache',
+    dict(name='on', nargs='?', help='Turn repository caching on. Will use either a default cache location or the specified cache directory to store repositories.'),
+    dict(name='off', nargs='?', help='Turn repository caching off. Note that this doesn\'t purge cached repositories. See "purge".'),
+    dict(name='ls', nargs='?', help='List cached repositories'),
+    dict(name='purge', nargs='?', help='Purge cached repositories. Note that this doesn\'t turn caching off'),
+    dict(name=['-D', '--dir'], dest='cache_dir', help='Set cache directory. Set to "default" to let mbed CLI determine the cache directory location.'),
+    help='Repository cache management\n\n',
+    description=(
+        "Set or get default toolchain\n"))
+def cache_(on=False, off=False, ls=False, purge=False, cache_dir=None, global_cfg=False):
+    cmd = str(on).lower()
+    argument = off
+    g = Global()
+
+    if cache_dir:
+        if not os.path.exists(cache_dir):
+            try:
+                os.makedirs(cache_dir)
+            except (IOError, ImportError, OSError):
+                error("Unable to create cache directory \"%s\"" % cache_dir, 128)
+        elif not os.path.isdir(cache_dir):
+            error("The specified location \"%s\" is not a directory" % cache_dir, 128)
+        elif len(os.listdir(cache_dir)) > 1:
+            warning("Directory \"%s\" is not empty." % d_path)
+
+        g.set_cfg('CACHE_DIR', cache_dir)
+        action('Repository cache location set to \"%s\"' % cache_dir)
+
+    if cmd == 'off' or cmd == 'on':
+        g.set_cfg('CACHE', 'enabled' if cmd == 'on' else 'disabled');
+        cfg = g.cache_cfg()
+        action('Repository cache is now %s.' % str(cfg['cache']).upper())
+        action('Cache location \"%s\"' % cfg['cache_dir'])
+    elif cmd == 'ls':
+        print 'list'
+    elif cmd == 'purge':
+        cfg = g.cache_cfg()
+        action('Purging cached repositories in \"%s\"' % cfg['cache_base'])
+        if os.path.isdir(path):
+            rmtree_readonly(cfg['cache_dir'])
+        action('Complete')
+    else:
+        cfg = g.cache_cfg()
+        action('Repository cache is %s.' % str(cfg['cache']).upper())
+        action('Cache location \"%s\"' % cfg['cache_base'])
+
 
 @subcommand('help',
     help='This help screen')
