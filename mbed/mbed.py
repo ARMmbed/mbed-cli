@@ -2811,8 +2811,8 @@ def cache_(on=False, off=False, ls=False, purge=False, cache_dir=None, global_cf
     if cmd == 'off' or cmd == 'on':
         g.set_cfg('CACHE', 'enabled' if cmd == 'on' else 'disabled')
         cfg = g.cache_cfg()
-        action('Repository cache is now %s.' % str(cfg['cache']).upper())
-        action('Cache location \"%s\"' % cfg['cache_dir'])
+        action("Repository cache is now %s." % str(cfg['cache']).upper())
+        action("Cache location \"%s\"" % cfg['cache_dir'])
     elif cmd == 'ls':
         def get_size_(path):
             size = 0
@@ -2821,7 +2821,7 @@ def cache_(on=False, off=False, ls=False, purge=False, cache_dir=None, global_cf
                     size += os.path.getsize(os.path.join(dirpath, f))
             return size
 
-        action('Listing cached repositories in \"%s\"' % cfg['cache_base'])
+        action("Listing cached repositories in \"%s\"" % cfg['cache_base'])
         repos = []
         total_size = 0
         for dirpath, dirs, files in os.walk(cfg['cache_dir']):
@@ -2831,20 +2831,21 @@ def cache_(on=False, off=False, ls=False, purge=False, cache_dir=None, global_cf
                 url = repo.url
                 size = get_size_(repo.path)
                 total_size += size
-                log('* %s %s\n' % ('{:60}'.format(url), sizeof_fmt(size).rjust(8)))
+                log("* %s %s\n" % ('{:64}'.format(url), sizeof_fmt(size).rjust(8)))
                 for d in dirs:
                     dirs.remove(d)
-        log('%s %s\n' % ('{:62}'.format('Total:'), sizeof_fmt(total_size).rjust(8)))
+        log("---------------------------------------------------------------------------\n")
+        log("%s %s\n" % ('{:66}'.format('Total size:'), sizeof_fmt(total_size).rjust(8)))
 
     elif cmd == 'purge':
-        action('Purging cached repositories in \"%s\"' % cfg['cache_base'])
+        action("Purging cached repositories in \"%s\"..." % cfg['cache_base'])
         if os.path.isdir(cfg['cache_dir']):
             rmtree_readonly(cfg['cache_dir'])
 
-        action('Purge complete')
+        action("Purge complete!")
     else:
-        action('Repository cache is %s.' % str(cfg['cache']).upper())
-        action('Cache location \"%s\"' % cfg['cache_base'])
+        action("Repository cache is %s." % str(cfg['cache']).upper())
+        action("Cache location \"%s\"" % cfg['cache_base'])
 
 
 @subcommand('help',
