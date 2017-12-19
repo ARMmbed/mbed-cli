@@ -1398,8 +1398,6 @@ class Program(object):
             with cd(os.path.join(path, tools_dir)):
                 try:
                     action("Updating the mbed 2.0 SDK tools...")
-                    print path
-                    print os.path.join(path, tools_dir)
                     repo = Repo.fromrepo()
                     repo.update()
                 except Exception:
