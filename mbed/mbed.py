@@ -451,9 +451,9 @@ class Hg(object):
         m = re.match(r'(\w+).+?\s+(\d+)/(\d+)\s+.*?', line)
         if m:
             if m.group(1) == "manifests":
-                show_progress('Downloading', (float(m.group(2)) / float(m.group(3))) * 20, 80)
+                show_progress('Downloading', (float(m.group(2)) / float(m.group(3))) * 20)
             if m.group(1) == "files":
-                show_progress('Downloading', (float(m.group(2)) / float(m.group(3))) * 100, 80)
+                show_progress('Downloading', (float(m.group(2)) / float(m.group(3))) * 100)
 
     def add(dest):
         info("Adding reference \"%s\"" % dest)
@@ -681,9 +681,16 @@ class Git(object):
             hide_progress()
 
     def clone_progress(line, sep):
-        m = re.match(r'Receiving objects\:\s*(\d+)% \((\d+)/(\d+)\)', line)
+        m = re.match(r'([\w :]+)\:\s*(\d+)% \((\d+)/(\d+)\)', line)
         if m:
-            show_progress('Downloading', (float(m.group(2)) / float(m.group(3))) * 100, 80)
+            if m.group(1) == "remote: Compressing objects" and int(m.group(4)) > 10:
+                show_progress('Preparing', (float(m.group(3)) / float(m.group(4))) * 100)
+            if m.group(1) == "Receiving objects":
+                show_progress('Downloading', (float(m.group(3)) / float(m.group(4))) * 80)
+            if m.group(1) == "Resolving deltas":
+                show_progress('Downloading', (float(m.group(3)) / float(m.group(4))) * 10 + 80)
+            if m.group(1) == "Checking out files":
+                show_progress('Downloading', (float(m.group(3)) / float(m.group(4))) * 10 + 90)
 
     def add(dest):
         info("Adding reference "+dest)
