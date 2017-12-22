@@ -1025,14 +1025,16 @@ class Repo(object):
 
         return "directory" if depth == 0 else ("program" if depth == 1 else "library")
 
-    def revtype(self, rev=None, ret_type=True, ret_rev=True):
+    def revtype(self, rev=None, ret_type=True, ret_rev=True, fmt=3):
         if rev is None or len(rev) == 0:
-            return ('latest' if ret_type else '') + (' revision in the current branch' if ret_rev else '')
+            output = ('latest' if fmt & 1 else '') + (' revision in the current branch' if fmt & 2 else '')
         elif re.match(r'^([a-fA-F0-9]{6,40})$', rev) or re.match(r'^([0-9]+)$', rev):
             revtags = self.scm.gettags(rev) if self.scm and rev else []
-            return ('rev ' if ret_type else '') + (('#' + rev[:12] + ((' (tag' + ('s' if len(revtags) > 1 else '') + ': ' + ', '.join(revtags[0:2]) + ')') if len(revtags) else '')) if ret_rev and rev else '')
+            output = ('rev ' if fmt & 1 else '') + (('#' + rev[:12] + ((' (tag' + ('s' if len(revtags) > 1 else '') + ': ' + ', '.join(revtags[0:2]) + ')') if len(revtags) else '')) if fmt & 2 and rev else '')
         else:
-            return ('branch/tag' if ret_type else '') + (' "'+rev+'"' if ret_rev else '')
+            output = ('branch/tag' if fmt & 1 else '') + (' "'+rev+'"' if fmt & 2 else '')
+
+        return re.sub(r' \(', ', ', re.sub(r'\)', '', output)) if fmt & 4 else output
 
     @classmethod
     def isurl(cls, url):
@@ -2178,7 +2180,7 @@ def sync(recursive=True, keep_refs=False, top=True):
 def list_(detailed=False, prefix='', p_path=None, ignore=False):
     repo = Repo.fromrepo()
 
-    print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url + ('#' + str(repo.rev)[:12] if repo.rev else '') if detailed else re.sub(r' \(', ', ', re.sub(r'\)', '', repo.revtype(repo.rev, False)))) or 'no revision'))
+    print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url + ('#' + str(repo.rev)[:12] if repo.rev else '') if detailed else repo.revtype(repo.rev, fmt=6)) or 'no revision'))
 
     for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.path)):
         nprefix = (prefix[:-3] + ('|  ' if prefix[-3] == '|' else '   ')) if prefix else ''
@@ -2210,7 +2212,7 @@ def releases_(detailed=False, unstable=False, recursive=False, prefix='', p_path
             rels.append(tag[1] + " %s%s" % ('#' + tag[0] if detailed else "", " <- current" if tag[1] in revtags else ""))
 
     # Print header
-    print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url + ('#' + str(repo.rev)[:12] if repo.rev else '') if detailed else re.sub(r' \(', ', ', re.sub(r'\)', '', repo.revtype(repo.rev, False)))) or 'no revision'))
+    print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url + ('#' + str(repo.rev)[:12] if repo.rev else '') if detailed else repo.revtype(repo.rev, fmt=6)) or 'no revision'))
 
     # Print list of tags
     rprefix = (prefix[:-3] + ('|  ' if prefix[-3] == '|' else '   ')) if recursive and prefix else ''
