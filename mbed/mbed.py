@@ -177,6 +177,20 @@ def progress():
     sys.stdout.flush()
     sys.stdout.write('\b')
 
+def show_progress(title, percent, max_width=80):
+    percent = round(float(percent), 2)
+    show_percent = '%.2f' % percent
+    line = str(title) + ' |'
+    bwidth = max_width - len(str(title)) - len(show_percent) - 6
+    for i in range(0, bwidth):
+        line += '#' if i <= (percent / 100 * bwidth) else '-'
+    line += '| ' + show_percent + '%'
+    sys.stdout.write(line+'\r')
+    sys.stdout.flush()
+    sys.stdout.write('\b')
+
+def hide_progress():
+    sys.stdout.write("\033[K\r\b")
 
 # Process execution
 class ProcessException(Exception):
@@ -198,11 +212,11 @@ def popen(command, stdin=None, **kwargs):
     if proc.wait() != 0:
         raise ProcessException(proc.returncode, command[0], ' '.join(command), getcwd())
 
-def pquery(command, stdin=None, **kwargs):
+def pquery(command, output_callback=None, stdin=None, **kwargs):
     if very_verbose:
         info('Query "'+' '.join(command)+'" in '+getcwd())
     try:
-        proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
+        proc = subprocess.Popen(command, bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
     except OSError as e:
         if e[0] == errno.ENOENT:
             error(
@@ -211,7 +225,21 @@ def pquery(command, stdin=None, **kwargs):
         else:
             raise e
 
-    stdout, _ = proc.communicate(stdin)
+    if output_callback:
+        line = ""
+        while 1:
+            s = str(proc.stderr.read(1))
+            line += s
+            if s == '\r' or s == '\n':
+                output_callback(line, s)
+                line = ""
+
+            if proc.returncode is None:
+                code = proc.poll()
+            else:
+                break
+
+    stdout, stderr = proc.communicate(stdin)
 
     if very_verbose:
         log(str(stdout).strip()+"\n")
@@ -413,7 +441,19 @@ class Hg(object):
         return True
 
     def clone(url, name=None, depth=None, protocol=None):
-        popen([hg_cmd, 'clone', formaturl(url, protocol), name] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
+        if verbose or very_verbose:
+            popen([hg_cmd, 'clone', formaturl(url, protocol), name] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
+        else:
+            pquery([hg_cmd, 'clone', '--config', 'progress.assume-tty=true', formaturl(url, protocol), name], output_callback=Hg.clone_progress)
+            hide_progress()
+
+    def clone_progress(line, sep):
+        m = re.match(r'(\w+).+?\s+(\d+)/(\d+)\s+.*?', line)
+        if m:
+            if m.group(1) == "manifests":
+                show_progress('Downloading', (float(m.group(2)) / float(m.group(3))) * 20, 80)
+            if m.group(1) == "files":
+                show_progress('Downloading', (float(m.group(2)) / float(m.group(3))) * 100, 80)
 
     def add(dest):
         info("Adding reference \"%s\"" % dest)
@@ -634,7 +674,16 @@ class Git(object):
             pquery([git_cmd, 'branch', '-D', branch])
 
     def clone(url, name=None, depth=None, protocol=None):
-        popen([git_cmd, 'clone', formaturl(url, protocol), name] + (['--depth', depth] if depth else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
+        if verbose or very_verbose:
+            popen([git_cmd, 'clone', formaturl(url, protocol), name] + (['--depth', depth] if depth else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
+        else:
+            pquery([git_cmd, 'clone', '--progress', formaturl(url, protocol), name] + (['--depth', depth] if depth else []), output_callback=Git.clone_progress)
+            hide_progress()
+
+    def clone_progress(line, sep):
+        m = re.match(r'Receiving objects\:\s*(\d+)% \((\d+)/(\d+)\)', line)
+        if m:
+            show_progress('Downloading', (float(m.group(2)) / float(m.group(3))) * 100, 80)
 
     def add(dest):
         info("Adding reference "+dest)
