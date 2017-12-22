@@ -533,13 +533,13 @@ class Hg(object):
     def getbranch():
         return pquery([hg_cmd, 'branch']).strip() or ""
 
-    def gettags(rev=None):
+    def gettags():
         tags = []
         refs = pquery([hg_cmd, 'tags']).strip().splitlines() or []
         for ref in refs:
             m = re.match(r'^(.+?)\s+(\d+)\:([a-f0-9]+)$', ref)
-            if m and (not rev or m.group(1).startswith(rev)):
-                tags.append(m.group(1) if rev else [m.group(3), m.group(1)])
+            if m and m.group(1) != 'tips':
+                tags.append([m.group(3), m.group(1)])
         return tags
 
     def remoteid(url, rev=None):
@@ -822,19 +822,19 @@ class Git(object):
         return result
 
     # Finds tags. Will match rev if specified
-    def gettags(rev=None):
+    def gettags():
         tags = []
         refs = Git.getrefs()
         for ref in refs:
             m = re.match(r'^(.+)\s+refs\/tags\/(.+)$', ref)
-            if m and (not rev or m.group(1).startswith(rev)):
+            if m:
                 t = m.group(2)
                 if re.match(r'^(.+)\^\{\}$', t): # detect tag "pointer"
                     t = re.sub(r'\^\{\}$', '', t) # remove "pointer" chars, e.g. some-tag^{}
                     for tag in tags:
                         if tag[1] == t:
                             tags.remove(tag)
-                tags.append(t if rev else [m.group(1), t])
+                tags.append([m.group(1), t])
         return tags
 
     # Finds branches a rev belongs to
@@ -1029,7 +1029,7 @@ class Repo(object):
         if rev is None or len(rev) == 0:
             output = ('latest' if fmt & 1 else '') + (' revision in the current branch' if fmt & 2 else '')
         elif re.match(r'^([a-fA-F0-9]{6,40})$', rev) or re.match(r'^([0-9]+)$', rev):
-            revtags = self.scm.gettags(rev) if self.scm and rev else []
+            revtags = self.gettags(rev) if rev else []
             output = ('rev ' if fmt & 1 else '') + (('#' + rev[:12] + ((' (tag' + ('s' if len(revtags) > 1 else '') + ': ' + ', '.join(revtags[0:2]) + ')') if len(revtags) else '')) if fmt & 2 and rev else '')
         else:
             output = ('branch/tag' if fmt & 1 else '') + (' "'+rev+'"' if fmt & 2 else '')
@@ -1086,6 +1086,13 @@ class Repo(object):
         for name, scm in scms.items():
             if os.path.isdir(os.path.join(self.path, '.'+name)):
                 return scm
+
+    def gettags(self, rev=None):
+        tags = self.scm.gettags() if self.scm else []
+        if rev:
+            return [tag[1] for tag in tags if tag[0].startswith(rev)]
+        else:
+            return tags
 
     # Pass backend SCM commands and parameters if SCM exists
     def __wrap_scm(self, method):
@@ -2201,8 +2208,8 @@ def list_(detailed=False, prefix='', p_path=None, ignore=False):
         "Show release tags for the current program or library."))
 def releases_(detailed=False, unstable=False, recursive=False, prefix='', p_path=None):
     repo = Repo.fromrepo()
-    tags = repo.scm.gettags()
-    revtags = repo.scm.gettags(repo.rev)  if repo.rev else [] # associated tags with current commit
+    tags = repo.gettags()
+    revtags = repo.gettags(repo.rev) if repo.rev and len(tags) else [] # associated tags with current commit
     regex_rels = regex_rels_all if unstable else regex_rels_official
 
     # Generate list of tags
