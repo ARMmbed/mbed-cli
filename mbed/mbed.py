@@ -538,7 +538,7 @@ class Hg(object):
         refs = pquery([hg_cmd, 'tags']).strip().splitlines() or []
         for ref in refs:
             m = re.match(r'^(.+?)\s+(\d+)\:([a-f0-9]+)$', ref)
-            if m and m.group(1) != 'tips':
+            if m:
                 tags.append([m.group(3), m.group(1)])
         return tags
 
