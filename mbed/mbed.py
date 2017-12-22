@@ -745,13 +745,18 @@ class Git(object):
         if not branch:
             # Default to "master" in detached mode
             branch = "master"
+        # Check if local branch exists. If not, then just carry on
         try:
-            # Check if remote branch exists
+            pquery([git_cmd, 'rev-parse', '%s' % branch])
+        except ProcessException:
+            return 0
+        # Check if remote branch exists. If not, then it's a new branch
+        try:
             if not pquery([git_cmd, 'rev-parse', '%s/%s' % (remote, branch)]):
                 return 1
         except ProcessException:
             return 1
-        # Check for outgoing commits for the same remote branch
+        # Check for outgoing commits for the same remote branch only if it exists locally and remotely
         return 1 if pquery([git_cmd, 'log', '%s/%s..%s' % (remote, branch, branch)]) else 0
 
     # Checks whether current working tree is detached
