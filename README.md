@@ -106,6 +106,14 @@ On Linux or Mac, you may need to run with `sudo`.
 
 <span class="tips">**Note:** Mbed CLI is compatible with [Virtual Python Environment (virtualenv)](https://pypi.python.org/pypi/virtualenv). You can read more about isolated Python virtual environments [here](http://docs.python-guide.org/en/latest/).</span>
 
+### Updating Mbed CLI
+
+To update an existing installation of Mbed CLI, run:
+
+```
+pip install -U mbed-cli
+```
+
 ### Uninstalling Mbed CLI
 
 To uninstall Mbed CLI, run:
