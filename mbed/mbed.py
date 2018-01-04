@@ -1673,10 +1673,14 @@ subcommands = {}
 # Process handling
 def subcommand(name, *args, **kwargs):
     def __subcommand(command):
+        aliases = []
         if not kwargs.get('description') and kwargs.get('help'):
             kwargs['description'] = kwargs['help']
         if not kwargs.get('formatter_class'):
             kwargs['formatter_class'] = argparse.RawDescriptionHelpFormatter
+        if kwargs.get('hidden_aliases'):
+            aliases = kwargs.get('hidden_aliases')
+            del kwargs['hidden_aliases']
 
         subparser = subparsers.add_parser(name, **kwargs)
         subcommands[name] = subparser
@@ -1704,6 +1708,11 @@ def subcommand(name, *args, **kwargs):
             return command(**argv)
 
         subparser.set_defaults(command=thunk)
+
+        # set hidden aliases if any
+        for alias in aliases:
+            subparsers._name_parser_map[alias] = subparsers._name_parser_map[name]
+
         return command
     return __subcommand
 
@@ -1800,6 +1809,7 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to cloning and updating.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
+    hidden_aliases=['im', 'imp'],
     help='Import program from URL',
     description=(
         "Imports mbed program and its dependencies from a source control based URL\n"
@@ -1870,6 +1880,7 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to cloning and updating.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
+    hidden_aliases=['ad'],
     help='Add library from URL',
     description=(
         "Adds mbed library and its dependencies from a source control based URL\n"
@@ -1894,6 +1905,7 @@ def add(url, path=None, ignore=False, depth=None, protocol=None, top=True):
 @subcommand('remove',
     dict(name='path', help='Local library name or path'),
     help='Remove library',
+    hidden_aliases=['rm', 'rem'],
     description=(
         "Remove specified library, its dependencies and references from the current\n"
         "You can re-add the library from its URL via 'mbed add <library URL>'."))
@@ -1942,6 +1954,7 @@ def deploy(ignore=False, depth=None, protocol=None, top=True):
 @subcommand('publish',
     dict(name=['-A', '--all'], dest='all_refs', action='store_true', help='Publish all branches, including new ones. Default: push only the current branch.'),
     dict(name=['-M', '--message'], dest='msg', type=str, nargs='?', help='Commit message. Default: prompts for commit message.'),
+    hidden_aliases=['pub'],
     help='Publish program or library',
     description=(
         "Publishes the current program or library and all dependencies to their\nassociated remote repository URLs.\n"
@@ -1998,6 +2011,7 @@ def publish(all_refs=None, msg=None, top=True):
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     dict(name=['-l', '--latest-deps'], action='store_true', help='Update all dependencies to the latest revision of their current branch. WARNING: Ignores lib files'),
+    hidden_aliases=['up'],
     help='Update to branch, tag, revision or latest',
     description=(
         "Updates the current program or library and its dependencies to specified\nbranch, tag or revision.\n"
@@ -2196,6 +2210,7 @@ def list_(detailed=False, prefix='', p_path=None, ignore=False):
     dict(name=['-a', '--all'], dest='detailed', action='store_true', help='Show revision hashes'),
     dict(name=['-u', '--unstable'], dest='unstable', action='store_true', help='Show unstable releases well, e.g. release candidates, alphas, betas, etc'),
     dict(name=['-r', '--recursive'], action='store_true', help='Show release tags for all libraries and sub-libraries as well'),
+    hidden_aliases=['rel', 'rels'],
     help='Show release tags',
     description=(
         "Show release tags for the current program or library."))
@@ -2237,6 +2252,7 @@ def releases_(detailed=False, unstable=False, recursive=False, prefix='', p_path
 # Command status for cross-SCM status of repositories
 @subcommand('status',
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to missing libraries.'),
+    hidden_aliases=['st', 'stat'],
     help='Show version control status\n\n',
     description=(
         "Show uncommitted changes a program or library and its dependencies."))
@@ -2531,6 +2547,7 @@ def export(ide=None, target=None, source=False, clean=False, supported=False, ap
 
 # Test command
 @subcommand('detect',
+    hidden_aliases=['det'],
     help='Detect connected mbed targets/boards\n\n',
     description=(
         "Detects mbed targets/boards connected to this system and shows supported\n"
@@ -2581,6 +2598,7 @@ def detect():
     dict(name=['-G', '--global'], dest='global_cfg', action='store_true', help='Use global settings, not local'),
     dict(name=['-U', '--unset'], dest='unset', action='store_true', help='Unset the specified variable.'),
     dict(name=['-L', '--list'], dest='list_config', action='store_true', help='List mbed tool configuration. Not to be confused with compile configuration, e.g. "mbed compile --config".'),
+    hidden_aliases=['cfg', 'conf'],
     help='Tool configuration',
     description=(
         "Gets, sets or unsets mbed tool configuration options.\n"
