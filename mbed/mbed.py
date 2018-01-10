@@ -444,16 +444,8 @@ class Hg(object):
         if verbose or very_verbose:
             popen([hg_cmd, 'clone', formaturl(url, protocol), name] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
         else:
-            pquery([hg_cmd, 'clone', '--config', 'progress.assume-tty=true', formaturl(url, protocol), name], output_callback=Hg.clone_progress)
+            pquery([hg_cmd, 'clone', '--config', 'progress.assume-tty=true', formaturl(url, protocol), name], output_callback=Hg.action_progress)
             hide_progress()
-
-    def clone_progress(line, sep):
-        m = re.match(r'(\w+).+?\s+(\d+)/(\d+)\s+.*?', line)
-        if m:
-            if m.group(1) == "manifests":
-                show_progress('Downloading', (float(m.group(2)) / float(m.group(3))) * 20)
-            if m.group(1) == "files":
-                show_progress('Downloading', (float(m.group(2)) / float(m.group(3))) * 100)
 
     def add(dest):
         info("Adding reference \"%s\"" % dest)
@@ -641,6 +633,15 @@ class Hg(object):
             except IOError:
                 error("Unable to write ignore file in \"%s\"" % os.path.join(getcwd(), Hg.ignore_file), 1)
 
+    def action_progress(line, sep):
+        m = re.match(r'(\w+).+?\s+(\d+)/(\d+)\s+.*?', line)
+        if m:
+            if m.group(1) == "manifests":
+                show_progress('Downloading', (float(m.group(2)) / float(m.group(3))) * 20)
+            if m.group(1) == "files":
+                show_progress('Downloading', (float(m.group(2)) / float(m.group(3))) * 100)
+
+
 # pylint: disable=no-self-argument, no-method-argument, no-member, no-self-use, unused-argument
 @scm('git')
 @staticclass
@@ -677,20 +678,8 @@ class Git(object):
         if verbose or very_verbose:
             popen([git_cmd, 'clone', formaturl(url, protocol), name] + (['--depth', depth] if depth else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
         else:
-            pquery([git_cmd, 'clone', '--progress', formaturl(url, protocol), name] + (['--depth', depth] if depth else []), output_callback=Git.clone_progress)
+            pquery([git_cmd, 'clone', '--progress', formaturl(url, protocol), name] + (['--depth', depth] if depth else []), output_callback=Git.action_progress)
             hide_progress()
-
-    def clone_progress(line, sep):
-        m = re.match(r'([\w :]+)\:\s*(\d+)% \((\d+)/(\d+)\)', line)
-        if m:
-            if m.group(1) == "remote: Compressing objects" and int(m.group(4)) > 10:
-                show_progress('Preparing', (float(m.group(3)) / float(m.group(4))) * 100)
-            if m.group(1) == "Receiving objects":
-                show_progress('Downloading', (float(m.group(3)) / float(m.group(4))) * 80)
-            if m.group(1) == "Resolving deltas":
-                show_progress('Downloading', (float(m.group(3)) / float(m.group(4))) * 10 + 80)
-            if m.group(1) == "Checking out files":
-                show_progress('Downloading', (float(m.group(3)) / float(m.group(4))) * 10 + 90)
 
     def add(dest):
         info("Adding reference "+dest)
@@ -950,6 +939,19 @@ class Git(object):
                     f.write('\n'.join(lines) + '\n')
             except IOError:
                 error("Unable to write ignore file in \"%s\"" % os.path.join(getcwd(), Git.ignore_file), 1)
+
+    def action_progress(line, sep):
+        m = re.match(r'([\w :]+)\:\s*(\d+)% \((\d+)/(\d+)\)', line)
+        if m:
+            if m.group(1) == "remote: Compressing objects" and int(m.group(4)) > 100:
+                show_progress('Preparing', (float(m.group(3)) / float(m.group(4))) * 100)
+            if m.group(1) == "Receiving objects":
+                show_progress('Downloading', (float(m.group(3)) / float(m.group(4))) * 80)
+            if m.group(1) == "Resolving deltas":
+                show_progress('Downloading', (float(m.group(3)) / float(m.group(4))) * 10 + 80)
+            if m.group(1) == "Checking out files":
+                show_progress('Downloading', (float(m.group(3)) / float(m.group(4))) * 10 + 90)
+
 
 # Repository object
 class Repo(object):
