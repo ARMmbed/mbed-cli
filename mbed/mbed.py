@@ -425,7 +425,7 @@ class Hg(object):
     def remove(dest):
         info("Removing reference \"%s\" " % dest)
         try:
-            popen([hg_cmd, 'rm', '-f', dest] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
+            pquery([hg_cmd, 'rm', '-f', dest] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
         except ProcessException:
             pass
 
@@ -533,13 +533,13 @@ class Hg(object):
     def getbranch():
         return pquery([hg_cmd, 'branch']).strip() or ""
 
-    def gettags(rev=None):
+    def gettags():
         tags = []
         refs = pquery([hg_cmd, 'tags']).strip().splitlines() or []
         for ref in refs:
             m = re.match(r'^(.+?)\s+(\d+)\:([a-f0-9]+)$', ref)
-            if m and (not rev or m.group(1).startswith(rev)):
-                tags.append(m.group(1) if rev else [m.group(3), m.group(1)])
+            if m:
+                tags.append([m.group(3), m.group(1)])
         return tags
 
     def remoteid(url, rev=None):
@@ -646,7 +646,7 @@ class Git(object):
     def remove(dest):
         info("Removing reference "+dest)
         try:
-            popen([git_cmd, 'rm', '-f', dest] + ([] if very_verbose else ['-q']))
+            pquery([git_cmd, 'rm', '-f', dest] + ([] if very_verbose else ['-q']))
         except ProcessException:
             pass
 
@@ -745,13 +745,18 @@ class Git(object):
         if not branch:
             # Default to "master" in detached mode
             branch = "master"
+        # Check if local branch exists. If not, then just carry on
         try:
-            # Check if remote branch exists
+            pquery([git_cmd, 'rev-parse', '%s' % branch])
+        except ProcessException:
+            return 0
+        # Check if remote branch exists. If not, then it's a new branch
+        try:
             if not pquery([git_cmd, 'rev-parse', '%s/%s' % (remote, branch)]):
                 return 1
         except ProcessException:
             return 1
-        # Check for outgoing commits for the same remote branch
+        # Check for outgoing commits for the same remote branch only if it exists locally and remotely
         return 1 if pquery([git_cmd, 'log', '%s/%s..%s' % (remote, branch, branch)]) else 0
 
     # Checks whether current working tree is detached
@@ -822,19 +827,19 @@ class Git(object):
         return result
 
     # Finds tags. Will match rev if specified
-    def gettags(rev=None):
+    def gettags():
         tags = []
         refs = Git.getrefs()
         for ref in refs:
             m = re.match(r'^(.+)\s+refs\/tags\/(.+)$', ref)
-            if m and (not rev or m.group(1).startswith(rev)):
+            if m:
                 t = m.group(2)
                 if re.match(r'^(.+)\^\{\}$', t): # detect tag "pointer"
                     t = re.sub(r'\^\{\}$', '', t) # remove "pointer" chars, e.g. some-tag^{}
                     for tag in tags:
                         if tag[1] == t:
                             tags.remove(tag)
-                tags.append(t if rev else [m.group(1), t])
+                tags.append([m.group(1), t])
         return tags
 
     # Finds branches a rev belongs to
@@ -1025,14 +1030,16 @@ class Repo(object):
 
         return "directory" if depth == 0 else ("program" if depth == 1 else "library")
 
-    @classmethod
-    def revtype(cls, rev, ret_rev=False):
+    def revtype(self, rev=None, ret_type=True, ret_rev=True, fmt=3):
         if rev is None or len(rev) == 0:
-            return 'latest' + (' revision in the current branch' if ret_rev else '')
+            output = ('latest' if fmt & 1 else '') + (' revision in the current branch' if fmt & 2 else '')
         elif re.match(r'^([a-fA-F0-9]{6,40})$', rev) or re.match(r'^([0-9]+)$', rev):
-            return 'rev' + (' #'+rev[0:12] if ret_rev else '')
+            revtags = self.gettags(rev) if rev else []
+            output = ('rev ' if fmt & 1 else '') + (('#' + rev[:12] + ((' (tag' + ('s' if len(revtags) > 1 else '') + ': ' + ', '.join(revtags[0:2]) + ')') if len(revtags) else '')) if fmt & 2 and rev else '')
         else:
-            return 'branch' + (' '+rev if ret_rev else '')
+            output = ('branch/tag' if fmt & 1 else '') + (' "'+rev+'"' if fmt & 2 else '')
+
+        return re.sub(r' \(', ', ', re.sub(r'\)', '', output)) if fmt & 4 else output
 
     @classmethod
     def isurl(cls, url):
@@ -1084,6 +1091,13 @@ class Repo(object):
         for name, scm in scms.items():
             if os.path.isdir(os.path.join(self.path, '.'+name)):
                 return scm
+
+    def gettags(self, rev=None):
+        tags = self.scm.gettags() if self.scm else []
+        if rev:
+            return [tag[1] for tag in tags if tag[0].startswith(rev)]
+        else:
+            return tags
 
     # Pass backend SCM commands and parameters if SCM exists
     def __wrap_scm(self, method):
@@ -1839,7 +1853,7 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
             warning("Importing from a local folder \"%s\", not from a URL" % orig_url)
 
     text = "Importing program" if top else "Adding library"
-    action("%s \"%s\" from \"%s\"%s" % (text, relpath(cwd_root, repo.path), formaturl(repo.url, protocol), ' at '+(repo.revtype(repo.rev, True))))
+    action("%s \"%s\" from \"%s\"%s" % (text, relpath(cwd_root, repo.path), formaturl(repo.url, protocol), ' at '+(repo.revtype(repo.rev))))
     if repo.clone(repo.url, repo.path, rev=repo.rev, depth=depth, protocol=protocol):
         with cd(repo.path):
             Program(repo.path).set_root()
@@ -1847,9 +1861,9 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
                 if repo.rev and repo.getrev() != repo.rev:
                     repo.checkout(repo.rev, True)
             except ProcessException as e:
-                err = "Unable to update \"%s\" to %s" % (repo.name, repo.revtype(repo.rev, True))
+                err = "Unable to update \"%s\" to %s" % (repo.name, repo.revtype(repo.rev))
                 if depth:
-                    err = err + ("\nThe --depth option might prevent fetching the whole revision tree and checking out %s." % (repo.revtype(repo.rev, True)))
+                    err = err + ("\nThe --depth option might prevent fetching the whole revision tree and checking out %s." % (repo.revtype(repo.rev)))
                 if ignore:
                     warning(err)
                 else:
@@ -2047,14 +2061,14 @@ def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=Fa
         action("Updating %s \"%s\" to %s" % (
             cwd_type if top else cwd_dest,
             os.path.basename(repo.path) if top else relpath(cwd_root, repo.path),
-            repo.revtype(rev, True)))
+            repo.revtype(rev)))
 
         try:
             repo.update(rev, clean, clean_files, repo.is_local)
         except ProcessException as e:
-            err = "Unable to update \"%s\" to %s" % (repo.name, repo.revtype(rev, True))
+            err = "Unable to update \"%s\" to %s" % (repo.name, repo.revtype(rev))
             if depth:
-                err = err + ("\nThe --depth option might prevent fetching the whole revision tree and checking out %s." % (repo.revtype(repo.rev, True)))
+                err = err + ("\nThe --depth option might prevent fetching the whole revision tree and checking out %s." % (repo.revtype(repo.rev)))
             if ignore:
                 warning(err)
             else:
@@ -2191,10 +2205,8 @@ def sync(recursive=True, keep_refs=False, top=True):
         "View the dependency tree of the current program or library."))
 def list_(detailed=False, prefix='', p_path=None, ignore=False):
     repo = Repo.fromrepo()
-    revtags = repo.scm.gettags(repo.rev) if repo.rev else []
-    revstr = ('#' + repo.rev[:12] + (', tags: ' + ', '.join(revtags[0:2]) if len(revtags) else '')) if repo.rev else ''
 
-    print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url + ('#' + str(repo.rev)[:12] if repo.rev else '') if detailed else revstr) or 'no revision'))
+    print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url + ('#' + str(repo.rev)[:12] if repo.rev else '') if detailed else repo.revtype(repo.rev, fmt=6)) or 'no revision'))
 
     for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.path)):
         nprefix = (prefix[:-3] + ('|  ' if prefix[-3] == '|' else '   ')) if prefix else ''
@@ -2216,9 +2228,8 @@ def list_(detailed=False, prefix='', p_path=None, ignore=False):
         "Show release tags for the current program or library."))
 def releases_(detailed=False, unstable=False, recursive=False, prefix='', p_path=None):
     repo = Repo.fromrepo()
-    tags = repo.scm.gettags()
-    revtags = repo.scm.gettags(repo.rev)  if repo.rev else [] # associated tags with current commit
-    revstr = ('#' + repo.rev[:12] + (', tags: ' + ', '.join(revtags[0:2]) if len(revtags) else '')) if repo.rev else ''
+    tags = repo.gettags()
+    revtags = repo.gettags(repo.rev) if repo.rev and len(tags) else [] # associated tags with current commit
     regex_rels = regex_rels_all if unstable else regex_rels_official
 
     # Generate list of tags
@@ -2228,7 +2239,7 @@ def releases_(detailed=False, unstable=False, recursive=False, prefix='', p_path
             rels.append(tag[1] + " %s%s" % ('#' + tag[0] if detailed else "", " <- current" if tag[1] in revtags else ""))
 
     # Print header
-    print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url + ('#' + str(repo.rev)[:12] if repo.rev else '') if detailed else revstr) or 'no revision'))
+    print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url + ('#' + str(repo.rev)[:12] if repo.rev else '') if detailed else repo.revtype(repo.rev, fmt=6)) or 'no revision'))
 
     # Print list of tags
     rprefix = (prefix[:-3] + ('|  ' if prefix[-3] == '|' else '   ')) if recursive and prefix else ''
