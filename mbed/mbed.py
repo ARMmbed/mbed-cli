@@ -187,10 +187,12 @@ def show_progress(title, percent, max_width=80):
     line += '| ' + show_percent + '%'
     sys.stdout.write(line+'\r')
     sys.stdout.flush()
-    sys.stdout.write('\b')
 
-def hide_progress():
-    sys.stdout.write("\033[K\r\b")
+def hide_progress(max_width=80):
+    line = ''
+    for i in range(0, max_width):
+        line += ' '
+    sys.stdout.write("\r%s\r" % line)
 
 # Process execution
 class ProcessException(Exception):
