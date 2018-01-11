@@ -1,7 +1,7 @@
 test:
     override:
         - mbed --version
-        - py.test test --cov=./mbed --cov-branch --cov-report html:${CIRCLE_ARTIFACTS}/coverage_output --cov-report term --durations=20 --color=yes
+        - py.test test --cov=mbed --cov-branch --cov-report html:${CIRCLE_ARTIFACTS}/coverage_output --cov-report term --durations=20 --color=yes
         - mbed toolchain -G GCC_ARM
         - mbed target -G K64F
         - mbed config -G protocol ssh
