@@ -1,7 +1,8 @@
 test:
     override:
         - mbed --version
-        - py.test test --cov=mbed --cov-branch --cov-report html:${CIRCLE_ARTIFACTS}/coverage_output --cov-report term --durations=20 --color=yes
+        - py.test test --cov=. --cov-branch --cov-report html:${CIRCLE_ARTIFACTS}/coverage_output --cov-report term --durations=20 --color=yes
+        - coveralls
         - mbed toolchain -G GCC_ARM
         - mbed target -G K64F
         - mbed config -G protocol ssh
@@ -76,7 +77,7 @@ test:
 
 dependencies:
     pre:
-        - sudo pip install pytest pytest-cov
+        - sudo pip install pytest pytest-cov coveralls
         - git config --global user.email "test@mbed.org"
         - git config --global user.name "mbed Test"
         - echo -e "[ui]\nusername = mbed Test <test@mbed.org>\n" > ~/.hgrc
