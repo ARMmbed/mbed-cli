@@ -29,13 +29,21 @@ import shutil
 import stat
 import errno
 import ctypes
-from itertools import chain, izip, repeat
-from urlparse import urlparse
-import urllib2
+from itertools import chain, repeat
 import zipfile
 import argparse
 import tempfile
 
+try:
+    # Python 2
+    basestring = (unicode, str)
+    from urlparse import urlparse
+    from urllib2 import urlopen
+except NameError:
+    # Python 3
+    basestring = str
+    from urllib.parse import urlparse
+    from urllib.request import urlopen
 
 # Application version
 ver = '1.3.0'
@@ -314,7 +322,7 @@ class Bld(object):
             if not os.path.exists(rev_file):
                 action("Downloading library build \"%s\" (might take a minute)" % rev)
                 outfd = open(rev_file, 'wb')
-                inurl = urllib2.urlopen(url)
+                inurl = urlopen(url)
                 outfd.write(inurl.read())
                 outfd.close()
         except:
@@ -2331,10 +2339,10 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
         # Compile configuration
         popen([python_cmd, os.path.join(tools_dir, 'get_config.py')]
               + ['-t', tchain, '-m', target]
-              + list(chain.from_iterable(izip(repeat('--profile'), profile or [])))
-              + list(chain.from_iterable(izip(repeat('--source'), source)))
+              + list(chain.from_iterable(zip(repeat('--profile'), profile or [])))
+              + list(chain.from_iterable(zip(repeat('--source'), source)))
               + (['-v'] if verbose else [])
-              + (list(chain.from_iterable(izip(repeat('--prefix'), config_prefix))) if config_prefix else []),
+              + (list(chain.from_iterable(zip(repeat('--prefix'), config_prefix))) if config_prefix else []),
               env=env)
     else:
         # If the user hasn't supplied a build directory, ignore the default build directory
@@ -2349,10 +2357,10 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                 build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, 'libraries', os.path.basename(orig_path), target, tchain)
 
             popen([python_cmd, '-u', os.path.join(tools_dir, 'build.py')]
-                  + list(chain.from_iterable(izip(repeat('-D'), macros)))
+                  + list(chain.from_iterable(zip(repeat('-D'), macros)))
                   + ['-t', tchain, '-m', target]
-                  + list(chain.from_iterable(izip(repeat('--profile'), profile or [])))
-                  + list(chain.from_iterable(izip(repeat('--source'), source)))
+                  + list(chain.from_iterable(zip(repeat('--profile'), profile or [])))
+                  + list(chain.from_iterable(zip(repeat('--source'), source)))
                   + ['--build', build_path]
                   + (['-c'] if clean else [])
                   + (['--artifact-name', artifact_name] if artifact_name else [])
@@ -2365,10 +2373,10 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                 build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, target, tchain)
 
             popen([python_cmd, '-u', os.path.join(tools_dir, 'make.py')]
-                  + list(chain.from_iterable(izip(repeat('-D'), macros)))
+                  + list(chain.from_iterable(zip(repeat('-D'), macros)))
                   + ['-t', tchain, '-m', target]
-                  + list(chain.from_iterable(izip(repeat('--profile'), profile or [])))
-                  + list(chain.from_iterable(izip(repeat('--source'), source)))
+                  + list(chain.from_iterable(zip(repeat('--profile'), profile or [])))
+                  + list(chain.from_iterable(zip(repeat('--source'), source)))
                   + ['--build', build_path]
                   + (['-c'] if clean else [])
                   + (['--artifact-name', artifact_name] if artifact_name else [])
@@ -2454,9 +2462,9 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
 
         if compile_list:
             popen([python_cmd, '-u', os.path.join(tools_dir, 'test.py'), '--list']
-                  + list(chain.from_iterable(izip(repeat('--profile'), profile or [])))
+                  + list(chain.from_iterable(zip(repeat('--profile'), profile or [])))
                   + ['-t', tchain, '-m', target]
-                  + list(chain.from_iterable(izip(repeat('--source'), source)))
+                  + list(chain.from_iterable(zip(repeat('--source'), source)))
                   + (['-n', tests_by_name] if tests_by_name else [])
                   + (['-v'] if verbose else [])
                   + (['--app-config', app_config] if app_config else [])
@@ -2470,11 +2478,11 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
                 program.ignore_build_dir()
 
             popen([python_cmd, '-u', os.path.join(tools_dir, 'test.py')]
-                  + list(chain.from_iterable(izip(repeat('-D'), macros)))
-                  + list(chain.from_iterable(izip(repeat('--profile'), profile or [])))
+                  + list(chain.from_iterable(zip(repeat('-D'), macros)))
+                  + list(chain.from_iterable(zip(repeat('--profile'), profile or [])))
                   + ['-t', tchain, '-m', target]
                   + (['-c'] if clean else [])
-                  + list(chain.from_iterable(izip(repeat('--source'), source)))
+                  + list(chain.from_iterable(zip(repeat('--source'), source)))
                   + ['--build', build_path]
                   + ['--test-spec', test_spec]
                   + (['-n', tests_by_name] if tests_by_name else [])
@@ -2545,11 +2553,11 @@ def export(ide=None, target=None, source=False, clean=False, supported=False, ap
     program.ignore_build_dir()
 
     popen([python_cmd, '-u', os.path.join(tools_dir, 'project.py')]
-          + list(chain.from_iterable(izip(repeat('-D'), macros)))
+          + list(chain.from_iterable(zip(repeat('-D'), macros)))
           + ['-i', ide.lower()]
           + ['-m', target]
           + (['-c'] if clean else [])
-          + list(chain.from_iterable(izip(repeat('--source'), source)))
+          + list(chain.from_iterable(zip(repeat('--source'), source)))
           + (['--app-config', app_config] if app_config else [])
           + args,
           env=env)
@@ -2716,11 +2724,6 @@ def main():
 
     # Help messages adapt based on current dir
     cwd_root = getcwd()
-
-    if sys.version_info[0] != 2 or sys.version_info[1] < 7:
-        error(
-            "mbed CLI is compatible with Python version >= 2.7 and < 3.0\n"
-            "Please refer to the online guide available at https://github.com/ARMmbed/mbed-cli")
 
     # Parse/run command
     if len(sys.argv) <= 1:
