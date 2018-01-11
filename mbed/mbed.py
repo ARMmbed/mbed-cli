@@ -180,19 +180,12 @@ def progress():
 def show_progress(title, percent, max_width=80):
     percent = round(float(percent), 2)
     show_percent = '%.2f' % percent
-    line = str(title) + ' |'
-    bwidth = max_width - len(str(title)) - len(show_percent) - 6
-    for i in range(0, bwidth):
-        line += '#' if i <= (percent / 100 * bwidth) else '-'
-    line += '| ' + show_percent + '%'
-    sys.stdout.write(line+'\r')
+    bwidth = max_width - len(str(title)) - len(show_percent) - 6 # 6 equals the spaces and paddings between title, progress bar and percentage
+    sys.stdout.write('%s |%s%s| %s%%\r' % (str(title), '#' * int(percent * bwidth // 100), '-' * (bwidth - int(percent * bwidth // 100)), show_percent))
     sys.stdout.flush()
 
 def hide_progress(max_width=80):
-    line = ''
-    for i in range(0, max_width):
-        line += ' '
-    sys.stdout.write("\r%s\r" % line)
+    sys.stdout.write("\r%s\r" % (' ' * max_width))
 
 # Process execution
 class ProcessException(Exception):
@@ -241,7 +234,7 @@ def pquery(command, output_callback=None, stdin=None, **kwargs):
             else:
                 break
 
-    stdout, stderr = proc.communicate(stdin)
+    stdout, _ = proc.communicate(stdin)
 
     if very_verbose:
         log(str(stdout).strip()+"\n")
