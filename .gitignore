@@ -65,3 +65,9 @@ target/
 # Doxygen
 html/
 latex/
+
+# editors
+*.idea
+
+# you ain't ready for this
+Pipfile*
