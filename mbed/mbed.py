@@ -177,6 +177,15 @@ def progress():
     sys.stdout.flush()
     sys.stdout.write('\b')
 
+def show_progress(title, percent, max_width=80):
+    percent = round(float(percent), 2)
+    show_percent = '%.2f' % percent
+    bwidth = max_width - len(str(title)) - len(show_percent) - 6 # 6 equals the spaces and paddings between title, progress bar and percentage
+    sys.stdout.write('%s |%s%s| %s%%\r' % (str(title), '#' * int(percent * bwidth // 100), '-' * (bwidth - int(percent * bwidth // 100)), show_percent))
+    sys.stdout.flush()
+
+def hide_progress(max_width=80):
+    sys.stdout.write("\r%s\r" % (' ' * max_width))
 
 # Process execution
 class ProcessException(Exception):
@@ -198,11 +207,11 @@ def popen(command, stdin=None, **kwargs):
     if proc.wait() != 0:
         raise ProcessException(proc.returncode, command[0], ' '.join(command), getcwd())
 
-def pquery(command, stdin=None, **kwargs):
+def pquery(command, output_callback=None, stdin=None, **kwargs):
     if very_verbose:
         info('Query "'+' '.join(command)+'" in '+getcwd())
     try:
-        proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
+        proc = subprocess.Popen(command, bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
     except OSError as e:
         if e[0] == errno.ENOENT:
             error(
@@ -210,6 +219,20 @@ def pquery(command, stdin=None, **kwargs):
                 "Please verify that it's installed and accessible from your current path by executing \"%s\".\n" % (command[0], command[0]), e[0])
         else:
             raise e
+
+    if output_callback:
+        line = ""
+        while 1:
+            s = str(proc.stderr.read(1))
+            line += s
+            if s == '\r' or s == '\n':
+                output_callback(line, s)
+                line = ""
+
+            if proc.returncode is None:
+                code = proc.poll()
+            else:
+                break
 
     stdout, _ = proc.communicate(stdin)
 
@@ -413,7 +436,11 @@ class Hg(object):
         return True
 
     def clone(url, name=None, depth=None, protocol=None):
-        popen([hg_cmd, 'clone', formaturl(url, protocol), name] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
+        if verbose or very_verbose:
+            popen([hg_cmd, 'clone', formaturl(url, protocol), name] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
+        else:
+            pquery([hg_cmd, 'clone', '--config', 'progress.assume-tty=true', formaturl(url, protocol), name], output_callback=Hg.action_progress)
+            hide_progress()
 
     def add(dest):
         info("Adding reference \"%s\"" % dest)
@@ -601,6 +628,15 @@ class Hg(object):
             except IOError:
                 error("Unable to write ignore file in \"%s\"" % os.path.join(getcwd(), Hg.ignore_file), 1)
 
+    def action_progress(line, sep):
+        m = re.match(r'(\w+).+?\s+(\d+)/(\d+)\s+.*?', line)
+        if m:
+            if m.group(1) == "manifests":
+                show_progress('Downloading', (float(m.group(2)) / float(m.group(3))) * 20)
+            if m.group(1) == "files":
+                show_progress('Downloading', (float(m.group(2)) / float(m.group(3))) * 100)
+
+
 # pylint: disable=no-self-argument, no-method-argument, no-member, no-self-use, unused-argument
 @scm('git')
 @staticclass
@@ -634,7 +670,11 @@ class Git(object):
             pquery([git_cmd, 'branch', '-D', branch])
 
     def clone(url, name=None, depth=None, protocol=None):
-        popen([git_cmd, 'clone', formaturl(url, protocol), name] + (['--depth', depth] if depth else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
+        if verbose or very_verbose:
+            popen([git_cmd, 'clone', formaturl(url, protocol), name] + (['--depth', depth] if depth else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
+        else:
+            pquery([git_cmd, 'clone', '--progress', formaturl(url, protocol), name] + (['--depth', depth] if depth else []), output_callback=Git.action_progress)
+            hide_progress()
 
     def add(dest):
         info("Adding reference "+dest)
@@ -899,6 +939,19 @@ class Git(object):
                     f.write('\n'.join(lines) + '\n')
             except IOError:
                 error("Unable to write ignore file in \"%s\"" % os.path.join(getcwd(), Git.ignore_file), 1)
+
+    def action_progress(line, sep):
+        m = re.match(r'([\w :]+)\:\s*(\d+)% \((\d+)/(\d+)\)', line)
+        if m:
+            if m.group(1) == "remote: Compressing objects" and int(m.group(4)) > 100:
+                show_progress('Preparing', (float(m.group(3)) / float(m.group(4))) * 100)
+            if m.group(1) == "Receiving objects":
+                show_progress('Downloading', (float(m.group(3)) / float(m.group(4))) * 80)
+            if m.group(1) == "Resolving deltas":
+                show_progress('Downloading', (float(m.group(3)) / float(m.group(4))) * 10 + 80)
+            if m.group(1) == "Checking out files":
+                show_progress('Downloading', (float(m.group(3)) / float(m.group(4))) * 10 + 90)
+
 
 # Repository object
 class Repo(object):
