@@ -2578,7 +2578,7 @@ def detect():
         env = program.get_env()
 
         try:
-            pquery([python_cmd, '-u', os.path.join(tools_dir, 'detect_targets.py')]
+            popen([python_cmd, '-u', os.path.join(tools_dir, 'detect_targets.py')]
                   + args,
                   env=env)
         except ProcessException as e:
