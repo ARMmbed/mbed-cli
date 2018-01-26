@@ -43,6 +43,7 @@ import stat
 import errno
 import ctypes
 from itertools import chain, repeat
+from urlparse import urlparse
 import zipfile
 import argparse
 
@@ -218,7 +219,8 @@ def hide_progress(max_width=80):
 class ProcessException(Exception):
     pass
 
-def popen(command, stdin=None, **kwargs):
+
+def popen(command, **kwargs):
     # print for debugging
     info("Exec \"%s\" in \"%s\"" % (' '.join(command), getcwd()))
     proc = None
@@ -234,6 +236,7 @@ def popen(command, stdin=None, **kwargs):
 
     if proc and proc.wait() != 0:
         raise ProcessException(proc.returncode, command[0], ' '.join(command), getcwd())
+    return proc
 
 def pquery(command, output_callback=None, stdin=None, **kwargs):
     if very_verbose:
@@ -1480,6 +1483,12 @@ class Program(object):
                 return os.path.join(path)
         return None
 
+    def requirements_contains(self, library_name):
+        req_path = self.get_requirements() or self.path
+        req_file = 'requirements.txt'
+        with open(os.path.join(req_path, req_file), 'r') as f:
+            return library_name in f.read()
+
     def check_requirements(self, show_warning=False):
         req_path = self.get_requirements() or self.path
         req_file = 'requirements.txt'
@@ -2592,26 +2601,51 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
 @subcommand('test',
     dict(name=['-t', '--toolchain'], help='Compile toolchain. Example: ARM, GCC_ARM, IAR'),
     dict(name=['-m', '--target'], help='Compile target MCU. Example: K64F, NUCLEO_F401RE, NRF51822...'),
-    dict(name='--compile-list', dest='compile_list', action='store_true', help='List all tests that can be built'),
+    dict(name='--compile-list', dest='compile_list', action='store_true',
+         help='List all tests that can be built'),
     dict(name='--run-list', dest='run_list', action='store_true', help='List all built tests that can be ran'),
     dict(name='--compile', dest='compile_only', action='store_true', help='Only compile tests'),
     dict(name='--run', dest='run_only', action='store_true', help='Only run tests'),
-    dict(name=['-n', '--tests-by-name'], dest='tests_by_name', help='Limit the tests to a list (ex. test1,test2,test3)'),
+    dict(name=['-n', '--tests-by-name'], dest='tests_by_name',
+         help='Limit the tests to a list (ex. test1,test2,test3)'),
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
     dict(name='--build', help='Build directory. Default: build/'),
-    dict(name=['--profile'], action='append', help='Path of a build profile configuration file. Example: mbed-os/tools/profiles/debug.json'),
+    dict(name=['--profile'], action='append',
+         help='Path of a build profile configuration file. Example: mbed-os/tools/profiles/debug.json'),
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
     dict(name='--test-spec', dest="test_spec", help="Path used for the test spec file used when building and running tests (the default path is the build directory)"),
     dict(name='--app-config', dest="app_config", help="Path of an application configuration file. Default is to look for \"mbed_app.json\""),
     dict(name='--test-config', dest="test_config", help="Path or mbed OS keyword of a test configuration file. Example: ethernet, odin_wifi, or path/to/config.json"),
+    dict(name='--build-data', dest="build_data", default=None, help="Dump build_data to this file"),
+    dict(name=['--greentea'], dest="greentea", action='store_true', default=False, help="Run Greentea tests"),
+    dict(name=['--icetea'], dest="icetea", action='store_true', default=False,
+         help="Run Icetea tests. If used without --greentea flag then run only icetea tests."),
     help='Find, build and run tests',
     description="Find, build, and run tests in a program and libraries")
-def test_(toolchain=None, target=None, compile_list=False, run_list=False, compile_only=False, run_only=False, tests_by_name=None, source=False, profile=False, build=False, clean=False, test_spec=None, app_config=None, test_config=None):
+def test_(toolchain=None, target=None, compile_list=False, run_list=False, compile_only=False, run_only=False,
+          tests_by_name=None, source=False, profile=False, build=False, clean=False, test_spec=None, build_data=None,
+          app_config=None, test_config=None, greentea=None, icetea=None):
+
+    # Default behaviour is to run only greentea tests
+    if not (greentea or icetea):
+        greentea = True
+        icetea = False
+
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
     program = Program(getcwd(), True)
     program.check_requirements(True)
+    # Check if current Mbed OS support icetea
+    icetea_supported = program.requirements_contains('icetea')
+
+    # TODO: Remove next line when publishing this commit
+    icetea_supported = True
+
+    # Disable icetea if not supported
+    if not icetea_supported:
+        icetea = False
+
     # Save original working directory
     orig_path = getcwd()
 
@@ -2620,6 +2654,11 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
     macros = program.get_macros()
     tools_dir = program.get_tools()
     build_and_run_tests = not compile_list and not run_list and not compile_only and not run_only
+
+    icetea_command_base = [python_cmd, '-u', os.path.join(tools_dir, 'run_icetea.py')] \
+                          + (['-m', target, '-t', tchain]) \
+                          + (['-n', tests_by_name] if tests_by_name else []) \
+                          + (['-v'] if verbose else [])
 
     # Prepare environment variables
     env = program.get_env()
@@ -2642,7 +2681,14 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
             # Create the path to the test spec file
             test_spec = os.path.join(build_path, 'test_spec.json')
 
-        if compile_list:
+        if build_data:
+            # Preserve path to given build data
+            build_data = os.path.relpath(os.path.join(orig_path, build_data), program.path)
+        else:
+            # Create the path to the test build data file
+            build_data = os.path.join(build_path, 'build_data.json')
+
+        if compile_list and greentea:
             popen([python_cmd, '-u', os.path.join(tools_dir, 'test.py'), '--list']
                   + list(chain.from_iterable(list(zip(repeat('--profile'), profile or []))))
                   + ['-t', tchain, '-m', target]
@@ -2651,10 +2697,28 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
                   + (['-v'] if verbose else [])
                   + (['--app-config', app_config] if app_config else [])
                   + (['--test-config', test_config] if test_config else [])
+                  + (['--greentea'] if icetea_supported and greentea else [])
                   + args,
                   env=env)
 
+        if compile_list and icetea:
+            popen(icetea_command_base + ['--compile-list'])
+
         if compile_only or build_and_run_tests:
+
+            # Add icetea binaries in compile list
+            tests_by_name_temp = tests_by_name if tests_by_name else ''
+            if icetea:
+                proc = popen(icetea_command_base + ['--application-list'], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT)
+                applications_to_add = proc.stdout.read()
+                # Filter right row in case that debugger print something there
+                if applications_to_add and 'TEST_APPS-' in applications_to_add:
+                    applications_to_add = filter(lambda x: 'TEST_APPS-' in x, applications_to_add.split('\n'))[0]
+                    if tests_by_name_temp:
+                        tests_by_name_temp += ','
+                    tests_by_name_temp += applications_to_add
+
             # If the user hasn't supplied a build directory, ignore the default build directory
             if not build:
                 program.ignore_build_dir()
@@ -2667,26 +2731,37 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
                   + list(chain.from_iterable(zip(repeat('--source'), source)))
                   + ['--build', build_path]
                   + ['--test-spec', test_spec]
-                  + (['-n', tests_by_name] if tests_by_name else [])
+                  + ['--build-data', build_data]
+                  + (['-n', tests_by_name_temp] if tests_by_name_temp else [])
                   + (['-v'] if verbose else [])
                   + (['--app-config', app_config] if app_config else [])
                   + (['--test-config', test_config] if test_config else [])
+                  + (['--icetea'] if icetea_supported and icetea else [])
+                  + (['--greentea'] if icetea_supported and greentea else [])
                   + args,
                   env=env)
 
-        if run_list:
-            popen(['mbedgt', '--test-spec', test_spec, '--list']
-                  + (['-n', tests_by_name] if tests_by_name else [])
-                  + (['-V'] if verbose else [])
-                  + args,
-                  env=env)
+        # Greentea tests
+        if greentea:
+            greentea_command = ['mbedgt', '--test-spec', test_spec] \
+                      + (['-n', tests_by_name] if tests_by_name else []) \
+                      + (['-V'] if verbose else []) \
+                      + args
 
-        if run_only or build_and_run_tests:
-            popen(['mbedgt', '--test-spec', test_spec]
-                  + (['-n', tests_by_name] if tests_by_name else [])
-                  + (['-V'] if verbose else [])
-                  + args,
-                  env=env)
+            if run_only or build_and_run_tests:
+                popen(greentea_command, env=env)
+
+        # Icetea tests
+        if icetea:
+            icetea_command = icetea_command_base \
+                         + ['--build-data', build_data] \
+                         + ['--test-suite', os.path.join(build_path, 'test_suite.json')]
+
+            if run_list:
+                popen(icetea_command + ['--run-list'])
+
+            if run_only or build_and_run_tests:
+                popen(icetea_command)
 
     program.set_defaults(target=target, toolchain=tchain)
 
