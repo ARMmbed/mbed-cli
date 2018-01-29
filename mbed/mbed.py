@@ -1451,7 +1451,7 @@ class Program(object):
                 if missing and install_requirements:
                     try:
                         action("Auto-installing missing Python modules...")
-                        pquery(['pip', 'install', '-q', '-r', os.path.join(req_path, req_file)])
+                        pquery([python_cmd, '-m', 'pip', 'install', '-q', '-r', os.path.join(req_path, req_file)])
                         missing = []
                     except ProcessException:
                         warning("Unable to auto-install required Python modules.")
