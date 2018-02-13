@@ -102,7 +102,7 @@ ignores = [
 # git & url (no #rev)
 regex_repo_url = r'^(git\://|file\://|ssh\://|https?\://|)(([^/:@]+)(\:([^/:@]+))?@)?([^/:]{3,})(\:\d+)?[:/](.+?)(\.git|\.hg|\/?)$'
 # mbed url is subset of hg. mbed doesn't support ssh transport though so https? urls cannot be converted to ssh
-regex_mbed_url = r'^(https?)://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+)/?$'
+regex_mbed_url = r'^(https?)://(([^/:@]+)(\:([^/:@]+))?@)?([\w\-\.]*mbed\.(co\.uk|org|com))(\:\d+)?[:/](.+?)/?$'
 # mbed sdk builds url are treated specially
 regex_build_url = r'^(https?://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+))/builds/?([\w\-]{6,40}|tip)?/?$'
 
@@ -1090,6 +1090,11 @@ class Repo(object):
     def isurl(cls, url):
         return re.match(regex_url_ref, url.strip().replace('\\', '/'))
 
+    @classmethod
+    def isinsecure(cls, url):
+        up = urlparse(url, 'https')
+        return not up or not up.scheme or up.scheme not in ['http', 'https', 'ssh', 'git'] or (up.port and int(up.port) not in [22, 80, 443])
+
     @property
     def lib(self):
         return self.path + '.' + ('bld' if self.is_build else 'lib')
@@ -1709,9 +1714,9 @@ def formaturl(url, format="default"):
     m = re.match(regex_mbed_url, url)
     if m:
         if format == "http": # mbed urls doesn't convert to ssh - only http and https
-            url = 'http://%s/%s/%s/%s/%s' % (m.group(2), m.group(4), m.group(5), m.group(6), m.group(7))
+            url = 'http://%s%s%s/%s' % (m.group(2) or '', m.group(6), m.group(8) or '', m.group(9))
         else:
-            url = 'https://%s/%s/%s/%s/%s' % (m.group(2), m.group(4), m.group(5), m.group(6), m.group(7))
+            url = 'https://%s%s%s/%s' % (m.group(2) or '', m.group(6), m.group(8) or '', m.group(9))
     else:
         m = re.match(regex_repo_url, url)
         if m and m.group(1) == '': # no protocol specified, probably ssh string like "git@github.com:ARMmbed/mbed-os.git"
@@ -1720,11 +1725,11 @@ def formaturl(url, format="default"):
 
         if m:
             if format == "ssh":
-                url = 'ssh://%s%s%s/%s' % (m.group(2) or 'git@', m.group(6), m.group(7), m.group(8))
+                url = 'ssh://%s%s%s/%s' % (m.group(2) or 'git@', m.group(6), m.group(7) or '', m.group(8))
             elif format == "http":
-                url = 'http://%s%s%s/%s' % (m.group(2) if (m.group(2) and (m.group(5) or m.group(3) != 'git')) else '', m.group(6), m.group(7), m.group(8))
+                url = 'http://%s%s%s/%s' % (m.group(2) if (m.group(2) and (m.group(5) or m.group(3) != 'git')) else '', m.group(6), m.group(7) or '', m.group(8))
             elif format == "https":
-                url = 'https://%s%s%s/%s' % (m.group(2) if (m.group(2) and (m.group(5) or m.group(3) != 'git')) else '', m.group(6), m.group(7), m.group(8))
+                url = 'https://%s%s%s/%s' % (m.group(2) if (m.group(2) and (m.group(5) or m.group(3) != 'git')) else '', m.group(6), m.group(7) or '', m.group(8))
     return url
 
 
@@ -1898,7 +1903,11 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, insecure=Fa
             error("Cannot import program in the specified location \"%s\" because it's already part of a program \"%s\".\n"
                   "Please change your working directory to a different location or use \"mbed add\" to import the URL as a library." % (os.path.abspath(repo.path), p.name), 1)
 
-    protocol = Program().get_cfg('PROTOCOL', protocol)
+    protocol = protocol or Program().get_cfg('PROTOCOL')
+    insecure = insecure or Program().get_cfg('INSECURE')
+
+    if not insecure and Repo.isinsecure(url):
+        error("Cannot import \"%s\" in \"%s\" due to arbitrary service schema/port in the repository URL.\nRepositories are usually hosted on service port 443 (https), 80 (http) and 22 (ssh)\nYou can use \"--insecure\" switch enable the use arbitrary repository URLs." % (repo.url, repo.path), 255)
 
     if os.path.isdir(repo.path) and len(os.listdir(repo.path)) > 1:
         error("Directory \"%s\" is not empty. Please ensure that the destination folder is empty." % repo.path, 1)
@@ -1908,7 +1917,7 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, insecure=Fa
 
     text = "Importing program" if top else "Adding library"
     action("%s \"%s\" from \"%s\"%s" % (text, relpath(cwd_root, repo.path), formaturl(repo.url, protocol), ' at '+(repo.revtype(repo.rev))))
-    if repo.clone(repo.url, repo.path, rev=repo.rev, depth=depth, protocol=protocol, insecure=insecure):
+    if repo.clone(repo.url, repo.path, rev=repo.rev, depth=depth, protocol=protocol):
         with cd(repo.path):
             Program(repo.path).set_root()
             try:
