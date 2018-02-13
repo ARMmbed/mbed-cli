@@ -99,20 +99,17 @@ ignores = [
     "# subrepo ignores",
     ]
 
-# reference to local (unpublished) repo - dir#rev
-regex_local_ref = r'^([\w.+-][\w./+-]*?)/?(?:#(.*))?$'
-# reference to repo - url#rev
-regex_url_ref = r'^(.*/([\w.+-]+)(?:\.\w+)?)/?(?:#(.*))?$'
-
-# git url (no #rev)
-regex_git_url = r'^(git\://|ssh\://|https?\://|)(([^/:@]+)(\:([^/:@]+))?@)?([^/:]{3,})[:/](.+?)(\.git|\/?)$'
-# hg url (no #rev)
-regex_hg_url = r'^(file|ssh|https?)://([^/:]+)/([^/]+)/?([^/]+?)?$'
-
-# mbed url is subset of hg. mbed doesn't support ssh transport
+# git & url (no #rev)
+regex_repo_url = r'^(git\://|file\://|ssh\://|https?\://|)(([^/:@]+)(\:([^/:@]+))?@)?([^/:]{3,})(\:\d+)?[:/](.+?)(\.git|\.hg|\/?)$'
+# mbed url is subset of hg. mbed doesn't support ssh transport though so https? urls cannot be converted to ssh
 regex_mbed_url = r'^(https?)://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+)/?$'
-# mbed sdk builds url
+# mbed sdk builds url are treated specially
 regex_build_url = r'^(https?://([\w\-\.]*mbed\.(co\.uk|org|com))/(users|teams)/([\w\-]{1,32})/(repos|code)/([\w\-]+))/builds/?([\w\-]{6,40}|tip)?/?$'
+
+# valid .lib reference to local (unpublished) repo - dir#rev
+regex_local_ref = r'^([\w.+-][\w./+-]*?)/?(?:#(.*))?$'
+# valid .lib reference to repo - url#rev
+regex_url_ref = r'^(.*/([\w.+-]+)(?:\.\w+)?)/?(?:#(.*))?$'
 
 # match official release tags
 regex_rels_official = r'^(release|rel|mbed-os|[rv]+)?[.-]?\d+(\.\d+)*$'
@@ -307,16 +304,12 @@ class Bld(object):
     name = 'bld'
     default_branch = 'default'
 
-    def isurl(url):
-        m_url = re.match(regex_url_ref, url.strip().replace('\\', '/'))
-        if m_url:
-            return re.match(regex_build_url, m_url.group(1))
-        else:
-            return False
-
     def init(path):
         if not os.path.exists(path):
             os.mkdir(path)
+        else:
+            if len(os.listdir(path)) > 1:
+                error("Directory \"%s\" is not empty." % path)
 
     def cleanup():
         info("Cleaning up library build folder")
@@ -328,7 +321,7 @@ class Bld(object):
                     shutil.rmtree(fl)
 
     def clone(url, path=None, depth=None, protocol=None):
-        m = Bld.isurl(url)
+        m = Bld.isvalidurl(url)
         if not m:
             raise ProcessException(1, "Not a library build URL")
 
@@ -337,6 +330,8 @@ class Bld(object):
             with cd(path):
                 Bld.seturl(url+'/tip')
         except Exception as e:
+            if os.path.isdir(path):
+                rmtree_readonly(path)
             error(e[1], e[0])
 
     def fetch_rev(url, rev):
@@ -366,7 +361,7 @@ class Bld(object):
 
     def checkout(rev, clean=False):
         url = Bld.geturl()
-        m = Bld.isurl(url)
+        m = Bld.isvalidurl(url)
         if not m:
             raise ProcessException(1, "Not a library build URL")
         rev = Hg.remoteid(m.group(1), rev)
@@ -392,6 +387,9 @@ class Bld(object):
     def untracked():
         return ""
 
+    def isvalidurl(url):
+        return re.match(regex_build_url, url.strip().replace('\\', '/'))
+
     def seturl(url):
         info("Setting url to \"%s\" in %s" % (url, getcwd()))
         if not os.path.exists('.'+Bld.name):
@@ -407,13 +405,14 @@ class Bld(object):
     def geturl():
         with open(os.path.join('.bld', 'bldrc')) as f:
             url = f.read().strip()
-        m = Bld.isurl(url)
+        m = Bld.isvalidurl(url)
         return m.group(1)+'/builds' if m else ''
 
     def getrev():
         with open(os.path.join('.bld', 'bldrc')) as f:
             url = f.read().strip()
-        m = Bld.isurl(url)
+
+        m = Bld.isvalidurl(url)
         return m.group(8) if m else ''
 
     def getbranch():
@@ -430,13 +429,6 @@ class Hg(object):
     name = 'hg'
     default_branch = 'default'
     ignore_file = os.path.join('.hg', 'hgignore')
-
-    def isurl(url):
-        m_url = re.match(regex_url_ref, url.strip().replace('\\', '/'))
-        if m_url and not re.match(regex_build_url, m_url.group(1)):
-            return re.match(regex_hg_url, m_url.group(1)) or re.match(regex_mbed_url, m_url.group(1))
-        else:
-            return False
 
     def init(path=None):
         popen([hg_cmd, 'init'] + ([path] if path else []) + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
@@ -653,13 +645,6 @@ class Git(object):
     name = 'git'
     default_branch = 'master'
     ignore_file = os.path.join('.git', 'info', 'exclude')
-
-    def isurl(url):
-        m_url = re.match(regex_url_ref, url.strip().replace('\\', '/'))
-        if m_url and not re.match(regex_build_url, m_url.group(1)) and not re.match(regex_mbed_url, m_url.group(1)):
-            return re.match(regex_git_url, m_url.group(1))
-        else:
-            return False
 
     def init(path=None):
         popen([git_cmd, 'init'] + ([path] if path else []) + ([] if very_verbose else ['-q']))
@@ -978,25 +963,25 @@ class Repo(object):
     def fromurl(cls, url, path=None):
         repo = cls()
         m_local = re.match(regex_local_ref, url.strip().replace('\\', '/'))
-        m_repo_url = re.match(regex_url_ref, url.strip().replace('\\', '/'))
-        m_bld_url = re.match(regex_build_url, url.strip().replace('\\', '/'))
+        m_repo_ref = re.match(regex_url_ref, url.strip().replace('\\', '/'))
+        m_bld_ref = re.match(regex_build_url, url.strip().replace('\\', '/'))
         if m_local:
             repo.name = os.path.basename(path or m_local.group(1))
             repo.path = os.path.abspath(path or os.path.join(getcwd(), m_local.group(1)))
             repo.url = m_local.group(1)
             repo.rev = m_local.group(2)
             repo.is_local = True
-        elif m_bld_url:
-            repo.name = os.path.basename(path or m_bld_url.group(7))
+        elif m_bld_ref:
+            repo.name = os.path.basename(path or m_bld_ref.group(7))
             repo.path = os.path.abspath(path or os.path.join(getcwd(), repo.name))
-            repo.url = m_bld_url.group(1)+'/builds'
-            repo.rev = m_bld_url.group(8)
+            repo.url = m_bld_ref.group(1)+'/builds'
+            repo.rev = m_bld_ref.group(8)
             repo.is_build = True
-        elif m_repo_url:
-            repo.name = os.path.basename(path or m_repo_url.group(2))
+        elif m_repo_ref:
+            repo.name = os.path.basename(path or m_repo_ref.group(2))
             repo.path = os.path.abspath(path or os.path.join(getcwd(), repo.name))
-            repo.url = formaturl(m_repo_url.group(1))
-            repo.rev = m_repo_url.group(3)
+            repo.url = formaturl(m_repo_ref.group(1))
+            repo.rev = m_repo_ref.group(3)
             if repo.rev and repo.rev != 'latest' and not re.match(r'^([a-fA-F0-9]{6,40})$', repo.rev):
                 error('Invalid revision (%s)' % repo.rev, -1)
         else:
@@ -1014,9 +999,9 @@ class Repo(object):
             ref = f.read(200)
 
         m_local = re.match(regex_local_ref, ref.strip().replace('\\', '/'))
-        m_repo_url = re.match(regex_url_ref, ref.strip().replace('\\', '/'))
-        m_bld_url = re.match(regex_build_url, ref.strip().replace('\\', '/'))
-        if not (m_local or m_bld_url or m_repo_url):
+        m_repo_ref = re.match(regex_url_ref, ref.strip().replace('\\', '/'))
+        m_bld_ref = re.match(regex_build_url, ref.strip().replace('\\', '/'))
+        if not (m_local or m_bld_ref or m_repo_ref):
             warning(
                 "File \"%s\" in \"%s\" uses a non-standard .lib file extension, which is not compatible with the mbed build tools.\n" % (os.path.basename(lib), os.path.split(lib)[0]))
             return False
@@ -1103,8 +1088,7 @@ class Repo(object):
 
     @classmethod
     def isurl(cls, url):
-        m = re.match(regex_url_ref, url.strip().replace('\\', '/'))
-        return True if m else False
+        return re.match(regex_url_ref, url.strip().replace('\\', '/'))
 
     @property
     def lib(self):
@@ -1185,12 +1169,10 @@ class Repo(object):
                 pass
         return self.scm.remove(dest, *args, **kwargs)
 
-    def clone(self, url, path, rev=None, depth=None, protocol=None, **kwargs):
+    def clone(self, url, path, rev=None, depth=None, protocol=None, insecure=False, **kwargs):
         # Sorted so repositories that match urls are attempted first
-        sorted_scms = [(scm.isurl(url), scm) for scm in scms.values()]
-        sorted_scms = sorted(sorted_scms, key=lambda (m, _): not m)
-
-        for _, scm in sorted_scms:
+        info("Trying to guess source control management tool. Supported SCMs: %s" % ', '.join([s.name for s in scms.values()]))
+        for _, scm in scms.items():
             main = True
             cache = self.get_cache(url, scm.name)
 
@@ -1249,24 +1231,23 @@ class Repo(object):
                         dirs.remove(f[:-4])
 
     def write(self):
+        up = urlparse(self.url)
+        url = up._replace(netloc=up.hostname).geturl() # strip auth string
+
         if os.path.isfile(self.lib):
             with open(self.lib) as f:
                 lib_repo = Repo.fromurl(f.read().strip())
-                if (formaturl(lib_repo.url, 'https') == formaturl(self.url, 'https') # match URLs in common format (https)
+                if (formaturl(lib_repo.url, 'https') == formaturl(url, 'https') # match URLs in common format (https)
                         and (lib_repo.rev == self.rev                              # match revs, even if rev is None (valid for repos with no revisions)
                              or (lib_repo.rev and self.rev
                                  and lib_repo.rev == self.rev[0:len(lib_repo.rev)]))):  # match long and short rev formats
                     #print self.name, 'unmodified'
                     return
 
-        ref = (formaturl(self.url, 'https').rstrip('/') + '/' +
-              (('' if self.is_build else '#') +
-                self.rev if self.rev else ''))
+        ref = url.rstrip('/') + '/' + (('' if self.is_build else '#') + self.rev if self.rev else '')
         action("Updating reference \"%s\" -> \"%s\"" % (relpath(cwd_root, self.path) if cwd_root != self.path else self.name, ref))
         with open(self.lib, 'wb') as f:
-            with_auth = urlparse(ref)
-            f.write(with_auth._replace(netloc=with_auth.hostname).geturl())
-            f.write("\n")
+            f.write(ref+"\n")
 
     def rm_untracked(self):
         untracked = self.scm.untracked()
@@ -1727,28 +1708,23 @@ def formaturl(url, format="default"):
     url = "%s" % url
     m = re.match(regex_mbed_url, url)
     if m:
-        if format == "http":
+        if format == "http": # mbed urls doesn't convert to ssh - only http and https
             url = 'http://%s/%s/%s/%s/%s' % (m.group(2), m.group(4), m.group(5), m.group(6), m.group(7))
         else:
             url = 'https://%s/%s/%s/%s/%s' % (m.group(2), m.group(4), m.group(5), m.group(6), m.group(7))
     else:
-        m = re.match(regex_git_url, url)
+        m = re.match(regex_repo_url, url)
+        if m and m.group(1) == '': # no protocol specified, probably ssh string like "git@github.com:ARMmbed/mbed-os.git"
+            url = 'ssh://%s%s%s/%s.git' % (m.group(2) or 'git@', m.group(6), m.group(7), m.group(8)) # convert to common ssh URL-like format
+            m = re.match(regex_repo_url, url)
+
         if m:
             if format == "ssh":
-                url = 'ssh://%s%s/%s.git' % (m.group(2) or 'git@', m.group(6), m.group(7))
+                url = 'ssh://%s%s%s/%s' % (m.group(2) or 'git@', m.group(6), m.group(7), m.group(8))
             elif format == "http":
-                url = 'http://%s%s/%s' % (m.group(2) if (m.group(2) and (m.group(5) or m.group(3) != 'git')) else '', m.group(6), m.group(7))
+                url = 'http://%s%s%s/%s' % (m.group(2) if (m.group(2) and (m.group(5) or m.group(3) != 'git')) else '', m.group(6), m.group(7), m.group(8))
             elif format == "https":
-                url = 'https://%s%s/%s' % (m.group(2) if (m.group(2) and (m.group(5) or m.group(3) != 'git')) else '', m.group(6), m.group(7))
-        else:
-            m = re.match(regex_hg_url, url)
-            if m:
-                if format == "ssh":
-                    url = 'ssh://%s/%s' % (m.group(2), m.group(3))
-                elif format == "http":
-                    url = 'http://%s/%s' % (m.group(2), m.group(3))
-                elif format == "https":
-                    url = 'https://%s/%s' % (m.group(2), m.group(3))
+                url = 'https://%s%s%s/%s' % (m.group(2) if (m.group(2) and (m.group(5) or m.group(3) != 'git')) else '', m.group(6), m.group(7), m.group(8))
     return url
 
 
@@ -1900,13 +1876,14 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to cloning and updating.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
+    dict(name='--insecure', action='store_true', help='Allow insecure repository URLs. By default mbed CLI imports only "safe" URLs, e.g. based on standard ports - 80, 443 and 22. This option enables the use of arbitrary URLs/ports.'),
     hidden_aliases=['im', 'imp'],
     help='Import program from URL',
     description=(
         "Imports mbed program and its dependencies from a source control based URL\n"
         "(GitHub, Bitbucket, mbed.org) into the current directory or specified\npath.\n"
         "Use 'mbed add <URL>' to add a library into an existing program."))
-def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
+def import_(url, path=None, ignore=False, depth=None, protocol=None, insecure=False, top=True):
     global cwd_root
 
     # translate 'mbed-os' to https://github.com/ARMmbed/mbed-os
@@ -1931,7 +1908,7 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
 
     text = "Importing program" if top else "Adding library"
     action("%s \"%s\" from \"%s\"%s" % (text, relpath(cwd_root, repo.path), formaturl(repo.url, protocol), ' at '+(repo.revtype(repo.rev))))
-    if repo.clone(repo.url, repo.path, rev=repo.rev, depth=depth, protocol=protocol):
+    if repo.clone(repo.url, repo.path, rev=repo.rev, depth=depth, protocol=protocol, insecure=insecure):
         with cd(repo.path):
             Program(repo.path).set_root()
             try:
@@ -1958,7 +1935,7 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
         cwd_root = repo.path
 
     with cd(repo.path):
-        deploy(ignore=ignore, depth=depth, protocol=protocol, top=False)
+        deploy(ignore=ignore, depth=depth, protocol=protocol, insecure=insecure, top=False)
 
     if top:
         Program(repo.path).post_action()
@@ -1971,17 +1948,18 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to cloning and updating.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
+    dict(name='--insecure', action='store_true', help='Allow insecure repository URLs. By default mbed CLI imports only "safe" URLs, e.g. based on standard ports - 80, 443 and 22. This option enables the use of arbitrary URLs/ports.'),
     hidden_aliases=['ad'],
     help='Add library from URL',
     description=(
         "Adds mbed library and its dependencies from a source control based URL\n"
         "(GitHub, Bitbucket, mbed.org) into an existing program.\n"
         "Use 'mbed import <URL>' to import as a program"))
-def add(url, path=None, ignore=False, depth=None, protocol=None, top=True):
+def add(url, path=None, ignore=False, depth=None, protocol=None, insecure=False, top=True):
     repo = Repo.fromrepo()
 
     lib = Repo.fromurl(url, path)
-    import_(lib.fullurl, lib.path, ignore=ignore, depth=depth, protocol=protocol, top=False)
+    import_(lib.fullurl, lib.path, ignore=ignore, depth=depth, protocol=protocol, insecure=insecure, top=False)
     repo.ignore(relpath(repo.path, lib.path))
     lib.sync()
 
@@ -2017,12 +1995,13 @@ def remove(path):
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to cloning and updating.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
+    dict(name='--insecure', action='store_true', help='Allow insecure repository URLs. By default mbed CLI imports only "safe" URLs, e.g. based on standard ports - 80, 443 and 22. This option enables the use of arbitrary URLs/ports.'),
     help='Find and add missing libraries',
     description=(
         "Import missing dependencies in an existing program or library.\n"
         "Use 'mbed import <URL>' and 'mbed add <URL>' instead of cloning manually and\n"
         "then running 'mbed deploy'"))
-def deploy(ignore=False, depth=None, protocol=None, top=True):
+def deploy(ignore=False, depth=None, protocol=None, insecure=False, top=True):
     repo = Repo.fromrepo()
     repo.ignores()
 
@@ -2030,9 +2009,9 @@ def deploy(ignore=False, depth=None, protocol=None, top=True):
         if os.path.isdir(lib.path):
             if lib.check_repo():
                 with cd(lib.path):
-                    update(lib.rev, ignore=ignore, depth=depth, protocol=protocol, top=False)
+                    update(lib.rev, ignore=ignore, depth=depth, protocol=protocol, insecure=insecure, top=False)
         else:
-            import_(lib.fullurl, lib.path, ignore=ignore, depth=depth, protocol=protocol, top=False)
+            import_(lib.fullurl, lib.path, ignore=ignore, depth=depth, protocol=protocol, insecure=insecure, top=False)
             repo.ignore(relpath(repo.path, lib.path))
 
     if top:
@@ -2101,6 +2080,7 @@ def publish(all_refs=None, msg=None, top=True):
     dict(name=['-I', '--ignore'], action='store_true', help='Ignore errors related to unpublished libraries, unpublished or uncommitted changes, and attempt to update from associated remote repository URLs.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
+    dict(name='--insecure', action='store_true', help='Allow insecure repository URLs. By default mbed CLI imports only "safe" URLs, e.g. based on standard ports - 80, 443 and 22. This option enables the use of arbitrary URLs/ports.'),
     dict(name=['-l', '--latest-deps'], action='store_true', help='Update all dependencies to the latest revision of their current branch. WARNING: Ignores lib files'),
     hidden_aliases=['up'],
     help='Update to branch, tag, revision or latest',
@@ -2108,7 +2088,7 @@ def publish(all_refs=None, msg=None, top=True):
         "Updates the current program or library and its dependencies to specified\nbranch, tag or revision.\n"
         "Alternatively fetches from associated remote repository URL and updates to the\n"
         "latest revision in the current branch."))
-def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=False, top=True, depth=None, protocol=None, latest_deps=False):
+def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=False, depth=None, protocol=None, insecure=False, latest_deps=False, top=True):
     if top and clean:
         sync()
 
@@ -2196,11 +2176,11 @@ def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=Fa
     # Import missing repos and update to revs
     for lib in repo.libs:
         if not os.path.isdir(lib.path):
-            import_(lib.fullurl, lib.path, ignore=ignore, depth=depth, protocol=protocol, top=False)
+            import_(lib.fullurl, lib.path, ignore=ignore, depth=depth, protocol=protocol, insecure=insecure, top=False)
             repo.ignore(relpath(repo.path, lib.path))
         else:
             with cd(lib.path):
-                update(None if latest_deps else lib.rev, clean=clean, clean_files=clean_files, clean_deps=clean_deps, ignore=ignore, top=False, latest_deps=latest_deps)
+                update(None if latest_deps else lib.rev, clean=clean, clean_files=clean_files, clean_deps=clean_deps, ignore=ignore, protocol=protocol, insecure=insecure, latest_deps=latest_deps, top=False)
 
     if top:
         program = Program(repo.path)
