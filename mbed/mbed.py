@@ -125,6 +125,10 @@ mbed_lib_url = 'https://mbed.org/users/mbed_official/code/mbed/builds/'
 # mbed SDK tools needed for programs based on mbed SDK library
 mbed_sdk_tools_url = 'https://mbed.org/users/mbed_official/code/mbed-sdk-tools'
 
+# a list of public SCM service (github/butbucket) which support http, https and ssh schemas
+public_repo_services = ['bitbucket.org', 'github.com', 'gitlab.com']
+
+
 # verbose logging
 verbose = False
 very_verbose = False
@@ -1249,6 +1253,13 @@ class Repo(object):
                     #print self.name, 'unmodified'
                     return
 
+        if up.hostname in public_repo_services:
+            # Safely convert repo URL to https schema if this is a public SCM service (github/butbucket), supporting all schemas.
+            # This allows anonymous cloning of public repos without having to have ssh keys and associated accounts at github/bitbucket/etc.
+            # Without this anonymous users will get clone errors with ssh repository links even if the repository is public.
+            # See hhttps://help.github.com/articles/which-remote-url-should-i-use/
+            url = formaturl(url, 'https')
+
         ref = url.rstrip('/') + '/' + (('' if self.is_build else '#') + self.rev if self.rev else '')
         action("Updating reference \"%s\" -> \"%s\"" % (relpath(cwd_root, self.path) if cwd_root != self.path else self.name, ref))
         with open(self.lib, 'wb') as f:
@@ -1720,7 +1731,7 @@ def formaturl(url, format="default"):
     else:
         m = re.match(regex_repo_url, url)
         if m and m.group(1) == '': # no protocol specified, probably ssh string like "git@github.com:ARMmbed/mbed-os.git"
-            url = 'ssh://%s%s%s/%s.git' % (m.group(2) or 'git@', m.group(6), m.group(7), m.group(8)) # convert to common ssh URL-like format
+            url = 'ssh://%s%s%s/%s.git' % (m.group(2) or 'git@', m.group(6), m.group(7) or '', m.group(8)) # convert to common ssh URL-like format
             m = re.match(regex_repo_url, url)
 
         if m:
