@@ -1384,6 +1384,8 @@ class Program(object):
 
     # Gets mbed OS dir (unified)
     def get_os_dir(self):
+        if self.get_cfg('MBED_OS_DIR', None) is not None:
+            return self.get_cfg('MBED_OS_DIR')
         if os.path.isdir(os.path.join(self.path, 'mbed-os')):
             return os.path.join(self.path, 'mbed-os')
         elif self.name == 'mbed-os':
