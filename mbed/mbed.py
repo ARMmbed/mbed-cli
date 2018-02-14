@@ -1241,7 +1241,7 @@ class Repo(object):
 
     def write(self):
         up = urlparse(self.url)
-        url = up._replace(netloc=up.hostname).geturl() # strip auth string
+        url = up._replace(netloc=up.hostname + (':'+str(up.port) if up.port else '')).geturl() # strip auth string
 
         if os.path.isfile(self.lib):
             with open(self.lib) as f:
@@ -1731,7 +1731,7 @@ def formaturl(url, format="default"):
     else:
         m = re.match(regex_repo_url, url)
         if m and m.group(1) == '': # no protocol specified, probably ssh string like "git@github.com:ARMmbed/mbed-os.git"
-            url = 'ssh://%s%s%s/%s.git' % (m.group(2) or 'git@', m.group(6), m.group(7) or '', m.group(8)) # convert to common ssh URL-like format
+            url = 'ssh://%s%s%s/%s' % (m.group(2) or 'git@', m.group(6), m.group(7) or '', m.group(8)) # convert to common ssh URL-like format
             m = re.match(regex_repo_url, url)
 
         if m:
