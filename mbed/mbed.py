@@ -982,7 +982,7 @@ class Repo(object):
             repo.rev = m_bld_ref.group(8)
             repo.is_build = True
         elif m_repo_ref:
-            repo.name = os.path.basename(path or m_repo_ref.group(2))
+            repo.name = re.sub(r'\.(git|hg)/?$', '', os.path.basename(path or m_repo_ref.group(2)))
             repo.path = os.path.abspath(path or os.path.join(getcwd(), repo.name))
             repo.url = formaturl(m_repo_ref.group(1))
             repo.rev = m_repo_ref.group(3)
