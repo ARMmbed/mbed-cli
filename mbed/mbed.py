@@ -1711,12 +1711,12 @@ class Cfg(object):
 
     # Get cache configuration
     def cache(self):
-        cache_cfg = self.get('CACHE', None)
+        cache_cfg = self.get('CACHE', 'enabled')
         cache_val = 'enabled' if cache_repositories and cache_cfg and cache_cfg != 'none' and cache_cfg != 'off' and cache_cfg != 'disabled' else 'disabled'
 
         cache_dir_cfg = self.get('CACHE_DIR', None)
         loc = cache_dir_cfg if cache_dir_cfg != 'default' else (cache_cfg if (cache_cfg and cache_cfg != 'on' and cache_cfg != 'off' and cache_cfg != 'none' and cache_cfg != 'enabled' and cache_cfg != 'disabled') else None)
-        cache_base = loc or tempfile.gettempdir()
+        cache_base = loc or Global().path
         return {'cache': cache_val, 'cache_base': cache_base, 'cache_dir': os.path.join(cache_base, 'mbed-cache')}
 
 
