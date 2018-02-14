@@ -126,7 +126,7 @@ mbed_lib_url = 'https://mbed.org/users/mbed_official/code/mbed/builds/'
 mbed_sdk_tools_url = 'https://mbed.org/users/mbed_official/code/mbed-sdk-tools'
 
 # a list of public SCM service (github/butbucket) which support http, https and ssh schemas
-public_repo_services = ['bitbucket.org', 'github.com', 'gitlab.com']
+public_scm_services = ['bitbucket.org', 'github.com', 'gitlab.com']
 
 
 # verbose logging
@@ -1096,7 +1096,7 @@ class Repo(object):
 
     @classmethod
     def isinsecure(cls, url):
-        up = urlparse(url, 'https')
+        up = urlparse(url)
         return not up or not up.scheme or up.scheme not in ['http', 'https', 'ssh', 'git'] or (up.port and int(up.port) not in [22, 80, 443])
 
     @property
@@ -1178,7 +1178,7 @@ class Repo(object):
                 pass
         return self.scm.remove(dest, *args, **kwargs)
 
-    def clone(self, url, path, rev=None, depth=None, protocol=None, insecure=False, **kwargs):
+    def clone(self, url, path, rev=None, depth=None, protocol=None, **kwargs):
         # Sorted so repositories that match urls are attempted first
         info("Trying to guess source control management tool. Supported SCMs: %s" % ', '.join([s.name for s in scms.values()]))
         for _, scm in scms.items():
@@ -1246,14 +1246,14 @@ class Repo(object):
         if os.path.isfile(self.lib):
             with open(self.lib) as f:
                 lib_repo = Repo.fromurl(f.read().strip())
-                if (formaturl(lib_repo.url, 'https') == formaturl(url, 'https') # match URLs in common format (https)
-                        and (lib_repo.rev == self.rev                              # match revs, even if rev is None (valid for repos with no revisions)
+                if (formaturl(lib_repo.url, 'https') == formaturl(url, 'https') # match URLs in common schema (https)
+                        and (lib_repo.rev == self.rev                           # match revs, even if rev is None (valid for repos with no revisions)
                              or (lib_repo.rev and self.rev
                                  and lib_repo.rev == self.rev[0:len(lib_repo.rev)]))):  # match long and short rev formats
                     #print self.name, 'unmodified'
                     return
 
-        if up.hostname in public_repo_services:
+        if up.hostname in public_scm_services:
             # Safely convert repo URL to https schema if this is a public SCM service (github/butbucket), supporting all schemas.
             # This allows anonymous cloning of public repos without having to have ssh keys and associated accounts at github/bitbucket/etc.
             # Without this anonymous users will get clone errors with ssh repository links even if the repository is public.
