@@ -2780,32 +2780,20 @@ def toolchain_(name=None, global_cfg=False, supported=False):
 
 
 @subcommand('cache',
-    dict(name='on', nargs='?', help='Turn repository caching on. Will use either a default cache location or the specified cache directory to store repositories.'),
+    dict(name='on', nargs='?', help='Turn repository caching on. Will use either the default or the user specified cache directory.'),
     dict(name='off', nargs='?', help='Turn repository caching off. Note that this doesn\'t purge cached repositories. See "purge".'),
-    dict(name='ls', nargs='?', help='List cached repositories'),
+    dict(name='dir', nargs='?', help='Set cache directory. Set to "default" to let mbed CLI determine the cache directory location. Typically this is "~/.mbed/mbed-cache/" on UNIX, or "%%userprofile%%/.mbed/mbed-cache/" on Windows.'),
+    dict(name='ls', nargs='?', help='List cached repositories and their sizes.'),
     dict(name='purge', nargs='?', help='Purge cached repositories. Note that this doesn\'t turn caching off'),
-    dict(name=['-D', '--dir'], dest='cache_dir', help='Set cache directory. Set to "default" to let mbed CLI determine the cache directory location.'),
     help='Repository cache management\n\n',
     description=(
-        "Set or get default toolchain\n"))
-def cache_(on=False, off=False, ls=False, purge=False, cache_dir=None, global_cfg=False):
+        "Repository cache management\n"
+        "To minimize traffic and reduce import times, Mbed CLI can cache repositories by storing their indexes.\n"
+        "By default repository caching is turned on. Turn it off if you experience any problems.\n"))
+def cache_(on=False, off=False, dir=None, ls=False, purge=False, global_cfg=False):
     cmd = str(on).lower()
     argument = off
     g = Global()
-
-    if cache_dir:
-        if not os.path.exists(cache_dir):
-            try:
-                os.makedirs(cache_dir)
-            except (IOError, ImportError, OSError):
-                error("Unable to create cache directory \"%s\"" % cache_dir, 128)
-        elif not os.path.isdir(cache_dir):
-            error("The specified location \"%s\" is not a directory" % cache_dir, 128)
-        elif len(os.listdir(cache_dir)) > 1:
-            warning("Directory \"%s\" is not empty." % d_path)
-
-        g.set_cfg('CACHE_DIR', cache_dir)
-        action('Repository cache location set to \"%s\"' % cache_dir)
 
     cfg = g.cache_cfg()
     if cmd == 'off' or cmd == 'on':
@@ -2813,6 +2801,20 @@ def cache_(on=False, off=False, ls=False, purge=False, cache_dir=None, global_cf
         cfg = g.cache_cfg()
         action("Repository cache is now %s." % str(cfg['cache']).upper())
         action("Cache location \"%s\"" % cfg['cache_dir'])
+    elif cmd == 'dir':
+        if not argument:
+            error("Please specify directory or path to cache repositories. Alternatively specify \"default\" to cache repositories in the default user home location.")
+        if not os.path.exists(argument):
+            try:
+                os.makedirs(argument)
+            except (IOError, ImportError, OSError):
+                error("Unable to create cache directory \"%s\"" % argument, 128)
+        elif not os.path.isdir(argument):
+            error("The specified location \"%s\" is not a directory" % argument, 128)
+        elif len(os.listdir(argument)) > 1:
+            warning("Directory \"%s\" is not empty." % argument)
+        g.set_cfg('CACHE_DIR', argument)
+        action('Repository cache location set to \"%s\"' % argument)
     elif cmd == 'ls':
         def get_size_(path):
             size = 0
@@ -2820,7 +2822,6 @@ def cache_(on=False, off=False, ls=False, purge=False, cache_dir=None, global_cf
                 for f in files:
                     size += os.path.getsize(os.path.join(dirpath, f))
             return size
-
         action("Listing cached repositories in \"%s\"" % cfg['cache_base'])
         repos = []
         total_size = 0
@@ -2831,21 +2832,22 @@ def cache_(on=False, off=False, ls=False, purge=False, cache_dir=None, global_cf
                 url = repo.url
                 size = get_size_(repo.path)
                 total_size += size
-                log("* %s %s\n" % ('{:64}'.format(url), sizeof_fmt(size).rjust(8)))
+                log("* %s %s\n" % ('{:68}'.format(url), sizeof_fmt(size).rjust(8)))
                 for d in dirs:
                     dirs.remove(d)
-        log("---------------------------------------------------------------------------\n")
-        log("%s %s\n" % ('{:66}'.format('Total size:'), sizeof_fmt(total_size).rjust(8)))
-
+        log(("-" * 79) + "\n")
+        log("%s %s\n" % ('{:70}'.format('Total size:'), sizeof_fmt(total_size).rjust(8)))
     elif cmd == 'purge':
         action("Purging cached repositories in \"%s\"..." % cfg['cache_base'])
         if os.path.isdir(cfg['cache_dir']):
             rmtree_readonly(cfg['cache_dir'])
-
         action("Purge complete!")
-    else:
+    elif cmd == "false":
         action("Repository cache is %s." % str(cfg['cache']).upper())
         action("Cache location \"%s\"" % cfg['cache_base'])
+    else:
+        print cmd
+        error("Invalid cache command. Please see \"mbed cache --help\" for valid commands.")
 
 
 @subcommand('help',
