@@ -863,7 +863,7 @@ mbed cache [on|off|dir <path>|ls|purge|-h|--help]
 
  * `on` - Turn repository caching on. Will use either the default or the user specified cache directory.
  * `off` - Turn repository caching off. Note that this doesn't purge cached repositories. See "purge".
- * 'dir' - Set cache directory. Set to "default" to let mbed CLI determine the cache directory location. Typically this is `~/.mbed/mbed-cache/` on UNIX systems, or `%%userprofile%%/.mbed/mbed-cache/` on Windows systems.
+ * `dir` - Set cache directory. Set to "default" to let mbed CLI determine the cache directory location. Typically this is `~/.mbed/mbed-cache/` on UNIX systems, or `%%userprofile%%/.mbed/mbed-cache/` on Windows systems.
  * `ls` - List cached repositories and their size.
  * `purge` - Purge cached repositories. Note that this doesn't turn caching off.
  * `-h` or `--help` - Print cache command options.
