@@ -872,7 +872,7 @@ If no sub-command is specified to `mbed cache`, then mbed CLI would print the cu
 
 For safety reasons, Mbed CLI will always use `mbed-cache` subfolder to a user specified location. This ensure that no user files will deleted during `purge` even if the user has specified root/system folder as a cache location (e.g. `mbed cache dir /` or `mbed cache dir C:\`).
 
-**Security notice: It's generally recommended to user cache location inside your own home directory. If you use cache location outside your user home/profile, then other system users might be able to access the repository cache and therefore the data of the cached repositories**
+**Security notice**: It's generally recommended to use cache location inside your profile home directory. If you use cache location outside your user home/profile, then other system users might be able to access the repository cache and therefore the data of the cached repositories
 
 
 ## Mbed CLI configuration
