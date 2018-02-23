@@ -2782,7 +2782,7 @@ def toolchain_(name=None, global_cfg=False, supported=False):
 @subcommand('cache',
     dict(name='on', nargs='?', help='Turn repository caching on. Will use either the default or the user specified cache directory.'),
     dict(name='off', nargs='?', help='Turn repository caching off. Note that this doesn\'t purge cached repositories. See "purge".'),
-    dict(name='dir', nargs='?', help='Set cache directory. Set to "default" to let mbed CLI determine the cache directory location. Typically this is "~/.mbed/mbed-cache/" on UNIX, or "%%userprofile%%/.mbed/mbed-cache/" on Windows.'),
+    dict(name='dir', nargs='?', help='Set cache directory. Set to "default" to let mbed CLI determine the cache directory location (%s/mbed-cache/).' % Global().path),
     dict(name='ls', nargs='?', help='List cached repositories and their sizes.'),
     dict(name='purge', nargs='?', help='Purge cached repositories. Note that this doesn\'t turn caching off'),
     help='Repository cache management\n\n',
@@ -2844,8 +2844,9 @@ def cache_(on=False, off=False, dir=None, ls=False, purge=False, global_cfg=Fals
         action("Purge complete!")
     elif cmd == "false":
         action("Repository cache is %s." % str(cfg['cache']).upper())
-        action("Cache location \"%s\"" % cfg['cache_base'])
+        action("Cache location \"%s\"" % cfg['cache_dir'])
     else:
+        print cmd
         error("Invalid cache command. Please see \"mbed cache --help\" for valid commands.")
 
 
