@@ -853,7 +853,7 @@ Use these with caution because your uncommitted changes and unpublished librarie
 
 ## Repository caching
 
-To minimize traffic and reduce import times, by default Mbed CLI would cache repositories by storing their indexes under the Mbed CLI user config folder - typically `~/.mbed/mbed-cache/` on UNIX systems, or `%userprofile%/.mbed/mbed-cache/` on Windows systems. Compared to a fully checked out repository, indexes are significantly smaller in size and number of files, and contain the whole revision history of that repository. This allows Mbed CLI to quickly create copies of previously downloaded repository indexes and pull/fetch only the latest changes from the remote repositories, therefore dramatically reducing network traffic and download times, especially for big repositories like `mbed-os`.
+To minimize traffic and reduce import times, by default Mbed CLI caches repositories by storing their indexes under the Mbed CLI user config folder - typically `~/.mbed/mbed-cache/` on UNIX systems, or `%userprofile%/.mbed/mbed-cache/` on Windows systems. Compared to a fully checked out repository, indexes are significantly smaller in size and number of files, and contain the whole revision history of that repository. This allows Mbed CLI to quickly create copies of previously downloaded repository indexes and pull/fetch only the latest changes from the remote repositories, therefore dramatically reducing network traffic and download times, especially for big repositories like `mbed-os`.
 
 You can manage the Mbed CLI caching behavior with the following sub-commands:
 
@@ -861,18 +861,18 @@ You can manage the Mbed CLI caching behavior with the following sub-commands:
 mbed cache [on|off|dir <path>|ls|purge|-h|--help]
 ```
 
- * `on` - Turn repository caching on. Will use either the default or the user specified cache directory.
+ * `on` - Turn repository caching on. This will either use the user specified cache directory or the default one. See "dir".
  * `off` - Turn repository caching off. Note that this doesn't purge cached repositories. See "purge".
  * `dir` - Set cache directory. Set to "default" to let mbed CLI determine the cache directory location. Typically this is `~/.mbed/mbed-cache/` on UNIX systems, or `%%userprofile%%/.mbed/mbed-cache/` on Windows systems.
  * `ls` - List cached repositories and their size.
  * `purge` - Purge cached repositories. Note that this doesn't turn caching off.
  * `-h` or `--help` - Print cache command options.
 
-If no sub-command is specified to `mbed cache`, then mbed CLI would print the current cache setting (ENABLED or DISABLED) and the path to the local cache directory.
+If no sub-command is specified to `mbed cache`, mbed CLI prints the current cache setting (ENABLED or DISABLED) and the path to the local cache directory.
 
-For safety reasons, Mbed CLI will always use `mbed-cache` subfolder to a user specified location. This ensure that no user files will deleted during `purge` even if the user has specified root/system folder as a cache location (e.g. `mbed cache dir /` or `mbed cache dir C:\`).
+For safety reasons, Mbed CLI uses `mbed-cache` subfolder to a user specified location. This ensure that no user files will deleted during `purge` even if the user has specified root/system folder as a cache location (e.g. `mbed cache dir /` or `mbed cache dir C:\`).
 
-**Security notice**: It's generally recommended to use cache location inside your profile home directory. If you use cache location outside your user home/profile, then other system users might be able to access the repository cache and therefore the data of the cached repositories
+**Security notice**: If you use cache location outside your user home/profile directory, then other system users might be able to access the repository cache and therefore the data of the cached repositories.
 
 
 ## Mbed CLI configuration

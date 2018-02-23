@@ -2846,7 +2846,6 @@ def cache_(on=False, off=False, dir=None, ls=False, purge=False, global_cfg=Fals
         action("Repository cache is %s." % str(cfg['cache']).upper())
         action("Cache location \"%s\"" % cfg['cache_base'])
     else:
-        print cmd
         error("Invalid cache command. Please see \"mbed cache --help\" for valid commands.")
 
 
