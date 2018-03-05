@@ -1560,11 +1560,18 @@ class Program(object):
             error("Please specify toolchain using the -t switch or set default toolchain using command 'mbed toolchain'", 1)
         return tchain
 
-    def set_defaults(self, target=None, toolchain=None):
+    def get_profile(self, profile=None):
+        profile_cfg = self.get_cfg('PROFILE')
+        profile_cfg = profile_cfg.split() if profile_cfg else []
+        return profile if profile else profile_cfg
+
+    def set_defaults(self, target=None, toolchain=None, profile=None):
         if target and not self.get_cfg('TARGET'):
             self.set_cfg('TARGET', target)
         if toolchain and not self.get_cfg('TOOLCHAIN'):
             self.set_cfg('TOOLCHAIN', toolchain)
+        if profile and not self.get_cfg('PROFILE'):
+            self.set_cfg('PROFILE', (' ').join(profile))
 
     def get_macros(self):
         macros = []
@@ -2399,6 +2406,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
 
     target = program.get_target(target)
     tchain = program.get_toolchain(toolchain)
+    profile = program.get_profile(profile)
     macros = program.get_macros()
 
     if compile_config:
@@ -2470,7 +2478,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                 if not reset_dev(detected['port']):
                     error("Unable to reset the target board connected to your system.\nThis might be caused by an old interface firmware.\nPlease check the board page for new firmware.", 1)
 
-    program.set_defaults(target=target, toolchain=tchain)
+    program.set_defaults(target=target, toolchain=tchain, profile=profile)
 
 
 # Test command
@@ -2502,6 +2510,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
 
     target = program.get_target(target)
     tchain = program.get_toolchain(toolchain)
+    profile = program.get_profile(profile)
     macros = program.get_macros()
     tools_dir = program.get_tools()
     build_and_run_tests = not compile_list and not run_list and not compile_only and not run_only
@@ -2572,7 +2581,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
                   + args,
                   env=env)
 
-    program.set_defaults(target=target, toolchain=tchain)
+    program.set_defaults(target=target, toolchain=tchain, profile=profile)
 
 
 # Export command
