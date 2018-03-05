@@ -2699,7 +2699,7 @@ def detect():
         "Gets, sets or unsets mbed tool configuration options.\n"
         "Options can be global (via the --global switch) or local (per program)\n"
         "Global options are always overridden by local/program options.\n"
-        "Currently supported options: target, toolchain, protocol, depth, cache"))
+        "Currently supported options: target, toolchain, profile, protocol, depth, cache"))
 def config_(var=None, value=None, global_cfg=False, unset=False, list_config=False):
     name = var
     var = str(var).upper()
@@ -2788,6 +2788,17 @@ def toolchain_(name=None, global_cfg=False, supported=False):
     if supported:
         return compile_(supported=supported)
     return config_('toolchain', name, global_cfg=global_cfg)
+
+
+@subcommand('profile',
+    dict(name='path', nargs='+', help='Default profile path. Example: mbed-os/tools/profiles/develop.json, ./profile-cxx11.json'),
+    dict(name=['-G', '--global'], dest='global_cfg', action='store_true', help='Use global settings, not local'),
+    help='Set or get default profile(s)\n\n',
+    description=(
+        "Set or get default profile\n"
+        "This is an alias to 'mbed config [--global] profile [path ...]'\n"))
+def profile_(path=None, global_cfg=False):
+    return config_('profile', (' ').join(path), global_cfg=global_cfg)
 
 
 @subcommand('cache',
