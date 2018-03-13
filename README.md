@@ -851,6 +851,29 @@ You can combine the options of the Mbed update command for the following scenari
 
 Use these with caution because your uncommitted changes and unpublished libraries cannot be restored.
 
+## Repository caching
+
+To minimize traffic and reduce import times, by default Mbed CLI caches repositories by storing their indexes under the Mbed CLI user config folder - typically `~/.mbed/mbed-cache/` on UNIX systems, or `%userprofile%/.mbed/mbed-cache/` on Windows systems. Compared to a fully checked out repository, indexes are significantly smaller in size and number of files and contain the whole revision history of that repository. This allows Mbed CLI to quickly create copies of previously downloaded repository indexes and pull/fetch only the latest changes from the remote repositories, therefore dramatically reducing network traffic and download times, especially for big repositories such as `mbed-os`.
+
+You can manage the Mbed CLI caching behavior with the following subcommands:
+
+```
+mbed cache [on|off|dir <path>|ls|purge|-h|--help]
+```
+
+ * `on` - Turn repository caching on. This uses either the user specified cache directory or the default one. See "dir".
+ * `off` - Turn repository caching off. Note that this doesn't purge cached repositories. See "purge".
+ * `dir` - Set cache directory. Set to "default" to let Mbed CLI determine the cache directory location. Typically, this is `~/.mbed/mbed-cache/` on UNIX systems, or `%%userprofile%%/.mbed/mbed-cache/` on Windows systems.
+ * `ls` - List cached repositories and their size.
+ * `purge` - Purge cached repositories. Note that this doesn't turn caching off.
+ * `-h` or `--help` - Print cache command options.
+
+If no subcommand is specified to `mbed cache`, Mbed CLI prints the current cache setting (ENABLED or DISABLED) and the path to the local cache directory.
+
+For safety reasons, Mbed CLI uses the `mbed-cache` subfolder to a user specified location. This ensures that no user files are deleted during `purge` even if the user has specified root/system folder as a cache location (for example, `mbed cache dir /` or `mbed cache dir C:\`).
+
+**Security notice**: If you use cache location outside your user home/profile directory, then other system users might be able to access the repository cache and therefore the data of the cached repositories.
+
 ## Mbed CLI configuration
 
 You can streamline many options in Mbed CLI with global and local configuration.
@@ -874,7 +897,6 @@ Here is a list of configuration settings and their defaults:
  * `ARM_PATH`, `ARMC6_PATH`, `GCC_ARM_PATH`, `IAR_PATH` - defines the path to Arm Compiler 5 and 6, GCC Arm and IAR Workbench toolchains. Default: none.
  * `protocol` - defines the default protocol used for importing or cloning of programs and libraries. The possible values are `https`, `http` and `ssh`. Use `ssh` if you have generated and registered SSH keys (Public Key Authentication) with a service such as GitHub, GitLab, Bitbucket and so on. Read more about SSH keys [here](https://help.github.com/articles/generating-an-ssh-key/). Default: `https`.
  * `depth` - defines the *clone* depth for importing or cloning and applies only to *Git* repositories. Note that though this option may improve cloning speed, it may also prevent you from correctly checking out a dependency tree when the reference revision hash is older than the clone depth. Read more about shallow clones [here](https://git-scm.com/docs/git-clone). Default: none.
- * `cache` - defines the local path that stores small copies of the imported or cloned repositories, and Mbed CLI uses it to minimize traffic and speed up future imports of the same repositories. Use `on` or `enabled` to turn on caching in the system temp path. Use `none` to turn caching off. Default: none (disabled).
 
 ## Troubleshooting
 
