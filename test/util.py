@@ -162,6 +162,7 @@ def testrepos(mbed, request):
 
     with cd('test1/test2/test3'):
         with open('test4.lib', 'w') as f:
+            hash = 'none'
             with cd('test4'):
                 if scm() == 'git':
                     hash = pquery(['git', 'rev-parse', 'HEAD'])
