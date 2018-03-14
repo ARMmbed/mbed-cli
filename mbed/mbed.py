@@ -196,6 +196,7 @@ class ProcessException(Exception):
 def popen(command, stdin=None, **kwargs):
     # print for debugging
     info('Exec "'+' '.join(command)+'" in '+getcwd())
+    proc = None
     try:
         proc = subprocess.Popen(command, **kwargs)
     except OSError as e:
@@ -206,7 +207,7 @@ def popen(command, stdin=None, **kwargs):
         else:
             raise e
 
-    if proc.wait() != 0:
+    if proc and proc.wait() != 0:
         raise ProcessException(proc.returncode, command[0], ' '.join(command), getcwd())
 
 def pquery(command, output_callback=None, stdin=None, **kwargs):
@@ -232,7 +233,7 @@ def pquery(command, output_callback=None, stdin=None, **kwargs):
                 line = ""
 
             if proc.returncode is None:
-                code = proc.poll()
+                proc.poll()
             else:
                 break
 
@@ -1282,8 +1283,8 @@ class Repo(object):
     def set_cache(self, url):
         up = urlparse(formaturl(url, 'https'))
         if self.cache and up and up.netloc and os.path.isdir(self.path):
+            cpath = os.path.join(self.cache, up.netloc, re.sub(r'^/', '', up.path))
             try:
-                cpath = os.path.join(self.cache, up.netloc, re.sub(r'^/', '', up.path))
                 if not os.path.isdir(cpath):
                     os.makedirs(cpath)
 
@@ -1827,6 +1828,7 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
 
     d_path = os.path.abspath(name or getcwd())
     p_path = os.path.dirname(d_path)
+    d_type = None
     if program and library:
         error("Cannot use both --program and --library options.", 1)
     elif program or library:
@@ -2059,7 +2061,7 @@ def publish(all_refs=None, msg=None, top=True):
     if repo.is_local:
         error(
             "%s \"%s\" in \"%s\" is a local repository.\nPlease associate it with a remote repository URL before attempting to publish.\n"
-            "Read more about publishing local repositories here:\nhttps://github.com/ARMmbed/mbed-cli/#publishing-local-program-or-library" % ("Program" if top else "Library", repo.name, repo.path, repo.scm.name), 1)
+            "Read more about publishing local repositories here:\nhttps://github.com/ARMmbed/mbed-cli/#publishing-local-program-or-library" % ("Program" if top else "Library", repo.name, repo.path), 1)
 
     for lib in repo.libs:
         if lib.check_repo():
@@ -2157,7 +2159,6 @@ def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=Fa
     # Compare library references (.lib) before and after update, and remove libraries that do not have references in the current revision
     for lib in repo_orig.libs:
         if not os.path.isfile(lib.lib) and os.path.isdir(lib.path): # Library reference doesn't exist in the new revision. Will try to remove library to reproduce original structure
-            gc = False
             with cd(lib.path):
                 lib_repo = Repo.fromrepo(lib.path)
                 gc, msg = lib_repo.can_update(clean, clean_deps)
@@ -2180,7 +2181,6 @@ def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=Fa
             lib_repo = Repo.fromrepo(lib.path)
             if (not lib.is_local and not lib_repo.is_local and
                 formaturl(lib.url, 'https') != formaturl(lib_repo.url, 'https')): # Repository URL has changed
-                gc = False
                 with cd(lib.path):
                     gc, msg = lib_repo.can_update(clean, clean_deps)
                 if gc:
@@ -2370,7 +2370,7 @@ def status_(ignore=False):
     dict(name=['-S', '--supported'], dest='supported', const=True, choices=["matrix", "toolchains", "targets"], nargs="?", help='Shows supported matrix of targets and toolchains'),
     dict(name='--app-config', dest="app_config", help="Path of an app configuration file (Default is to look for 'mbed_app.json')"),
     help='Compile code using the mbed build tools',
-    description=("Compile this program using the mbed build tools."))
+    description="Compile this program using the mbed build tools.")
 def compile_(toolchain=None, target=None, profile=False, compile_library=False, compile_config=False, config_prefix=None, source=False, build=False, clean=False, flash=False, artifact_name=None, supported=False, app_config=None):
     # Gather remaining arguments
     args = remainder
@@ -2490,7 +2490,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
     dict(name='--app-config', dest="app_config", help="Path of an app configuration file (Default is to look for 'mbed_app.json')"),
     dict(name='--test-config', dest="test_config", help="Path or mbed OS keyword of a test configuration file. Example: ethernet, odin_wifi, or path/to/config.json"),
     help='Find, build and run tests',
-    description=("Find, build, and run tests in a program and libraries"))
+    description="Find, build, and run tests in a program and libraries")
 def test_(toolchain=None, target=None, compile_list=False, run_list=False, compile_only=False, run_only=False, tests_by_name=None, source=False, profile=False, build=False, clean=False, test_spec=None, app_config=None, test_config=None):
     # Gather remaining arguments
     args = remainder
@@ -2730,7 +2730,7 @@ def config_(var=None, value=None, global_cfg=False, unset=False, list_config=Fal
                 action('%s now set as global %s' % (value, name))
             else:
                 value = g.get_cfg(var)
-                action(('%s' % value) if value else 'No global %s set' % (name))
+                action(('%s' % value) if value else 'No global %s set' % name)
         else:
             # Find the root of the program
             program = Program(getcwd())
@@ -2897,7 +2897,7 @@ def main():
                 "You could retry the last command with \"-v\" flag for verbose output\n", e[0])
         else:
             error('OS Error: %s' % e[1], e[0])
-    except KeyboardInterrupt as e:
+    except KeyboardInterrupt:
         info('User aborted!', -1)
         sys.exit(255)
     except Exception as e:

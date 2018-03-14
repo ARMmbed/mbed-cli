@@ -58,7 +58,6 @@ def test_sync_update_remove(mbed, testrepos):
 # Tests if adding a library is carried over sync/update
 def test_sync_update_add(mbed, testrepos):
     test1 = testrepos[0]
-    test3 = testrepos[2]
     popen(['python', mbed, 'import', test1, 'testimport'])
 
     with cd('test1/test2'):
@@ -85,7 +84,6 @@ def test_sync_update_add(mbed, testrepos):
 # Tests if moving a library is carried over sync/update
 def test_sync_update_move(mbed, testrepos):
     test1 = testrepos[0]
-    test3 = testrepos[2]
     popen(['python', mbed, 'import', test1, 'testimport'])
 
     with cd('test1/test2'):

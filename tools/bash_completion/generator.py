@@ -25,31 +25,26 @@ def getHelpTxt(command=None):
     return out
 
 def getTargetCode():
-    txt = ''
     with open("templates/target.tmplt") as fp:
         txt = fp.read()
     return txt
 
 def getToolchainCode():
-    txt = ''
     with open("templates/toolchain.tmplt") as fp:
         txt = fp.read()
     return txt
 
 def getSCMCode():
-    txt = ''
     with open("templates/scm.tmplt") as fp:
         txt = fp.read()
     return txt
 
 def getIDECode():
-    txt = ''
     with open("templates/ide.tmplt") as fp:
         txt = fp.read()
     return txt
 
 def getProtocolCode():
-    txt = ''
     with open("templates/protocol.tmplt") as fp:
         txt = fp.read()
     return txt
@@ -159,8 +154,6 @@ def parseCommands():
 
 
 def generateMain(commands):
-    tmplt = ""
-
     txt = []
 
     with open("templates/mbed.tmplt") as fp:
@@ -172,7 +165,6 @@ def generateMain(commands):
 
 
 def generateCompleters(commands):
-    tmplt = ""
     txt = []
 
     renderer = pystache.Renderer(escape=lambda u: u)
@@ -188,7 +180,7 @@ def generateCompleters(commands):
     return txt
 
 
-def generateBoilerPlate(commands):
+def generateBoilerPlate(_):
     txt = []
 
     with open("templates/boilerplate.tmplt") as fp:
