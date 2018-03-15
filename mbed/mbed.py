@@ -1192,7 +1192,7 @@ class Repo(object):
 
         for _, scm in sorted_scms:
             main = True
-            cache = self.get_cache(url)
+            cache = self.get_cache(url, scm.name)
 
             # Try to clone with cache ref first
             if cache and not os.path.isdir(path):
@@ -1275,9 +1275,9 @@ class Repo(object):
                 action("Remove untracked library reference \"%s\"" % f)
                 os.remove(f)
 
-    def get_cache(self, url):
+    def get_cache(self, url, scm):
         up = urlparse(formaturl(url, 'https'))
-        if self.cache and up and up.netloc and os.path.isdir(os.path.join(self.cache, up.netloc, re.sub(r'^/', '', up.path))):
+        if self.cache and up and up.netloc and os.path.isdir(os.path.join(self.cache, up.netloc, re.sub(r'^/', '', up.path), '.'+scm)):
             return os.path.join(self.cache, up.netloc, re.sub(r'^/', '', up.path))
 
     def set_cache(self, url):
