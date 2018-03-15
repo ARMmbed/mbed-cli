@@ -1097,7 +1097,8 @@ class Repo(object):
     @classmethod
     def isinsecure(cls, url):
         up = urlparse(url)
-        return not up or not up.scheme or up.scheme not in ['http', 'https', 'ssh', 'git'] or (up.port and int(up.port) not in [22, 80, 443])
+        return False
+#        return not up or (up.scheme and up.scheme not in ['http', 'https', 'ssh', 'git']) or (up.port and int(up.port) not in [22, 80, 443])
 
     @property
     def lib(self):
@@ -1241,7 +1242,10 @@ class Repo(object):
 
     def write(self):
         up = urlparse(self.url)
-        url = up._replace(netloc=up.hostname + (':'+str(up.port) if up.port else '')).geturl() # strip auth string
+        if up.hostname:
+            url = up._replace(netloc=up.hostname + (':'+str(up.port) if up.port else '')).geturl() # strip auth string
+        else:
+            url = self.url # use local repo "urls" as is
 
         if os.path.isfile(self.lib):
             with open(self.lib) as f:
