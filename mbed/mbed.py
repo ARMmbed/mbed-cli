@@ -1484,7 +1484,7 @@ class Program(object):
     def post_action(self):
         mbed_tools_path = self.get_tools_dir()
 
-        if not mbed_tools_path and (self.is_classic or os.path.exists(os.path.join(self.path, Cfg.file))):
+        if not mbed_tools_path and self.is_classic:
             self.add_tools(os.path.join(self.path, '.temp'))
             mbed_tools_path = self.get_tools_dir()
 
