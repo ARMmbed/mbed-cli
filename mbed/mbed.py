@@ -1922,7 +1922,7 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, insecure=Fa
     insecure = insecure or Program().get_cfg('INSECURE')
 
     if not insecure and Repo.isinsecure(url):
-        error("Cannot import \"%s\" in \"%s\" due to arbitrary service schema/port in the repository URL.\nRepositories are usually hosted on service port 443 (https), 80 (http) and 22 (ssh)\nYou can use \"--insecure\" switch enable the use arbitrary repository URLs." % (repo.url, repo.path), 255)
+        error("Cannot import \"%s\" in \"%s\" due to arbitrary service schema/port in the repository URL.\nRepositories are usually hosted on service port 443 (https), 80 (http), or 22 (ssh).\nYou can use the \"--insecure\" switch to enable the use of arbitrary repository URLs." % (repo.url, repo.path), 255)
 
     if os.path.isdir(repo.path) and len(os.listdir(repo.path)) > 1:
         error("Directory \"%s\" is not empty. Please ensure that the destination folder is empty." % repo.path, 1)
