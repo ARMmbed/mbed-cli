@@ -30,6 +30,7 @@ import errno
 import ctypes
 from itertools import chain, izip, repeat
 from urlparse import urlparse
+import urllib
 import urllib2
 import zipfile
 import argparse
@@ -1277,8 +1278,8 @@ class Repo(object):
 
     def get_cache(self, url, scm):
         up = urlparse(formaturl(url, 'https'))
-        if self.cache and up and up.netloc and os.path.isdir(os.path.join(self.cache, up.netloc, re.sub(r'^/', '', up.path), '.'+scm)):
-            return os.path.join(self.cache, up.netloc, re.sub(r'^/', '', up.path))
+        if self.cache and up and up.netloc and os.path.isdir(os.path.join(self.cache, urllib.quote(up.netloc), urllib.quote(re.sub(r'^/', '', up.path), '.'+scm))):
+            return os.path.join(self.cache, urllib.quote(up.netloc), urllib.quote(re.sub(r'^/', '', up.path)))
 
     def set_cache(self, url):
         up = urlparse(formaturl(url, 'https'))
