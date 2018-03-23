@@ -1097,7 +1097,7 @@ class Repo(object):
     @classmethod
     def isinsecure(cls, url):
         up = urlparse(url)
-        return not up or (up.scheme and up.scheme not in ['http', 'https', 'ssh', 'git']) or (up.port and int(up.port) not in [22, 80, 443])
+        return (not up) or (up.scheme and up.scheme not in ['http', 'https', 'ssh', 'git']) or (up.port and int(up.port) not in [22, 80, 443])
 
     @property
     def lib(self):
