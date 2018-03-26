@@ -1276,19 +1276,22 @@ class Repo(object):
                 action("Remove untracked library reference \"%s\"" % f)
                 os.remove(f)
 
-    def get_cache(self, url, scm):
+    def url2cachedir(self, url):
         up = urlparse(formaturl(url, 'https'))
-        if self.cache and up and up.netloc and os.path.isdir(os.path.join(self.cache, urllib.quote(up.netloc), urllib.quote(re.sub(r'^/', '', up.path), '.'+scm))):
+        if self.cache and up and up.netloc:
             return os.path.join(self.cache, urllib.quote(up.netloc), urllib.quote(re.sub(r'^/', '', up.path)))
 
+    def get_cache(self, url, scm):
+        cpath = self.url2cachedir(url)
+        if cpath and os.path.isdir(os.path.join(cpath, '.'+scm)):
+            return cpath
+
     def set_cache(self, url):
-        up = urlparse(formaturl(url, 'https'))
-        if self.cache and up and up.netloc and os.path.isdir(self.path):
-            cpath = os.path.join(self.cache, up.netloc, re.sub(r'^/', '', up.path))
+        cpath = self.url2cachedir(url)
+        if cpath and os.path.isdir(self.path):
             try:
                 if not os.path.isdir(cpath):
                     os.makedirs(cpath)
-
                 scm_dir = '.'+self.scm.name
                 if os.path.isdir(os.path.join(cpath, scm_dir)):
                     rmtree_readonly(os.path.join(cpath, scm_dir))
