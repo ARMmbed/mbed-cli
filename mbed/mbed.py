@@ -34,6 +34,7 @@ import urllib2
 import zipfile
 import argparse
 import tempfile
+from mbed_cdc import mbed_cdc
 
 
 # Application version
@@ -1752,103 +1753,6 @@ def formaturl(url, format="default"):
     return url
 
 
-def cdc(port, reset=False, sterm=False, baudrate=9600, timeout=10):
-    from serial import Serial, SerialException
-
-    def get_instance(*args, **kwargs):
-        try:
-            serial_port = Serial(*args, **kwargs)
-            serial_port.flush()
-        except Exception as e:
-            error("Unable to open serial port connection to \"%s\"" % port)
-            return False
-        return serial_port
-
-    def cdc_reset(serial_instance):
-        try:
-            serial_instance.sendBreak()
-        except:
-            try:
-                serial_instance.setBreak(False) # For Linux the following setBreak() is needed to release the reset signal on the target mcu.
-            except:
-                result = False
-
-    def cdc_term(serial_instance):
-        import serial.tools.miniterm as miniterm
-
-        term = miniterm.Miniterm(serial_instance, echo=True)
-        term.exit_character = '\x03'
-        term.menu_character = '\x14'
-        term.set_rx_encoding('UTF-8')
-        term.set_tx_encoding('UTF-8')
-        def cli_writer():
-            menu_active = False
-            while term.alive:
-                try:
-                    c = term.console.getkey()
-                except KeyboardInterrupt:
-                    c = '\x03'
-                if not term.alive:
-                    break
-                if menu_active:
-                    term.handle_menu_key(c)
-                    menu_active = False
-                elif c == term.menu_character:
-                    menu_active = True # next char will be for menu
-                elif c == '\x02' or  c == '\x12': # ctrl+b/ctrl+r sendbreak
-                    cdc_reset(term.serial)
-                elif c == '\x03' or c == '\x1d': # ctrl+c/ctrl+]
-                    term.stop()
-                    term.alive = False
-                    break
-                elif c == '\x05': # ctrl+e
-                    term.echo = not term.echo
-                elif c == '\x08': # ctrl+e
-                    print term.get_help_text()
-                elif c == '\t': # tab/ctrl+i
-                    term.dump_port_settings()
-                else:
-                    text = c
-                    for transformation in term.tx_transformations:
-                        text = transformation.tx(text)
-                    term.serial.write(term.tx_encoder.encode(text))
-                    if term.echo:
-                        echo_text = c
-                        for transformation in term.tx_transformations:
-                            echo_text = transformation.echo(echo_text)
-                        term.console.write(echo_text)
-        term.writer = cli_writer
-        action('--- Terminal on {p.name} - {p.baudrate},{p.bytesize},{p.parity},{p.stopbits} ---\n'.format(p=term.serial))
-        action('--- Quit: CTRL+C | Reset: CTRL+B | Echo: CTRL+E ---')
-        action('--- Info: TAB    | Help:  Ctrl+H | Menu: Ctrl+T ---')
-        term.start()
-        try:
-            term.join(True)
-        except KeyboardInterrupt:
-            pass
-        term.join()
-        term.close()
-
-    result = False
-    serial_port = get_instance(port, baudrate=baudrate, timeout=timeout)
-    if serial_port:
-        serial_port.reset_input_buffer()
-        if reset:
-            cdc_reset(serial_port)
-            result = True
-
-        if sterm:
-            if not serial_port.is_open:
-                serial_port = get_instance(port, baudrate=baudrate, timeout=timeout)
-            try:
-                cdc_term(serial_port)
-                result = True
-            except:
-                pass
-
-    return result
-
-
 # Subparser handling
 parser = argparse.ArgumentParser(prog='mbed',
     description="Command-line code management tool for ARM mbed OS - http://www.mbed.com\nversion %s\n\nUse 'mbed <command> -h|--help' for detailed help.\nOnline manual and guide available at https://github.com/ARMmbed/mbed-cli" % ver,
@@ -2566,7 +2470,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                     error("Unable to flash the target board connected to your system.", 1)
 
             if flash or sterm:
-                if not cdc(detected['port'], reset=flash, sterm=sterm):
+                if not mbed_cdc(detected['port'], reset=flash, sterm=sterm):
                     error("Unable to reset the target board connected to your system.\nThis might be caused by an old interface firmware.\nPlease check the board page for new firmware.", 1)
 
     program.set_defaults(target=target, toolchain=tchain)
@@ -2774,7 +2678,7 @@ def detect(reset=False, sterm=False):
                     action("Detected unknown target connected to \"%s\" and using com port \"%s\"" % (target['mount'], target['serial']))
                 else:
                     action("Detected \"%s\" connected to \"%s\" and using com port \"%s\"" % (target['name'], target['mount'], target['serial']))
-                cdc(target['serial'], reset=reset, sterm=sterm)
+                mbed_cdc(target['serial'], reset=reset, sterm=sterm)
 
             if unknown_found:
                 warning("If you're developing a new target, you can mock the device to continue your development. "
