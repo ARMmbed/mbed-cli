@@ -1,4 +1,24 @@
 
+#!/usr/bin/env python2
+
+# Copyright (c) 2016 ARM Limited, All Rights Reserved
+# SPDX-License-Identifier: Apache-2.0
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+
+# You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+# either express or implied.
+
+
+# pylint: disable=too-many-arguments, too-many-locals, too-many-branches, too-many-lines, line-too-long,
+# pylint: disable=too-many-nested-blocks, too-many-public-methods, too-many-instance-attributes, too-many-statements
+# pylint: disable=invalid-name, missing-docstring, bad-continuation
+
 def mbed_cdc(port, reset=False, sterm=False, baudrate=9600, timeout= 10, print_term_header=True):
     try:
         from serial import Serial, SerialException
@@ -22,7 +42,8 @@ def mbed_cdc(port, reset=False, sterm=False, baudrate=9600, timeout= 10, print_t
             try:
                 serial_instance.setBreak(False) # For Linux the following setBreak() is needed to release the reset signal on the target mcu.
             except:
-                result = False
+                return False
+        return True
 
     def cdc_term(serial_instance):
         term = miniterm.Miniterm(serial_instance, echo=True)
@@ -90,21 +111,21 @@ def mbed_cdc(port, reset=False, sterm=False, baudrate=9600, timeout= 10, print_t
         term.join()
         term.close()
 
+        return True
+
 
     result = False
     serial_port = get_instance(port, baudrate=baudrate, timeout=timeout)
     if serial_port:
         serial_port.reset_input_buffer()
         if reset:
-            cdc_reset(serial_port)
-            result = True
+            result = cdc_reset(serial_port)
 
         if sterm:
             if not serial_port.is_open:
                 serial_port = get_instance(port, baudrate=baudrate, timeout=timeout)
             try:
-                cdc_term(serial_port)
-                result = True
+                result = cdc_term(serial_port)
             except:
                 pass
 
