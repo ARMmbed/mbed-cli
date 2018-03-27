@@ -2749,7 +2749,7 @@ def detect(reset=False, sterm=False):
     with cd(program.path):
         tools_dir = program.get_tools_dir()
 
-    if tools_dir:
+    if tools_dir and not (reset or sterm):
         # Prepare environment variables
         env = program.get_env()
 
@@ -2762,7 +2762,9 @@ def detect(reset=False, sterm=False):
             if very_verbose:
                 error(str(e))
     else:
-        warning("The mbed OS tools were not found in \"%s\". \nLimited information will be shown about connected mbed targets/boards" % program.path)
+        if not tools_dir:
+            warning("The mbed OS tools were not found in \"%s\". \nLimited information will be shown about connected mbed targets/boards" % program.path)
+
         targets = program.get_detected_targets()
         if targets:
             unknown_found = False
