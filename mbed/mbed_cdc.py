@@ -1,7 +1,11 @@
-from serial import Serial, SerialException
-import serial.tools.miniterm as miniterm
 
-def mbed_cdc(port, reset=False, sterm=False, baudrate=9600, timeout=10, print_term_header=True):
+def mbed_cdc(port, reset=False, sterm=False, baudrate=9600, timeout= 10, print_term_header=True):
+    try:
+        from serial import Serial, SerialException
+        import serial.tools.miniterm as miniterm
+    except (IOError, ImportError, OSError):
+        return False
+
     def get_instance(*args, **kwargs):
         try:
             serial_port = Serial(*args, **kwargs)
