@@ -2554,7 +2554,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                 try:
                     from mbed_host_tests.host_tests_toolbox import flash_dev
                 except (IOError, ImportError, OSError):
-                    error("The '-f/--flash' option requires that the 'mbed-greentea' python module is installed.\nYou can install mbed-ls by running 'pip install mbed-greentea'.", 1)
+                    error("The '-f/--flash' option requires that the 'mbed-greentea' python module is installed.\nYou can install mbed-greentea by running 'pip install mbed-greentea'.", 1)
 
             if flash:
                 fw_name = artifact_name if artifact_name else program.name
@@ -2780,7 +2780,7 @@ def detect(reset=False, sterm=False):
                 warning("If you're developing a new target, you can mock the device to continue your development. "
                         "Use 'mbedls --mock ID:NAME' to do so (see 'mbedls --help' for more information)")
         else:
-            error("This command requires that the 'mbed-greentea' python module is installed.\nYou can install mbed-ls by running 'pip install mbed-greentea'.", 1)
+            error("This command requires that the 'mbed-greentea' python module is installed.\nYou can install mbed-greentea by running 'pip install mbed-greentea'.", 1)
 
 
 # Generic config command
