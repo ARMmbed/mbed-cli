@@ -2174,7 +2174,7 @@ def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=Fa
         except ProcessException as e:
             err = "Unable to update \"%s\" to %s" % (repo.name, repo.revtype(rev))
             if offline:
-                err = err + "\nThis might be caused by offline mode ('--offline' used).\nYou should try without offline mode."
+                err = err + "\nThis might be caused by offline mode ('--offline' used). You should try without offline mode."
             elif depth:
                 err = err + ("\nThis might be caused by the '--depth' option, which prevents fetching the whole revision history." % (repo.revtype(repo.rev)))
             if ignore:
