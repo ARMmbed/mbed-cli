@@ -22,6 +22,7 @@ test:
         - cd .tests/bld-test/mbed && mbed update 85 --clean
         - cd .tests/bld-test && mbed update --clean
         - cd .tests/bld-test && mbed compile -m LPC1768 -j 0
+        - cd .tests && mbed new new-offline --offline
         - cd .tests && mbed new supported-tests
         - |-
             cd .tests/supported-tests
