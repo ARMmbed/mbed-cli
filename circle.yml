@@ -25,6 +25,7 @@ test:
         - cd .tests && mbed import https://github.com/ARMmbed/mbed-os-example-mesh-minimal offline-test
         - cd .tests/offline-test && mbed update mbed-os-5.5.6 --offline
         - cd .tests/offline-test && mbed update mbed-os-5.7.5 --offline
+        - cd .tests && mbed import https://github.com/ARMmbed/mbed-os-example-mesh-minimal offline-test2 --offline
         - cd .tests && mbed new supported-tests
         - |-
             cd .tests/supported-tests
