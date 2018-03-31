@@ -167,6 +167,15 @@ def error(msg, code=-1):
     sys.stderr.write("---\n")
     sys.exit(code)
 
+def offline_warning(offline, top=True):
+    if top and offline:
+        log("\n")
+        log(".=============================== OFFLINE MODE ================================.\n")
+        log("|   Offline mode is enabled. No connections to remote repositories will be    |\n")
+        log("|           made and only locally cached repositories will be used.           |\n")
+        log("|   This might break some actions if non-cached repositories are referenced.  |\n")
+        log("'============================================================================='\n\n")
+
 def progress_cursor():
     while True:
         for cursor in '|/-\\':
@@ -1179,7 +1188,7 @@ class Repo(object):
                 pass
         return self.scm.remove(dest, *args, **kwargs)
 
-    def clone(self, url, path, rev=None, depth=None, protocol=None, **kwargs):
+    def clone(self, url, path, rev=None, depth=None, protocol=None, offline=False, **kwargs):
         # Sorted so repositories that match urls are attempted first
         info("Trying to guess source control management tool. Supported SCMs: %s" % ', '.join([s.name for s in scms.values()]))
         for scm in scms.values():
@@ -1202,7 +1211,7 @@ class Repo(object):
                         info("Update cached copy from remote repository")
                         if not rev:
                             rev = scm.default_branch
-                        scm.update(rev, True)
+                        scm.update(rev, True, is_local=offline)
                         main = False
                 except (ProcessException, IOError):
                     info("Discarding cached repository")
@@ -1211,6 +1220,8 @@ class Repo(object):
 
             # Main clone routine if the clone with cache ref failed (might occur if cache ref is dirty)
             if main:
+                if offline:
+                    error("Unable to clone repository \"%s\" in offline mode ('--offline' used)." % url)
                 try:
                     scm.clone(url, path, depth=depth, protocol=protocol, **kwargs)
                 except ProcessException:
@@ -1816,14 +1827,16 @@ def subcommand(name, *args, **kwargs):
     dict(name='--create-only', action='store_true', help='Only create a program, do not import mbed-os or mbed library.'),
     dict(name='--depth', nargs='?', help='Number of revisions to fetch the mbed OS repository when creating new program. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol when fetching the mbed OS repository when creating new program. Supported: https, http, ssh, git. Default: inferred from URL.'),
+    dict(name='--offline', action='store_true', help='Offline mode will force the use of locally cached repositories and prevent requests to remote repositories.'),
     help='Create new mbed program or library',
     description=(
         "Creates a new mbed program if executed within a non-program location.\n"
         "Alternatively creates an mbed library if executed within an existing program.\n"
         "When creating new program, the latest mbed-os release will be downloaded/added\n unless --create-only is specified.\n"
         "Supported source control management: git, hg"))
-def new(name, scm='git', program=False, library=False, mbedlib=False, create_only=False, depth=None, protocol=None):
+def new(name, scm='git', program=False, library=False, mbedlib=False, create_only=False, depth=None, protocol=None, offline=False):
     global cwd_root
+    offline_warning(offline)
 
     d_path = os.path.abspath(name or getcwd())
     p_path = os.path.dirname(d_path)
@@ -1900,14 +1913,16 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     dict(name='--insecure', action='store_true', help='Allow insecure repository URLs. By default mbed CLI imports only "safe" URLs, e.g. based on standard ports - 80, 443 and 22. This option enables the use of arbitrary URLs/ports.'),
+    dict(name='--offline', action='store_true', help='Offline mode will force the use of locally cached repositories and prevent requests to remote repositories.'),
     hidden_aliases=['im', 'imp'],
     help='Import program from URL',
     description=(
         "Imports mbed program and its dependencies from a source control based URL\n"
         "(GitHub, Bitbucket, mbed.org) into the current directory or specified\npath.\n"
         "Use 'mbed add <URL>' to add a library into an existing program."))
-def import_(url, path=None, ignore=False, depth=None, protocol=None, insecure=False, top=True):
+def import_(url, path=None, ignore=False, depth=None, protocol=None, insecure=False, offline=False, top=True):
     global cwd_root
+    offline_warning(offline, top)
 
     # translate 'mbed-os' to https://github.com/ARMmbed/mbed-os
     orig_url = url
@@ -1931,11 +1946,11 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, insecure=Fa
         error("Directory \"%s\" is not empty. Please ensure that the destination folder is empty." % repo.path, 1)
 
     if not Repo.isurl(orig_url) and os.path.exists(orig_url):
-            warning("Importing from a local folder \"%s\", not from a URL" % orig_url)
+        warning("Importing from a local folder \"%s\", not from a URL" % orig_url)
 
     text = "Importing program" if top else "Adding library"
     action("%s \"%s\" from \"%s\"%s" % (text, relpath(cwd_root, repo.path), formaturl(repo.url, protocol), ' at '+(repo.revtype(repo.rev))))
-    if repo.clone(repo.url, repo.path, rev=repo.rev, depth=depth, protocol=protocol):
+    if repo.clone(repo.url, repo.path, rev=repo.rev, depth=depth, protocol=protocol, offline=offline):
         with cd(repo.path):
             Program(repo.path).set_root()
             try:
@@ -1962,7 +1977,7 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, insecure=Fa
         cwd_root = repo.path
 
     with cd(repo.path):
-        deploy(ignore=ignore, depth=depth, protocol=protocol, insecure=insecure, top=False)
+        deploy(ignore=ignore, depth=depth, protocol=protocol, insecure=insecure, offline=offline, top=False)
 
     if top:
         Program(repo.path).post_action()
@@ -1976,17 +1991,19 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, insecure=Fa
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     dict(name='--insecure', action='store_true', help='Allow insecure repository URLs. By default mbed CLI imports only "safe" URLs, e.g. based on standard ports - 80, 443 and 22. This option enables the use of arbitrary URLs/ports.'),
+    dict(name='--offline', action='store_true', help='Offline mode will force the use of locally cached repositories and prevent requests to remote repositories.'),
     hidden_aliases=['ad'],
     help='Add library from URL',
     description=(
         "Adds mbed library and its dependencies from a source control based URL\n"
         "(GitHub, Bitbucket, mbed.org) into an existing program.\n"
         "Use 'mbed import <URL>' to import as a program"))
-def add(url, path=None, ignore=False, depth=None, protocol=None, insecure=False, top=True):
-    repo = Repo.fromrepo()
+def add(url, path=None, ignore=False, depth=None, protocol=None, insecure=False, offline=False, top=True):
+    offline_warning(offline, top)
 
+    repo = Repo.fromrepo()
     lib = Repo.fromurl(url, path)
-    import_(lib.fullurl, lib.path, ignore=ignore, depth=depth, protocol=protocol, insecure=insecure, top=False)
+    import_(lib.fullurl, lib.path, ignore=ignore, depth=depth, protocol=protocol, insecure=insecure, offline=offline, top=False)
     repo.ignore(relpath(repo.path, lib.path))
     lib.sync()
 
@@ -2023,22 +2040,24 @@ def remove(path):
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     dict(name='--insecure', action='store_true', help='Allow insecure repository URLs. By default mbed CLI imports only "safe" URLs, e.g. based on standard ports - 80, 443 and 22. This option enables the use of arbitrary URLs/ports.'),
+    dict(name='--offline', action='store_true', help='Offline mode will force the use of locally cached repositories and prevent requests to remote repositories.'),
     help='Find and add missing libraries',
     description=(
         "Import missing dependencies in an existing program or library.\n"
         "Use 'mbed import <URL>' and 'mbed add <URL>' instead of cloning manually and\n"
         "then running 'mbed deploy'"))
-def deploy(ignore=False, depth=None, protocol=None, insecure=False, top=True):
+def deploy(ignore=False, depth=None, protocol=None, insecure=False, offline=False, top=True):
+    offline_warning(offline, top)
+
     repo = Repo.fromrepo()
     repo.ignores()
-
     for lib in repo.libs:
         if os.path.isdir(lib.path):
             if lib.check_repo():
                 with cd(lib.path):
-                    update(lib.rev, ignore=ignore, depth=depth, protocol=protocol, insecure=insecure, top=False)
+                    update(lib.rev, ignore=ignore, depth=depth, protocol=protocol, insecure=insecure, offline=offline, top=False)
         else:
-            import_(lib.fullurl, lib.path, ignore=ignore, depth=depth, protocol=protocol, insecure=insecure, top=False)
+            import_(lib.fullurl, lib.path, ignore=ignore, depth=depth, protocol=protocol, insecure=insecure, offline=offline, top=False)
             repo.ignore(relpath(repo.path, lib.path))
 
     if top:
@@ -2108,6 +2127,7 @@ def publish(all_refs=None, msg=None, top=True):
     dict(name='--depth', nargs='?', help='Number of revisions to fetch from the remote repository. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     dict(name='--insecure', action='store_true', help='Allow insecure repository URLs. By default mbed CLI imports only "safe" URLs, e.g. based on standard ports - 80, 443 and 22. This option enables the use of arbitrary URLs/ports.'),
+    dict(name='--offline', action='store_true', help='Offline mode will force the use of locally cached repositories and prevent requests to remote repositories.'),
     dict(name=['-l', '--latest-deps'], action='store_true', help='Update all dependencies to the latest revision of their current branch. WARNING: Ignores lib files'),
     hidden_aliases=['up'],
     help='Update to branch, tag, revision or latest',
@@ -2115,7 +2135,9 @@ def publish(all_refs=None, msg=None, top=True):
         "Updates the current program or library and its dependencies to specified\nbranch, tag or revision.\n"
         "Alternatively fetches from associated remote repository URL and updates to the\n"
         "latest revision in the current branch."))
-def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=False, depth=None, protocol=None, insecure=False, latest_deps=False, top=True):
+def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=False, depth=None, protocol=None, insecure=False, offline=False, latest_deps=False, top=True):
+    offline_warning(offline, top)
+
     if top and clean:
         sync()
 
@@ -2148,11 +2170,13 @@ def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=Fa
             repo.revtype(rev)))
 
         try:
-            repo.update(rev, clean, clean_files, repo.is_local)
+            repo.update(rev, clean, clean_files, offline or repo.is_local)
         except ProcessException as e:
             err = "Unable to update \"%s\" to %s" % (repo.name, repo.revtype(rev))
-            if depth:
-                err = err + ("\nThe --depth option might prevent fetching the whole revision tree and checking out %s." % (repo.revtype(repo.rev)))
+            if offline:
+                err = err + "\nThis might be caused by offline mode ('--offline' used).\nYou should try without offline mode."
+            elif depth:
+                err = err + ("\nThis might be caused by the '--depth' option, which prevents fetching the whole revision history." % (repo.revtype(repo.rev)))
             if ignore:
                 warning(err)
             else:
@@ -2203,11 +2227,11 @@ def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=Fa
     # Import missing repos and update to revs
     for lib in repo.libs:
         if not os.path.isdir(lib.path):
-            import_(lib.fullurl, lib.path, ignore=ignore, depth=depth, protocol=protocol, insecure=insecure, top=False)
+            import_(lib.fullurl, lib.path, ignore=ignore, depth=depth, protocol=protocol, insecure=insecure, offline=offline, top=False)
             repo.ignore(relpath(repo.path, lib.path))
         else:
             with cd(lib.path):
-                update(None if latest_deps else lib.rev, clean=clean, clean_files=clean_files, clean_deps=clean_deps, ignore=ignore, protocol=protocol, insecure=insecure, latest_deps=latest_deps, top=False)
+                update(None if latest_deps else lib.rev, clean=clean, clean_files=clean_files, clean_deps=clean_deps, ignore=ignore, depth=depth, protocol=protocol, insecure=insecure, offline=offline, latest_deps=latest_deps, top=False)
 
     if top:
         program = Program(repo.path)
