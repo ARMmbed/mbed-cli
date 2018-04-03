@@ -2789,6 +2789,15 @@ def toolchain_(name=None, global_cfg=False, supported=False):
         return compile_(supported=supported)
     return config_('toolchain', name, global_cfg=global_cfg)
 
+@subcommand('profile',
+    dict(name='path', nargs='+', help='Default profile path. Example: mbed-os/tools/profiles/develop.json, ./profile-cxx11.json'),
+    dict(name=['-G', '--global'], dest='global_cfg', action='store_true', help='Use global settings, not local'),
+    help='Set or get default profile(s)\n\n',
+    description=(
+        "Set or get default profile\n"
+        "This is an alias to 'mbed config [--global] profile [path ...]'\n"))
+def profile_(path=None, global_cfg=False):
+    return config_('profile', (' ').join(path), global_cfg=global_cfg)
 
 @subcommand('profile',
     dict(name='path', nargs='+', help='Default profile path. Example: mbed-os/tools/profiles/develop.json, ./profile-cxx11.json'),
