@@ -2731,6 +2731,9 @@ def config_(var=None, value=None, global_cfg=False, unset=False, list_config=Fal
         if global_cfg:
             # Global configuration
             g = Global()
+            if var == 'PROFILE':
+                action('profile is a local-only option')
+                return
             if unset:
                 g.set_cfg(var, None)
                 action('Unset global %s' % name)
@@ -2800,7 +2803,7 @@ def profile_(path=None, global_cfg=False):
     return config_('profile', (' ').join(path), global_cfg=global_cfg)
 
 @subcommand('profile',
-    dict(name='path', nargs='+', help='Default profile path. Example: mbed-os/tools/profiles/develop.json, ./profile-cxx11.json'),
+    dict(name='path', nargs='*', help='Default profile path. Example: mbed-os/tools/profiles/develop.json, ./profile-cxx11.json'),
     dict(name=['-G', '--global'], dest='global_cfg', action='store_true', help='Use global settings, not local'),
     help='Set or get default profile(s)\n\n',
     description=(
