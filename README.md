@@ -409,7 +409,7 @@ The arguments for *compile* are:
 * `-S` or `--supported` shows a matrix of the supported targets and toolchains.
 * `-f` or `--flash` to flash/program a connected target after successful compile.
 * `-s` or `--sterm` to open the connected target's serial terminal after successful compile. This option can be chained with `-f` or `-r` so the new firmware image will be flashed to the target or reset, then open the serial terminal.
-* `-c ` to build from scratch, a clean build or rebuild.
+* `-c` to build from scratch, a clean build or rebuild.
 * `-j <jobs>` to control the compile processes on your machine. The default value is 0, which infers the number of processes from the number of cores on your machine. You can use `-j 1` to trigger a sequential compile of source code.
 * `-v` or `--verbose` for verbose diagnostic output.
 * `-vv` or `--very_verbose` for very verbose diagnostic output.
