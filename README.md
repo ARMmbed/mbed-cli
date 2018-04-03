@@ -183,11 +183,11 @@ $ cd mbed-os
 $ mbed releases
 mbed-os (#182bbd51bc8d, tags: latest, mbed-os-5.6.5)
   ...
-  * mbed-os-5.6.0 
-  * mbed-os-5.6.1 
-  * mbed-os-5.6.2 
-  * mbed-os-5.6.3 
-  * mbed-os-5.6.4 
+  * mbed-os-5.6.0
+  * mbed-os-5.6.1
+  * mbed-os-5.6.2
+  * mbed-os-5.6.3
+  * mbed-os-5.6.4
   * mbed-os-5.6.5  <- current
 ```
 
@@ -408,6 +408,7 @@ The arguments for *compile* are:
 * `--config` to inspect the runtime compile configuration (see below).
 * `-S` or `--supported` shows a matrix of the supported targets and toolchains.
 * `-f` or `--flash` to flash/program a connected target after successful compile.
+* `-s` or `--sterm` to open the connected target's serial terminal after successful compile. This option can be chained with `-f` or `-r` so the new firmware image will be flashed to the target or reset, then open the serial terminal.
 * `-c ` to build from scratch, a clean build or rebuild.
 * `-j <jobs>` to control the compile processes on your machine. The default value is 0, which infers the number of processes from the number of cores on your machine. You can use `-j 1` to trigger a sequential compile of source code.
 * `-v` or `--verbose` for verbose diagnostic output.
@@ -479,10 +480,10 @@ $ mbed compile --config -t GCC_ARM -m K64F --prefix target --prefix app
 
 #### Macros
 
-You can specify macros in your command-line using the -D option. For example:
+You can specify macros in your command-line using the `-D` option. For example:
 
 ```
-$ mbed compile -t GCC_ARM -m K64F -c -DUVISOR_PRESENT
+$ mbed compile -t GCC_ARM -m K64F -c -D UVISOR_PRESENT
 ```
 
 #### Compiling in debug mode
@@ -501,6 +502,30 @@ $ mbed compile -t GCC_ARM -m K64F --profile mbed-os/tools/profiles/debug.json
 Using `mbed target <target>` and `mbed toolchain <toolchain>`, you can set the default target and toolchain for your program. You won't have to specify these every time you compile or generate IDE project files.
 
 You can also use `mbed target detect`, which detects the connected target board and uses it as a parameter to every subsequent compile and export.
+
+### Automatically open the connected target's serial terminal
+
+You can automatically open the connected target's serial terminal in your command-line by using the `-s` or `--sterm` option. For example, to compile and flash a new firmware image to the connected target and open it's serial terminal:
+
+```
+$ mbed compile -t GCC_ARM -m K64F -f -s
+```
+
+You can also use the `-s` option with `mbed detect` to open the target's serial terminal without flashing a new firmware image. For example:
+
+```
+$ mbed detect -rs
+```
+
+The following shortcuts are available within the serial terminal:
+
+- Quit: `CTRL+C` or `CTRL+J`
+- Reset: `CTRL+B` or `CTRL+R`
+- Echo toggle: `CTRL+E`
+- Terminal information: `TAB` or `CTRL+I`
+- Help: `CTRL+H`
+- Menu: `CTRL+T`
+- Change baud rate: `CTRL+T+B`
 
 ## Exporting to desktop IDEs
 
@@ -764,7 +789,7 @@ The update command fails if there are changes in your program or library that `m
 
 ### Updating to an upstream version
 
-Before updating a program or a library, it's good to know the names of the stable releases, usually marked with a tag using a common format, such as `1.2`, `v1.0.1`, `r5.6`, `mbed-os-5.6` and so on. 
+Before updating a program or a library, it's good to know the names of the stable releases, usually marked with a tag using a common format, such as `1.2`, `v1.0.1`, `r5.6`, `mbed-os-5.6` and so on.
 
 You can find stable release versions of a program or a library using the `mbed releases` command:
 
@@ -773,11 +798,11 @@ $ cd mbed-os
 $ mbed releases
 mbed-os (#182bbd51bc8d, tags: latest, mbed-os-5.6.5)
   ...
-  * mbed-os-5.6.0 
-  * mbed-os-5.6.1 
-  * mbed-os-5.6.2 
-  * mbed-os-5.6.3 
-  * mbed-os-5.6.4 
+  * mbed-os-5.6.0
+  * mbed-os-5.6.1
+  * mbed-os-5.6.2
+  * mbed-os-5.6.3
+  * mbed-os-5.6.4
   * mbed-os-5.6.5  <- current
 ```
 
@@ -789,12 +814,12 @@ Lastly, you can list unstable releases, such as release candidates, alphas and b
 $ cd mbed-client
 $ mbed releases -u
 mbed-client (#31e5ce203cc0, tags: v3.0.0)
-  * mbed-os-5.0-rc1 
-  * mbed-os-5.0-rc2 
-  * r0.5-rc4 
+  * mbed-os-5.0-rc1
+  * mbed-os-5.0-rc2
+  * r0.5-rc4
   ...
-  * v2.2.0 
-  * v2.2.1 
+  * v2.2.0
+  * v2.2.1
   * v3.0.0  <- current
 ```
 
