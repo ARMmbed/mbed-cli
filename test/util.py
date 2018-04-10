@@ -10,6 +10,8 @@
 # distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, 
 # either express or implied.
 
+from __future__ import print_function
+
 import contextlib
 import subprocess
 import pytest
@@ -25,14 +27,14 @@ class ProcessException(Exception):
     pass
 
 def popen(command, stdin=None, **kwargs):
-    print ' '.join(command)
+    print(' '.join(command))
     proc = subprocess.Popen(command, **kwargs)
 
     if proc.wait() != 0:
         raise ProcessException(proc.returncode)
 
 def pquery(command, stdin=None, **kwargs):
-    print ' '.join(command)
+    print(' '.join(command))
     proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
     stdout, _ = proc.communicate(stdin)
 
@@ -104,7 +106,7 @@ def assertls(mbed, dir, tree):
     with cd(dir):
         result = pquery(['python', mbed, 'ls'])
 
-    print result
+    print(result)
     assert re.match(tree, result, re.MULTILINE)
 
 def scm(dir=None):

@@ -18,6 +18,8 @@
 # pylint: disable=too-many-nested-blocks, too-many-public-methods, too-many-instance-attributes, too-many-statements
 # pylint: disable=invalid-name, missing-docstring, bad-continuation
 
+from __future__ import print_function
+
 import traceback
 import sys
 import re
@@ -2341,7 +2343,7 @@ def sync(recursive=True, keep_refs=False, top=True):
 def list_(detailed=False, prefix='', p_path=None, ignore=False):
     repo = Repo.fromrepo()
 
-    print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url + ('#' + str(repo.rev)[:12] if repo.rev else '') if detailed else repo.revtype(repo.rev, fmt=6)) or 'no revision'))
+    print("%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url + ('#' + str(repo.rev)[:12] if repo.rev else '') if detailed else repo.revtype(repo.rev, fmt=6)) or 'no revision')))
 
     for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.path)):
         nprefix = (prefix[:-3] + ('|  ' if prefix[-3] == '|' else '   ')) if prefix else ''
@@ -2374,16 +2376,16 @@ def releases_(detailed=False, unstable=False, recursive=False, prefix='', p_path
             rels.append(tag[1] + " %s%s" % ('#' + tag[0] if detailed else "", " <- current" if tag[1] in revtags else ""))
 
     # Print header
-    print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url + ('#' + str(repo.rev)[:12] if repo.rev else '') if detailed else repo.revtype(repo.rev, fmt=6)) or 'no revision'))
+    print("%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url + ('#' + str(repo.rev)[:12] if repo.rev else '') if detailed else repo.revtype(repo.rev, fmt=6)) or 'no revision')))
 
     # Print list of tags
     rprefix = (prefix[:-3] + ('|  ' if prefix[-3] == '|' else '   ')) if recursive and prefix else ''
     rprefix += '| ' if recursive and len(repo.libs) > 1 else '  '
     if len(rels):
         for rel in rels:
-            print rprefix + '* ' + rel
+            print(rprefix + '* ' + rel)
     else:
-        print rprefix + 'No release tags detected'
+        print(rprefix + 'No release tags detected')
 
     if recursive:
         for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.path)):
@@ -2947,7 +2949,7 @@ def cache_(on=False, off=False, dir=None, ls=False, purge=False, global_cfg=Fals
         action("Repository cache is %s." % str(cfg['cache']).upper())
         action("Cache location \"%s\"" % cfg['cache_dir'])
     else:
-        print cmd
+        print(cmd)
         error("Invalid cache command. Please see \"mbed cache --help\" for valid commands.")
 
 
