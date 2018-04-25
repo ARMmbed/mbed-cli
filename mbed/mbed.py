@@ -37,7 +37,7 @@ import tempfile
 
 
 # Application version
-ver = '1.5.0'
+ver = '1.5.1'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
@@ -1448,8 +1448,8 @@ class Program(object):
         missing = []
         try:
             with open(os.path.join(req_path, req_file), 'r') as f:
-                import pip
-                installed_packages = [re.sub(r'-', '_', package.project_name.lower()) for package in pip.get_installed_distributions(local_only=True)]
+                pkg_list = pquery([python_cmd, '-m', 'pip', 'list', '-l']) or ""
+                installed_packages = [re.sub(r'-', '_', pkg.split()[0].lower()) for pkg in pkg_list.splitlines()]
                 for line in f.read().splitlines():
                     pkg = re.sub(r'-', '_', re.sub(r'^([\w-]+).*$', r'\1', line).lower())
                     if not pkg in installed_packages:
