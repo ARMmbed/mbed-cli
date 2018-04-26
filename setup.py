@@ -32,4 +32,5 @@ setup(
             'mbed-cli=mbed.mbed:main',
         ]
     },
+    python_requires='>=2.7.10, <3',
 )
