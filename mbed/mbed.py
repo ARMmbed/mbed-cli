@@ -1449,7 +1449,7 @@ class Program(object):
         try:
             with open(os.path.join(req_path, req_file), 'r') as f:
                 pkg_list = pquery([python_cmd, '-m', 'pip', 'list', '-l']) or ""
-                installed_packages = [re.sub(r'-', '_', pkg.split()[0].lower()) for pkg in pkg_list.splitlines()]
+                installed_packages = [re.sub(r'-', '_', pkg.split()[0].lower()) for pkg in pkg_list.splitlines() if len(pkg.split())]
                 for line in f.read().splitlines():
                     pkg = re.sub(r'-', '_', re.sub(r'^([\w-]+).*$', r'\1', line).lower())
                     if not pkg in installed_packages:
