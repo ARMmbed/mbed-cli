@@ -874,6 +874,11 @@ For safety reasons, Mbed CLI uses the `mbed-cache` subfolder to a user specified
 
 **Security notice**: If you use cache location outside your user home/profile directory, then other system users might be able to access the repository cache and therefore the data of the cached repositories.
 
+### Offline mode
+Through the caching feature in Mbed CLI, you can enable offline mode, which will use the already cached repositories on your system. You can enable offline mode by adding `--offline` switch to `mbed import`, `mbed add`, `mbed update` and `mbed new`.
+
+In offline mode, Mbed CLI will look up for locally cached repositories and use them without fetching new content from their remote repositories. This is particularly useful if for example you are in a plane and you'd like to create another Mbed OS project (assuming you've imported or crated one before), but you don't have access to Internet. By using the command `mbed new <project_name> --offline`, you will be able to create the project with Mbed OS included.
+
 ## Mbed CLI configuration
 
 You can streamline many options in Mbed CLI with global and local configuration.
