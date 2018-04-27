@@ -1182,7 +1182,7 @@ class Repo(object):
     def clone(self, url, path, rev=None, depth=None, protocol=None, **kwargs):
         # Sorted so repositories that match urls are attempted first
         info("Trying to guess source control management tool. Supported SCMs: %s" % ', '.join([s.name for s in scms.values()]))
-        for _, scm in scms.items():
+        for scm in scms.values():
             main = True
             cache = self.get_cache(url, scm.name)
 
@@ -1261,7 +1261,7 @@ class Repo(object):
             # Safely convert repo URL to https schema if this is a public SCM service (github/butbucket), supporting all schemas.
             # This allows anonymous cloning of public repos without having to have ssh keys and associated accounts at github/bitbucket/etc.
             # Without this anonymous users will get clone errors with ssh repository links even if the repository is public.
-            # See hhttps://help.github.com/articles/which-remote-url-should-i-use/
+            # See https://help.github.com/articles/which-remote-url-should-i-use/
             url = formaturl(url, 'https')
 
         ref = url.rstrip('/') + '/' + (('' if self.is_build else '#') + self.rev if self.rev else '')
