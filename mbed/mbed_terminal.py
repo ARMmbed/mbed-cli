@@ -19,34 +19,41 @@
 # pylint: disable=too-many-nested-blocks, too-many-public-methods, too-many-instance-attributes, too-many-statements
 # pylint: disable=invalid-name, missing-docstring, bad-continuation
 
-def mbed_cdc(port, reset=False, sterm=False, baudrate=9600, timeout= 10, print_term_header=True):
-    try:
-        from serial import Serial, SerialException
-        import serial.tools.miniterm as miniterm
-    except (IOError, ImportError, OSError):
-        return False
 
-    def get_instance(*args, **kwargs):
+# Global class used for global config
+class MbedTerminal(object):
+    serial = None # Serial() object
+    port = None
+    baudrate = None
+    echo = None
+
+    def __init__(self, port, baudrate=9600, echo=True, timeout=10):
+        self.port = port
+        self.baudrate = int(baudrate)
+        self.timeout = int(timeout)
+        self.echo = bool(echo)
+
         try:
-            serial_port = Serial(*args, **kwargs)
-            serial_port.flush()
-        except Exception as e:
-            error("Unable to open serial port connection to \"%s\"" % port)
+            from serial import Serial, SerialException
+        except (IOError, ImportError, OSError):
             return False
-        return serial_port
 
-    def cdc_reset(serial_instance):
         try:
-            serial_instance.sendBreak()
-        except:
-            try:
-                serial_instance.setBreak(False) # For Linux the following setBreak() is needed to release the reset signal on the target mcu.
-            except:
-                return False
-        return True
+            self.serial = Serial(self.port, baudrate=self.baudrate, timeout=self.timeout)
+            self.serial.flush()
+            self.serial.reset_input_buffer()
+        except Exception as e:
+            print 'error'
+            self.serial = None
+            return False
 
-    def cdc_term(serial_instance):
-        term = miniterm.Miniterm(serial_instance, echo=True)
+    def terminal(self, print_header=True):
+        try:
+            import serial.tools.miniterm as miniterm
+        except (IOError, ImportError, OSError):
+            return False
+
+        term = miniterm.Miniterm(self.serial, echo=self.echo)
         term.exit_character = '\x03'
         term.menu_character = '\x14'
         term.set_rx_encoding('UTF-8')
@@ -54,6 +61,32 @@ def mbed_cdc(port, reset=False, sterm=False, baudrate=9600, timeout= 10, print_t
 
         def console_print(text):
             term.console.write('--- %s ---\n' % text)
+
+        def get_print_help():
+            return """
+--- Mbed Serial Terminal (0.3a)
+--- Based on miniterm from pySerial
+---
+--- CTRL+B     Send Break (reset target)
+--- CTRL+C     Exit terminal
+--- CTRL+E     Toggle local echo
+--- CTRL+H     Help
+--- CTRL+T     Menu escape key, followed by:
+---    P       Change COM port
+---    B       Change baudrate
+---    TAB     Show detailed terminal info
+---    CTRL+A  Change encoding (default UTF-8)
+---    CTRL+F  Edit filters
+---    CTRL+L  Toggle EOL
+---    CTRL+R  Toggle RTS
+---    CTRL+D  Toggle DTR
+---    CTRL+C  Send control character to remote
+---    CTRL+T  Send control character to remote
+"""
+
+        def print_help():
+            term.console.write(get_print_help())
+
 
         def input_handler():
             menu_active = False
@@ -64,16 +97,16 @@ def mbed_cdc(port, reset=False, sterm=False, baudrate=9600, timeout= 10, print_t
                     c = '\x03'
                 if not term.alive:
                     break
-                if menu_active:
+                if menu_active and c in ['p', 'b', '\t', '\x01', '\x03', '\x04', '\x05', '\x06', '\x0c', '\x14']:
                     term.handle_menu_key(c)
                     menu_active = False
                 elif c == term.menu_character:
                     console_print('[MENU]')
                     menu_active = True # next char will be for menu
-                elif c == '\x02' or  c == '\x12': # ctrl+b/ctrl+r sendbreak
+                elif c == '\x02': # ctrl+b sendbreak
                     console_print('[RESET]')
-                    cdc_reset(term.serial)
-                elif c == '\x03' or c == '\x1d': # ctrl+c/ctrl+]
+                    self.reset()
+                elif c == '\x03': # ctrl+c
                     console_print('[QUIT]')
                     term.stop()
                     term.alive = False
@@ -81,10 +114,10 @@ def mbed_cdc(port, reset=False, sterm=False, baudrate=9600, timeout= 10, print_t
                 elif c == '\x05': # ctrl+e
                     console_print('[ECHO %s]' % ('OFF' if term.echo else 'ON'))
                     term.echo = not term.echo
-                elif c == '\x08': # ctrl+e
-                    print term.get_help_text()
-                elif c == '\t': # tab/ctrl+i
-                    term.dump_port_settings()
+                elif c == '\x08': # ctrl+h
+                    print_help()
+#                elif c == '\t': # tab/ctrl+i
+#                    term.dump_port_settings()
                 else:
                     text = c
                     for transformation in term.tx_transformations:
@@ -97,10 +130,8 @@ def mbed_cdc(port, reset=False, sterm=False, baudrate=9600, timeout= 10, print_t
                         term.console.write(echo_text)
         term.writer = input_handler
 
-        if print_term_header:
-            console_print('Terminal on {p.name} - {p.baudrate},{p.bytesize},{p.parity},{p.stopbits}'.format(p=term.serial))
-            console_print('Quit: CTRL+C | Reset: CTRL+B | Echo: CTRL+E')
-            console_print('Info: TAB    | Help:  Ctrl+H | Menu: Ctrl+T')
+        if print_header:
+            console_print("Terminal on {p.name} - {p.baudrate},{p.bytesize},{p.parity},{p.stopbits}".format(p=term.serial))
 
         term.start()
 
@@ -113,20 +144,12 @@ def mbed_cdc(port, reset=False, sterm=False, baudrate=9600, timeout= 10, print_t
 
         return True
 
-
-    result = False
-    serial_port = get_instance(port, baudrate=baudrate, timeout=timeout)
-    if serial_port:
-        serial_port.reset_input_buffer()
-        if reset:
-            result = cdc_reset(serial_port)
-
-        if sterm:
-            if not serial_port.is_open:
-                serial_port = get_instance(port, baudrate=baudrate, timeout=timeout)
+    def reset(self):
+        try:
+            self.serial.sendBreak()
+        except:
             try:
-                result = cdc_term(serial_port)
+                self.serial.setBreak(False) # For Linux the following setBreak() is needed to release the reset signal on the target mcu.
             except:
-                pass
-
-    return result
+                return False
+        return True

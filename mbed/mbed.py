@@ -34,7 +34,6 @@ import urllib2
 import zipfile
 import argparse
 import tempfile
-from mbed_cdc import mbed_cdc
 
 
 # Application version
@@ -1752,6 +1751,30 @@ def formaturl(url, format="default"):
                     url = 'https://%s/%s' % (m.group(2), m.group(3))
     return url
 
+# Wrapper for the MbedTermnal functionality
+def mbed_sterm(port, baudrate=9600, echo=True, reset=False, sterm=False):
+    try:
+        from mbed_terminal import MbedTerminal
+    except (IOError, ImportError, OSError):
+        error("The serial terminal functionality requires that the 'mbed-terminal' python module is installed.\nYou can install mbed-terminal by running 'pip install mbed-terminal'.", 1)
+
+    result = False
+    mbed_serial = MbedTerminal(port, baudrate=baudrate, echo=echo)
+    if mbed_serial.serial:
+        if reset:
+            mbed_serial.reset()
+
+        if sterm:
+            # Some boards will reset the COM port after SendBreak, e.g. STLink based
+            if not mbed_serial.serial.is_open:
+                mbed_serial = MbedTerminal(port, baudrate=baudrate, echo=echo)
+
+            try:
+                result = mbed_serial.terminal()
+            except:
+                pass
+    return result
+
 
 # Subparser handling
 parser = argparse.ArgumentParser(prog='mbed',
@@ -2470,7 +2493,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                     error("Unable to flash the target board connected to your system.", 1)
 
             if flash or sterm:
-                if not mbed_cdc(detected['port'], reset=flash, sterm=sterm):
+                if not mbed_sterm(detected['port'], reset=flash, sterm=sterm):
                     error("Unable to reset the target board connected to your system.\nThis might be caused by an old interface firmware.\nPlease check the board page for new firmware.", 1)
 
     program.set_defaults(target=target, toolchain=tchain)
@@ -2634,16 +2657,14 @@ def export(ide=None, target=None, source=False, clean=False, supported=False, ap
     program.set_defaults(target=target)
 
 
-# Test command
+# Detect command
 @subcommand('detect',
-    dict(name=['-r', '--reset'], dest='reset', action='store_true', help='Reset detected targets (via SendBreak)'),
-    dict(name=['-s', '--sterm'], dest='sterm', action='store_true', help='Open serial terminal for detected targets'),
     hidden_aliases=['det'],
-    help='Detect connected mbed targets/boards\n\n',
+    help='Detect connected Mbed targets/boards\n\n',
     description=(
-        "Detects mbed targets/boards connected to this system and shows supported\n"
+        "Detect Mbed targets/boards connected to this system and show supported\n"
         "toolchain matrix."))
-def detect(reset=False, sterm=False):
+def detect():
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
@@ -2653,7 +2674,7 @@ def detect(reset=False, sterm=False):
     with cd(program.path):
         tools_dir = program.get_tools_dir()
 
-    if tools_dir and not (reset or sterm):
+    if tools_dir:
         # Prepare environment variables
         env = program.get_env()
 
@@ -2666,9 +2687,7 @@ def detect(reset=False, sterm=False):
             if very_verbose:
                 error(str(e))
     else:
-        if not tools_dir:
-            warning("The mbed OS tools were not found in \"%s\". \nLimited information will be shown about connected mbed targets/boards" % program.path)
-
+        warning("The mbed-os tools were not found in \"%s\". \nLimited information will be shown about connected targets/boards" % program.path)
         targets = program.get_detected_targets()
         if targets:
             unknown_found = False
@@ -2678,13 +2697,47 @@ def detect(reset=False, sterm=False):
                     action("Detected unknown target connected to \"%s\" and using com port \"%s\"" % (target['mount'], target['serial']))
                 else:
                     action("Detected \"%s\" connected to \"%s\" and using com port \"%s\"" % (target['name'], target['mount'], target['serial']))
-                mbed_cdc(target['serial'], reset=reset, sterm=sterm)
 
             if unknown_found:
                 warning("If you're developing a new target, you can mock the device to continue your development. "
-                        "Use 'mbedls --mock ID:NAME' to do so (see 'mbedls --help' for more information)")
-        else:
-            error("This command requires that the 'mbed-greentea' python module is installed.\nYou can install mbed-greentea by running 'pip install mbed-greentea'.", 1)
+"Use 'mbedls --mock ID:NAME' to do so (see 'mbedls --help' for more information)")
+
+
+# Serial terminal command
+@subcommand('sterm',
+    dict(name=['-p', '--port'], help='Communication port. Default: auto-detect'),
+    dict(name=['-b', '--baudrate'], help='Communication baudrate. Default: 9600'),
+    dict(name=['-e', '--echo'], help='Switch local echo on/off. Default: on'),
+    dict(name=['-r', '--reset'], action='store_true', help='Reset the targets (via SendBreak) before opening terminal.'),
+    hidden_aliases=['term'],
+    help='Open serial terminal to connected target.\n\n',
+    description=(
+        "Open serial terminal to connected target (usually board), or connect to a user-specified COM port\n"))
+def sterm(port=None, baudrate=None, echo=None, reset=False, sterm=True):
+    # Gather remaining arguments
+    args = remainder
+    # Find the root of the program
+    program = Program(getcwd(), False)
+
+    port = port or program.get_cfg('TERM_PORT', None)
+    baudrate = baudrate or program.get_cfg('TERM_BAUDRATE', 9600)
+    echo = echo or program.get_cfg('TERM_ECHO', 'on')
+
+    if port:
+        action("Opening serial terminal to the specified COM port \"%s\"" % port)
+        mbed_sterm(port, baudrate=baudrate, echo=echo, reset=reset, sterm=sterm)
+    else:
+        action("Detecting connected targets/boards to your system...")
+        targets = program.get_detected_targets()
+        if not targets:
+            error("Couldn't detect connected targets/boards to your system.\nYou can manually specify COM port via the '--port' option.", 1)
+
+        for target in targets:
+            if target['name'] is None:
+                action("Opening serial terminal to unknown target at \"%s\"" % target['serial'])
+            else:
+                action("Opening serial terminal to \"%s\"" % target['name'])
+            mbed_sterm(target['serial'], baudrate=baudrate, echo=echo, reset=reset, sterm=sterm)
 
 
 # Generic config command
