@@ -2390,7 +2390,7 @@ def status_(ignore=False):
     dict(name='--build', help='Build directory. Default: build/'),
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
     dict(name=['-f', '--flash'], action='store_true', help='Flash the built firmware onto a connected target.'),
-    dict(name=['-s', '--sterm'], action='store_true', help='Open serial terminal after compiling. Can be chained with --flash'),
+    dict(name=['--sterm'], action='store_true', help='Open serial terminal after compiling. Can be chained with --flash'),
     dict(name=['-N', '--artifact-name'], help='Name of the built program or library'),
     dict(name=['-S', '--supported'], dest='supported', const=True, choices=["matrix", "toolchains", "targets"], nargs="?", help='Shows supported matrix of targets and toolchains'),
     dict(name='--app-config', dest="app_config", help="Path of an app configuration file (Default is to look for 'mbed_app.json')"),
