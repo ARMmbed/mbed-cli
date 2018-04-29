@@ -31,7 +31,7 @@ class MbedTerminal(object):
         self.port = port
         self.baudrate = int(baudrate)
         self.timeout = int(timeout)
-        self.echo = bool(echo)
+        self.echo = False if str(echo).lower() == 'off' else True
 
         try:
             from serial import Serial, SerialException
