@@ -2489,9 +2489,10 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
     dict(name='--test-spec', dest="test_spec", help="Path used for the test spec file used when building and running tests (the default path is the build directory)"),
     dict(name='--app-config', dest="app_config", help="Path of an app configuration file (Default is to look for 'mbed_app.json')"),
     dict(name='--test-config', dest="test_config", help="Path or mbed OS keyword of a test configuration file. Example: ethernet, odin_wifi, or path/to/config.json"),
+    dict(name='--ignore', dest="ignore", help="Comma separated list of patterns to add to mbedignore. Example: ./main.cpp,./src/app/*"),
     help='Find, build and run tests',
     description="Find, build, and run tests in a program and libraries")
-def test_(toolchain=None, target=None, compile_list=False, run_list=False, compile_only=False, run_only=False, tests_by_name=None, source=False, profile=False, build=False, clean=False, test_spec=None, app_config=None, test_config=None):
+def test_(toolchain=None, target=None, compile_list=False, run_list=False, compile_only=False, run_only=False, tests_by_name=None, source=False, profile=False, build=False, clean=False, test_spec=None, app_config=None, test_config=None, ignore=None):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
@@ -2535,6 +2536,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
                   + (['-v'] if verbose else [])
                   + (['--app-config', app_config] if app_config else [])
                   + (['--test-config', test_config] if test_config else [])
+                  + (['--ignore', ignore] if ignore else [])
                   + args,
                   env=env)
 
@@ -2555,6 +2557,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
                   + (['-v'] if verbose else [])
                   + (['--app-config', app_config] if app_config else [])
                   + (['--test-config', test_config] if test_config else [])
+                  + (['--ignore', ignore] if ignore else [])
                   + args,
                   env=env)
 
