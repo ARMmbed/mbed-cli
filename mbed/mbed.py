@@ -2972,11 +2972,6 @@ def main():
     # Help messages adapt based on current dir
     cwd_root = getcwd()
 
-    if sys.version_info[0] != 2 or sys.version_info[1] < 7:
-        error(
-            "mbed CLI is compatible with Python version >= 2.7 and < 3.0\n"
-            "Please refer to the online guide available at https://github.com/ARMmbed/mbed-cli")
-
     # Parse/run command
     if len(sys.argv) <= 1:
         help_()
