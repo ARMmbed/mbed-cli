@@ -527,12 +527,12 @@ There are various options to `mbed sterm`:
 You can also set default port, baudrate and echo mode using the `TERM_PORT`, `TERM_BAUDRATE` and `TERM_ECHO` Mbed CLI configuration options.
 
 The following shortcuts are available within the serial terminal:
-- CTRL+B - Send Break (reset target)
-- CTRL+C - Exit terminal
-- CTRL+E - Toggle local echo
-- CTRL+H - Help
-- CTRL+T - Menu escape key
-- _Even more shortcuts are available through the Menu shortcut. Check the help within the serial terminal (CTRL+H).__
+- Ctrl+b - Send Break (reset target)
+- Ctrl+c - Exit terminal
+- Ctrl+e - Toggle local echo
+- Ctrl+h - Help
+- Ctrl+t - Menu escape key
+- _Even more shortcuts are available through the Menu shortcut. Check the help within the serial terminal (Ctrl+h).__
 
 To automate things, you can also add the `--sterm` option to `mbed compile -f` to compile a new program, flash the program/firmware image to the connected target and then open serial terminal to it's COM port:
 
