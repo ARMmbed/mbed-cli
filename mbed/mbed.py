@@ -19,6 +19,7 @@
 # pylint: disable=invalid-name, missing-docstring, bad-continuation
 
 from __future__ import print_function
+from past.builtins import basestring
 
 try:
   from urllib.parse import urlparse
