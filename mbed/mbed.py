@@ -31,12 +31,15 @@ import stat
 import errno
 import ctypes
 from itertools import chain, repeat
-from urlparse import urlparse
-import urllib
-import urllib2
-import zipfile
 import argparse
 import tempfile
+import zipfile
+try:
+  from urllib.parse import urlparse
+  from urllib.request  import urlopen
+except ImportError:
+  from urlparse import urlparse
+  from urllib2 import urlopen
 
 
 # Application version
@@ -356,7 +359,7 @@ class Bld(object):
             if not os.path.exists(rev_file):
                 action("Downloading library build \"%s\" (might take a minute)" % rev)
                 outfd = open(rev_file, 'wb')
-                inurl = urllib2.urlopen(url)
+                inurl = urlopen(url)
                 outfd.write(inurl.read())
                 outfd.close()
         except:
