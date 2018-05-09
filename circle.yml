@@ -5,6 +5,7 @@ test:
         - mbed toolchain -G GCC_ARM
         - mbed target -G K64F
         - mbed config -G protocol ssh
+        - mbed config -G --list
         - cd .tests && mbed new new-test
         - cd .tests/new-test && mbed ls
         - cd .tests/new-test && mbed releases -r
