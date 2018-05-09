@@ -20,6 +20,13 @@
 
 from __future__ import print_function
 
+try:
+  from urllib.parse import urlparse
+  from urllib.request  import urlopen
+except ImportError:
+  from urlparse import urlparse
+  from urllib2 import urlopen
+
 import traceback
 import sys
 import re
@@ -34,12 +41,6 @@ from itertools import chain, repeat
 import argparse
 import tempfile
 import zipfile
-try:
-  from urllib.parse import urlparse
-  from urllib.request  import urlopen
-except ImportError:
-  from urlparse import urlparse
-  from urllib2 import urlopen
 
 
 # Application version
