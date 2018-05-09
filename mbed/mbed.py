@@ -1221,7 +1221,7 @@ class Repo(object):
             # Main clone routine if the clone with cache ref failed (might occur if cache ref is dirty)
             if main:
                 if offline:
-                    error("Unable to clone repository \"%s\" in offline mode ('--offline' used)." % url)
+                    continue
                 try:
                     scm.clone(url, path, depth=depth, protocol=protocol, **kwargs)
                 except ProcessException:
@@ -1235,6 +1235,11 @@ class Repo(object):
             self.ignores()
             self.set_cache(url)
             return True
+
+        if offline:
+            error("Unable to clone repository \"%s\" in offline mode ('--offline' used)." % url)
+            if os.path.isdir(path):
+                rmtree_readonly(path)
 
         return False
 
