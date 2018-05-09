@@ -41,7 +41,7 @@ def pquery(command, stdin=None, **kwargs):
     if proc.returncode != 0:
         raise ProcessException(proc.returncode)
 
-    return stdout
+    return stdout.decode("utf-8")
 
 # Directory navigation
 @contextlib.contextmanager
