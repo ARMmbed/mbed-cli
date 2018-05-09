@@ -56,6 +56,11 @@ Windows, Linux and Mac OS X support Mbed CLI. We're keen to learn about your exp
 
 * **Python** - Mbed CLI is a Python script, so you'll need Python to use it. We test Mbed CLI with [version 2.7.11 of Python](https://www.python.org/downloads/release/python-2711/). It is not compatible with Python 3.
 
+#### Mbed CLI and pip compatibility
+
+<span class="notes">**Note:** Mbed CLI toolchain versions older than 1.5.1 are **not compatible** with `pip` version 10.0 (or newer). Please use latest Mbed CLI with newer version of `pip`. More details in Mbed CLI issue [#657](https://github.com/ARMmbed/mbed-cli/issues/657).</span>
+
+
 * **Git and Mercurial** - Mbed CLI supports both Git and Mercurial repositories, so you need to install both:
     * [Git](https://git-scm.com/) - version 1.9.5 or later.
     * [Mercurial](https://www.mercurial-scm.org/) - version 2.2.2 or later.
