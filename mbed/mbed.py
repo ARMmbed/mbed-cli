@@ -574,8 +574,9 @@ class Hg(object):
 
     def getrev():
         if os.path.isfile(os.path.join('.hg', 'dirstate')):
+            from io import open
             with open(os.path.join('.hg', 'dirstate'), 'rb') as f:
-                return ''.join('%02x'%ord(i) for i in f.read(6))
+                return "".join('{:02x}'.format(x) for x in bytearray(f.read(6)))
         else:
             return ""
 
