@@ -191,7 +191,7 @@ def progress_cursor():
 progress_spinner = progress_cursor()
 
 def progress():
-    sys.stdout.write(progress_spinner.next())
+    sys.stdout.write(next(progress_spinner))
     sys.stdout.flush()
     sys.stdout.write('\b')
 
