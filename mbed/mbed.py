@@ -19,6 +19,7 @@
 # pylint: disable=invalid-name, missing-docstring, bad-continuation
 
 from __future__ import print_function
+from future.builtins.iterators import zip
 from past.builtins import basestring
 
 try:
@@ -2476,8 +2477,8 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
         # Compile configuration
         popen([python_cmd, os.path.join(tools_dir, 'get_config.py')]
               + ['-t', tchain, '-m', target]
-              + list(chain.from_iterable(list(zip(repeat('--profile'), profile or []))))
-              + list(chain.from_iterable(list(zip(repeat('--source'), source))))
+              + list(chain.from_iterable(zip(repeat('--profile'), profile or [])))
+              + list(chain.from_iterable(zip(repeat('--source'), source)))
               + (['-v'] if verbose else [])
               + (list(chain.from_iterable(izip(repeat('--prefix'), config_prefix))) if config_prefix else []),
               env=env)
@@ -2494,10 +2495,10 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                 build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, 'libraries', os.path.basename(orig_path), target, tchain)
 
             popen([python_cmd, '-u', os.path.join(tools_dir, 'build.py')]
-                  + list(chain.from_iterable(list(zip(repeat('-D'), macros))))
+                  + list(chain.from_iterable(zip(repeat('-D'), macros)))
                   + ['-t', tchain, '-m', target]
-                  + list(chain.from_iterable(list(zip(repeat('--profile'), profile or []))))
-                  + list(chain.from_iterable(list(zip(repeat('--source'), source))))
+                  + list(chain.from_iterable(zip(repeat('--profile'), profile or [])))
+                  + list(chain.from_iterable(zip(repeat('--source'), source)))
                   + ['--build', build_path]
                   + (['-c'] if clean else [])
                   + (['--artifact-name', artifact_name] if artifact_name else [])
@@ -2510,10 +2511,10 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                 build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, target, tchain)
 
             popen([python_cmd, '-u', os.path.join(tools_dir, 'make.py')]
-                  + list(chain.from_iterable(list(zip(repeat('-D'), macros))))
+                  + list(chain.from_iterable(zip(repeat('-D'), macros)))
                   + ['-t', tchain, '-m', target]
-                  + list(chain.from_iterable(list(zip(repeat('--profile'), profile or []))))
-                  + list(chain.from_iterable(list(zip(repeat('--source'), source))))
+                  + list(chain.from_iterable(zip(repeat('--profile'), profile or [])))
+                  + list(chain.from_iterable(zip(repeat('--source'), source)))
                   + ['--build', build_path]
                   + (['-c'] if clean else [])
                   + (['--artifact-name', artifact_name] if artifact_name else [])
@@ -2602,7 +2603,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
             popen([python_cmd, '-u', os.path.join(tools_dir, 'test.py'), '--list']
                   + list(chain.from_iterable(list(izip(repeat('--profile'), profile or []))))
                   + ['-t', tchain, '-m', target]
-                  + list(chain.from_iterable(list(zip(repeat('--source'), source))))
+                  + list(chain.from_iterable(zip(repeat('--source'), source)))
                   + (['-n', tests_by_name] if tests_by_name else [])
                   + (['-v'] if verbose else [])
                   + (['--app-config', app_config] if app_config else [])
@@ -2616,11 +2617,11 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
                 program.ignore_build_dir()
 
             popen([python_cmd, '-u', os.path.join(tools_dir, 'test.py')]
-                  + list(chain.from_iterable(list(zip(repeat('-D'), macros))))
-                  + list(chain.from_iterable(list(zip(repeat('--profile'), profile or []))))
+                  + list(chain.from_iterable(zip(repeat('-D'), macros)))
+                  + list(chain.from_iterable(zip(repeat('--profile'), profile or [])))
                   + ['-t', tchain, '-m', target]
                   + (['-c'] if clean else [])
-                  + list(chain.from_iterable(list(zip(repeat('--source'), source))))
+                  + list(chain.from_iterable(zip(repeat('--source'), source)))
                   + ['--build', build_path]
                   + ['--test-spec', test_spec]
                   + (['-n', tests_by_name] if tests_by_name else [])
