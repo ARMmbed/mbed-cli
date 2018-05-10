@@ -520,7 +520,7 @@ class Hg(object):
             pquery([hg_cmd, 'outgoing'])
             return 1
         except ProcessException as e:
-            if e[0] != 1:
+            if e.args[0] != 1:
                 raise e
             return 0
 
