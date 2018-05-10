@@ -2008,7 +2008,6 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, insecure=Fa
         if ignore:
             warning(err)
         else:
-            print("THERE")
             error(err, 1)
 
     repo.sync()
