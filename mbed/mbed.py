@@ -22,11 +22,12 @@ from __future__ import print_function
 from past.builtins import basestring
 
 try:
-  from urllib.parse import urlparse
+  from urllib.parse import urlparse, quote
   from urllib.request  import urlopen
 except ImportError:
   from urlparse import urlparse
   from urllib2 import urlopen
+  from urllib import quote
 
 import traceback
 import sys
@@ -1290,7 +1291,7 @@ class Repo(object):
 
         ref = url.rstrip('/') + '/' + (('' if self.is_build else '#') + self.rev if self.rev else '')
         action("Updating reference \"%s\" -> \"%s\"" % (relpath(cwd_root, self.path) if cwd_root != self.path else self.name, ref))
-        with open(self.lib, 'wb') as f:
+        with open(self.lib, 'w') as f:
             f.write(ref+"\n")
 
     def rm_untracked(self):
@@ -1303,7 +1304,7 @@ class Repo(object):
     def url2cachedir(self, url):
         up = urlparse(formaturl(url, 'https'))
         if self.cache and up and up.netloc:
-            return os.path.join(self.cache, urllib.quote(up.netloc), urllib.quote(re.sub(r'^/', '', up.path)))
+            return os.path.join(self.cache, quote(up.netloc), quote(re.sub(r'^/', '', up.path)))
 
     def get_cache(self, url, scm):
         cpath = self.url2cachedir(url)
