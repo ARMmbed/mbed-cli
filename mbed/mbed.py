@@ -218,10 +218,10 @@ def popen(command, stdin=None, **kwargs):
     try:
         proc = subprocess.Popen(command, **kwargs)
     except OSError as e:
-        if e[0] == errno.ENOENT:
+        if e.args[0] == errno.ENOENT:
             error(
                 "Could not execute \"%s\".\n"
-                "Please verify that it's installed and accessible from your current path by executing \"%s\".\n" % (command[0], command[0]), e[0])
+                "Please verify that it's installed and accessible from your current path by executing \"%s\".\n" % (command[0], command[0]), e.args[0])
         else:
             raise e
 
@@ -234,10 +234,10 @@ def pquery(command, output_callback=None, stdin=None, **kwargs):
     try:
         proc = subprocess.Popen(command, bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
     except OSError as e:
-        if e[0] == errno.ENOENT:
+        if e.args[0] == errno.ENOENT:
             error(
                 "Could not execute \"%s\".\n"
-                "Please verify that it's installed and accessible from your current path by executing \"%s\".\n" % (command[0], command[0]), e[0])
+                "Please verify that it's installed and accessible from your current path by executing \"%s\".\n" % (command[0], command[0]), e.args[0])
         else:
             raise e
 
@@ -353,7 +353,7 @@ class Bld(object):
         except Exception as e:
             if os.path.isdir(path):
                 rmtree_readonly(path)
-            error(e[1], e[0])
+            error(e.args[1], e.args[0])
 
     def fetch_rev(url, rev):
         rev_file = os.path.join('.'+Bld.name, '.rev-' + rev + '.zip')
@@ -400,7 +400,7 @@ class Bld(object):
                 Bld.unpack_rev(rev)
                 Bld.seturl(url+'/'+rev)
             except Exception as e:
-                error(e[1], e[0])
+                error(e.args[1], e.args[0])
 
     def update(rev=None, clean=False, clean_files=False, is_local=False):
         return Bld.checkout(rev, clean)
@@ -2000,8 +2000,7 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, insecure=Fa
                 if ignore:
                     warning(err)
                 else:
-                    print("HI")
-                    error(err, e[0])
+                    error(err, e.args[0])
     else:
         err = "Unable to clone repository (%s)" % url
         if ignore:
@@ -2152,7 +2151,7 @@ def publish(all_refs=None, msg=None, top=True):
             if top:
                 action("Nothing to publish to the remote repository (the source tree is unmodified)")
     except ProcessException as e:
-        if e[0] != 1:
+        if e.args[0] != 1:
             raise e
 
 
@@ -2219,7 +2218,7 @@ def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=Fa
             if ignore:
                 warning(err)
             else:
-                error(err, e[0])
+                error(err, e.args[0])
 
         repo.rm_untracked()
         if top and cwd_type == 'library':
@@ -2993,14 +2992,14 @@ def main():
     except ProcessException as e:
         error(
             "\"%s\" returned error code %d.\n"
-            "Command \"%s\" in \"%s\"" % (e[1], e[0], e[2], e[3]), e[0])
+            "Command \"%s\" in \"%s\"" % (e.args[1], e.args[0], e.args[2], e.args[3]), e.args[0])
     except OSError as e:
-        if e[0] == errno.ENOENT:
+        if e.args[0] == errno.ENOENT:
             error(
                 "Could not detect one of the command-line tools.\n"
-                "You could retry the last command with \"-v\" flag for verbose output\n", e[0])
+                "You could retry the last command with \"-v\" flag for verbose output\n", e.args[0])
         else:
-            error('OS Error: %s' % e[1], e[0])
+            error('OS Error: %s' % e.args[1], e.args[0])
     except KeyboardInterrupt:
         info('User aborted!', -1)
         sys.exit(255)
