@@ -170,7 +170,7 @@ def testrepos(mbed, request):
                     hash = pquery(['git', 'rev-parse', 'HEAD'])
                 elif scm() == 'hg':
                     hash = pquery(['hg', 'id', '-i'])
-            f.write(test4 + '/#' + str(hash) + '\n')
+            f.write(test4 + '/#' + hash + '\n')
 
         if scm() == 'git':
             popen(['git', 'add', 'test4.lib'])
@@ -188,7 +188,7 @@ def testrepos(mbed, request):
                     hash = pquery(['git', 'rev-parse', 'HEAD'])
                 elif scm() == 'hg':
                     hash = pquery(['hg', 'id', '-i'])
-            f.write(test3 + '/#' + str(hash) + '\n')
+            f.write(test3 + '/#' + hash + '\n')
 
         if scm() == 'git':
             popen(['git', 'add', 'test3.lib'])
@@ -206,7 +206,7 @@ def testrepos(mbed, request):
                     hash = pquery(['git', 'rev-parse', 'HEAD'])
                 elif scm() == 'hg':
                     hash = pquery(['hg', 'id', '-i'])
-            f.write(test2 + '/#' + str(hash) + '\n')
+            f.write(test2 + '/#' + hash + '\n')
 
         if scm() == 'git':
             popen(['git', 'add', 'test2.lib'])
