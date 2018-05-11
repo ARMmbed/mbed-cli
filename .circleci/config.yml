@@ -143,4 +143,4 @@ workflows:
   build:
     jobs:
       - py2
-      - py3
+      #- py3
