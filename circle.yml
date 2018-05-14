@@ -5,6 +5,7 @@ test:
         - mbed toolchain -G GCC_ARM
         - mbed target -G K64F
         - mbed config -G protocol ssh
+        - mbed config -G --list
         - cd .tests && mbed new new-test
         - cd .tests/new-test && mbed ls
         - cd .tests/new-test && mbed releases -r
@@ -22,6 +23,10 @@ test:
         - cd .tests/bld-test/mbed && mbed update 85 --clean
         - cd .tests/bld-test && mbed update --clean
         - cd .tests/bld-test && mbed compile -m LPC1768 -j 0
+        - cd .tests && mbed import https://github.com/ARMmbed/mbed-os-example-mesh-minimal offline-test
+        - cd .tests/offline-test && mbed update mbed-os-5.5.6 --offline
+        - cd .tests/offline-test && mbed update mbed-os-5.7.5 --offline
+        - cd .tests && mbed import https://github.com/ARMmbed/mbed-os-example-mesh-minimal offline-test2 --offline
         - cd .tests && mbed new supported-tests
         - |-
             cd .tests/supported-tests
