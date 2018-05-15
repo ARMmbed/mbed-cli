@@ -67,21 +67,21 @@ class MbedTerminal(object):
 --- Mbed Serial Terminal (0.3a)
 --- Based on miniterm from pySerial
 ---
---- CTRL+B     Send Break (reset target)
---- CTRL+C     Exit terminal
---- CTRL+E     Toggle local echo
---- CTRL+H     Help
---- CTRL+T     Menu escape key, followed by:
----    P       Change COM port
----    B       Change baudrate
----    TAB     Show detailed terminal info
----    CTRL+A  Change encoding (default UTF-8)
----    CTRL+F  Edit filters
----    CTRL+L  Toggle EOL
----    CTRL+R  Toggle RTS
----    CTRL+D  Toggle DTR
----    CTRL+C  Send control character to remote
----    CTRL+T  Send control character to remote
+--- Ctrl+b     Send Break (reset target)
+--- Ctrl+c     Exit terminal
+--- Ctrl+e     Toggle local echo
+--- Ctrl+h     Help
+--- Ctrl+t     Menu escape key, followed by:
+---    p       Change COM port
+---    b       Change baudrate
+---    Tab     Show detailed terminal info
+---    Ctrl+a  Change encoding (default UTF-8)
+---    Ctrl+f  Edit filters
+---    Ctrl+l  Toggle EOL
+---    Ctrl+r  Toggle RTS
+---    Ctrl+d  Toggle DTR
+---    Ctrl+c  Send control character to remote
+---    Ctrl+t  Send control character to remote
 """
 
         def print_help():
