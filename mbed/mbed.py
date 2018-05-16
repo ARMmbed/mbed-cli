@@ -1766,6 +1766,30 @@ def formaturl(url, format="default"):
                 url = 'https://%s%s%s/%s' % (m.group(2) if (m.group(2) and (m.group(5) or m.group(3) != 'git')) else '', m.group(6), m.group(7) or '', m.group(8))
     return url
 
+# Wrapper for the MbedTermnal functionality
+def mbed_sterm(port, baudrate=9600, echo=True, reset=False, sterm=False):
+    try:
+        from mbed_terminal import MbedTerminal
+    except (IOError, ImportError, OSError):
+        error("The serial terminal functionality requires that the 'mbed-terminal' python module is installed.\nYou can install mbed-terminal by running 'pip install mbed-terminal'.", 1)
+
+    result = False
+    mbed_serial = MbedTerminal(port, baudrate=baudrate, echo=echo)
+    if mbed_serial.serial:
+        if reset:
+            mbed_serial.reset()
+
+        if sterm:
+            # Some boards will reset the COM port after SendBreak, e.g. STLink based
+            if not mbed_serial.serial.is_open:
+                mbed_serial = MbedTerminal(port, baudrate=baudrate, echo=echo)
+
+            try:
+                result = mbed_serial.terminal()
+            except:
+                pass
+    return result
+
 
 # Subparser handling
 parser = argparse.ArgumentParser(prog='mbed',
@@ -2402,12 +2426,13 @@ def status_(ignore=False):
     dict(name='--build', help='Build directory. Default: build/'),
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
     dict(name=['-f', '--flash'], action='store_true', help='Flash the built firmware onto a connected target.'),
+    dict(name=['--sterm'], action='store_true', help='Open serial terminal after compiling. Can be chained with --flash'),
     dict(name=['-N', '--artifact-name'], help='Name of the built program or library'),
     dict(name=['-S', '--supported'], dest='supported', const=True, choices=["matrix", "toolchains", "targets"], nargs="?", help='Shows supported matrix of targets and toolchains'),
     dict(name='--app-config', dest="app_config", help="Path of an app configuration file (Default is to look for 'mbed_app.json')"),
     help='Compile code using the mbed build tools',
     description="Compile this program using the mbed build tools.")
-def compile_(toolchain=None, target=None, profile=False, compile_library=False, compile_config=False, config_prefix=None, source=False, build=False, clean=False, flash=False, artifact_name=None, supported=False, app_config=None):
+def compile_(toolchain=None, target=None, profile=False, compile_library=False, compile_config=False, config_prefix=None, source=False, build=False, clean=False, flash=False, sterm=False, artifact_name=None, supported=False, app_config=None):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
@@ -2487,23 +2512,24 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                   + args,
                   env=env)
 
+            if flash or sterm:
+                detected = program.detect_target()
+                try:
+                    from mbed_host_tests.host_tests_toolbox import flash_dev
+                except (IOError, ImportError, OSError):
+                    error("The '-f/--flash' option requires that the 'mbed-greentea' python module is installed.\nYou can install mbed-greentea by running 'pip install mbed-greentea'.", 1)
+
             if flash:
                 fw_name = artifact_name if artifact_name else program.name
                 fw_fbase = os.path.join(build_path, fw_name)
                 fw_file = fw_fbase + ('.hex' if os.path.exists(fw_fbase+'.hex') else '.bin')
                 if not os.path.exists(fw_file):
                     error("Build program file (firmware) not found \"%s\"" % fw_file, 1)
-                detected = program.detect_target()
-
-                try:
-                    from mbed_host_tests.host_tests_toolbox import flash_dev, reset_dev
-                except (IOError, ImportError, OSError):
-                    error("The '-f/--flash' option requires that the 'mbed-greentea' python module is installed.\nYou can install mbed-ls by running 'pip install mbed-greentea'.", 1)
-
                 if not flash_dev(detected['msd'], fw_file, program_cycle_s=2):
                     error("Unable to flash the target board connected to your system.", 1)
 
-                if not reset_dev(detected['port']):
+            if flash or sterm:
+                if not mbed_sterm(detected['port'], reset=flash, sterm=sterm):
                     error("Unable to reset the target board connected to your system.\nThis might be caused by an old interface firmware.\nPlease check the board page for new firmware.", 1)
 
     program.set_defaults(target=target, toolchain=tchain)
@@ -2667,12 +2693,12 @@ def export(ide=None, target=None, source=False, clean=False, supported=False, ap
     program.set_defaults(target=target)
 
 
-# Test command
+# Detect command
 @subcommand('detect',
     hidden_aliases=['det'],
-    help='Detect connected mbed targets/boards\n\n',
+    help='Detect connected Mbed targets/boards\n\n',
     description=(
-        "Detects mbed targets/boards connected to this system and shows supported\n"
+        "Detect Mbed targets/boards connected to this system and show supported\n"
         "toolchain matrix."))
 def detect():
     # Gather remaining arguments
@@ -2697,7 +2723,7 @@ def detect():
             if very_verbose:
                 error(str(e))
     else:
-        warning("The mbed tools were not found in \"%s\". \nLimited information will be shown about connected mbed targets/boards" % program.path)
+        warning("The mbed-os tools were not found in \"%s\". \nLimited information will be shown about connected targets/boards" % program.path)
         targets = program.get_detected_targets()
         if targets:
             unknown_found = False
@@ -2710,7 +2736,44 @@ def detect():
 
             if unknown_found:
                 warning("If you're developing a new target, you can mock the device to continue your development. "
-                        "Use 'mbedls --mock ID:NAME' to do so (see 'mbedls --help' for more information)")
+"Use 'mbedls --mock ID:NAME' to do so (see 'mbedls --help' for more information)")
+
+
+# Serial terminal command
+@subcommand('sterm',
+    dict(name=['-p', '--port'], help='Communication port. Default: auto-detect'),
+    dict(name=['-b', '--baudrate'], help='Communication baudrate. Default: 9600'),
+    dict(name=['-e', '--echo'], help='Switch local echo on/off. Default: on'),
+    dict(name=['-r', '--reset'], action='store_true', help='Reset the targets (via SendBreak) before opening terminal.'),
+    hidden_aliases=['term'],
+    help='Open serial terminal to connected target.\n\n',
+    description=(
+        "Open serial terminal to connected target (usually board), or connect to a user-specified COM port\n"))
+def sterm(port=None, baudrate=None, echo=None, reset=False, sterm=True):
+    # Gather remaining arguments
+    args = remainder
+    # Find the root of the program
+    program = Program(getcwd(), False)
+
+    port = port or program.get_cfg('TERM_PORT', None)
+    baudrate = baudrate or program.get_cfg('TERM_BAUDRATE', 9600)
+    echo = echo or program.get_cfg('TERM_ECHO', 'on')
+
+    if port:
+        action("Opening serial terminal to the specified COM port \"%s\"" % port)
+        mbed_sterm(port, baudrate=baudrate, echo=echo, reset=reset, sterm=sterm)
+    else:
+        action("Detecting connected targets/boards to your system...")
+        targets = program.get_detected_targets()
+        if not targets:
+            error("Couldn't detect connected targets/boards to your system.\nYou can manually specify COM port via the '--port' option.", 1)
+
+        for target in targets:
+            if target['name'] is None:
+                action("Opening serial terminal to unknown target at \"%s\"" % target['serial'])
+            else:
+                action("Opening serial terminal to \"%s\"" % target['name'])
+            mbed_sterm(target['serial'], baudrate=baudrate, echo=echo, reset=reset, sterm=sterm)
 
 
 # Generic config command

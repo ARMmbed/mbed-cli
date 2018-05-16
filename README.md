@@ -519,6 +519,32 @@ $ mbed export -i uvision -m K64F
 
 Mbed CLI creates a `.uvprojx` file in the projectfiles/uvision folder. You can open the project file with uVision.
 
+### Serial terminal
+
+You can open a serial terminal to the COM port of a connected Mbed target (usually board) using the `mbed sterm` command. If no COM port is specified, Mbed CLI will attempt to detect the connected Mbed targets and their COM ports.
+
+There are various options to `mbed sterm`:
+* `--port <COM port>` to specify system COM port to connect to.
+* `--baudrate <numeric>` to select the communication baudrate, where the default value is 9600.
+* `--echo <on|off>` to switch local echo (default is `on`).
+* `--reset` to reset the connected target by sending Break before opening the serial terminal.
+
+You can also set default port, baudrate and echo mode using the `TERM_PORT`, `TERM_BAUDRATE` and `TERM_ECHO` Mbed CLI configuration options.
+
+The following shortcuts are available within the serial terminal:
+- Ctrl+b - Send Break (reset target)
+- Ctrl+c - Exit terminal
+- Ctrl+e - Toggle local echo
+- Ctrl+h - Help
+- Ctrl+t - Menu escape key
+- _More shortcuts can be viewed within the serial terminal's help menu (Ctrl+h)._
+
+You can also add the `--sterm` option to `mbed compile -f` to compile a new program, flash the program/firmware image to the connected target and then open the serial terminal to it's COM port:
+
+```
+$ mbed compile -t GCC_ARM -m K64F -f --sterm
+```
+
 ## Testing
 
 Use the `mbed test` command to compile and run tests.
