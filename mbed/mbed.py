@@ -2405,9 +2405,10 @@ def status_(ignore=False):
     dict(name=['-N', '--artifact-name'], help='Name of the built program or library'),
     dict(name=['-S', '--supported'], dest='supported', const=True, choices=["matrix", "toolchains", "targets"], nargs="?", help='Shows supported matrix of targets and toolchains'),
     dict(name='--app-config', dest="app_config", help="Path of an app configuration file (Default is to look for 'mbed_app.json')"),
+    dict(name='--ignore', dest="ignore", help="Comma separated list of patterns to add to mbedignore. Requires Mbed OS >= 5.9. Example: ./main.cpp,./src/app/*"),
     help='Compile code using the mbed build tools',
     description="Compile this program using the mbed build tools.")
-def compile_(toolchain=None, target=None, profile=False, compile_library=False, compile_config=False, config_prefix=None, source=False, build=False, clean=False, flash=False, artifact_name=None, supported=False, app_config=None):
+def compile_(toolchain=None, target=None, profile=False, compile_library=False, compile_config=False, config_prefix=None, source=False, build=False, clean=False, flash=False, artifact_name=None, supported=False, app_config=None, ignore=None):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
@@ -2467,6 +2468,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                   + (['-c'] if clean else [])
                   + (['--artifact-name', artifact_name] if artifact_name else [])
                   + (['-v'] if verbose else [])
+                  + (['--ignore', ignore] if ignore else [])
                   + args,
                   env=env)
         else:
@@ -2484,6 +2486,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                   + (['--artifact-name', artifact_name] if artifact_name else [])
                   + (['--app-config', app_config] if app_config else [])
                   + (['-v'] if verbose else [])
+                  + (['--ignore', ignore] if ignore else [])
                   + args,
                   env=env)
 
@@ -2525,9 +2528,10 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
     dict(name='--test-spec', dest="test_spec", help="Path used for the test spec file used when building and running tests (the default path is the build directory)"),
     dict(name='--app-config', dest="app_config", help="Path of an app configuration file (Default is to look for 'mbed_app.json')"),
     dict(name='--test-config', dest="test_config", help="Path or mbed OS keyword of a test configuration file. Example: ethernet, odin_wifi, or path/to/config.json"),
+    dict(name='--ignore', dest="ignore", help="Comma separated list of patterns to add to mbedignore. Requires Mbed OS >= 5.9. Example: ./main.cpp,./src/app/*"),
     help='Find, build and run tests',
     description="Find, build, and run tests in a program and libraries")
-def test_(toolchain=None, target=None, compile_list=False, run_list=False, compile_only=False, run_only=False, tests_by_name=None, source=False, profile=False, build=False, clean=False, test_spec=None, app_config=None, test_config=None):
+def test_(toolchain=None, target=None, compile_list=False, run_list=False, compile_only=False, run_only=False, tests_by_name=None, source=False, profile=False, build=False, clean=False, test_spec=None, app_config=None, test_config=None, ignore=None):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
@@ -2571,6 +2575,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
                   + (['-v'] if verbose else [])
                   + (['--app-config', app_config] if app_config else [])
                   + (['--test-config', test_config] if test_config else [])
+                  + (['--ignore', ignore] if ignore else [])
                   + args,
                   env=env)
 
@@ -2591,6 +2596,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
                   + (['-v'] if verbose else [])
                   + (['--app-config', app_config] if app_config else [])
                   + (['--test-config', test_config] if test_config else [])
+                  + (['--ignore', ignore] if ignore else [])
                   + args,
                   env=env)
 
@@ -2619,10 +2625,11 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
     dict(name=['-S', '--supported'], dest='supported', const=True, choices=['matrix', 'ides'], nargs='?', help='Shows supported matrix of targets and toolchains'),
     dict(name='--app-config', dest="app_config", help="Path of an app configuration file (Default is to look for 'mbed_app.json')"),
+    dict(name='--ignore', dest="ignore", help="Comma separated list of patterns to add to mbedignore. Requires Mbed OS >= 5.9. Example: ./main.cpp,./src/app/*"),
     help='Generate an IDE project',
     description=(
         "Generate IDE project files for the current program."))
-def export(ide=None, target=None, source=False, clean=False, supported=False, app_config=None):
+def export(ide=None, target=None, source=False, clean=False, supported=False, app_config=None, ignore=None):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
@@ -2661,6 +2668,7 @@ def export(ide=None, target=None, source=False, clean=False, supported=False, ap
           + (['-c'] if clean else [])
           + list(chain.from_iterable(izip(repeat('--source'), source)))
           + (['--app-config', app_config] if app_config else [])
+          + (['--ignore', ignore] if ignore else [])
           + args,
           env=env)
 
