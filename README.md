@@ -532,9 +532,9 @@ The following shortcuts are available within the serial terminal:
 - Ctrl+e - Toggle local echo
 - Ctrl+h - Help
 - Ctrl+t - Menu escape key
-- _Even more shortcuts are available through the Menu shortcut. Check the help within the serial terminal (Ctrl+h).__
+- _More shortcuts can be viewed within the serial terminal's help menu (Ctrl+h)._
 
-You can also add the --sterm option to mbed compile -f to compile a new program, flash the program/firmware image to the connected target and then open the serial terminal to it's COM port:
+You can also add the `--sterm` option to `mbed compile -f` to compile a new program, flash the program/firmware image to the connected target and then open the serial terminal to it's COM port:
 
 ```
 $ mbed compile -t GCC_ARM -m K64F -f --sterm
