@@ -260,7 +260,7 @@ def pquery(command, output_callback=None, stdin=None, **kwargs):
     stdout, _ = proc.communicate(stdin)
 
     if very_verbose:
-      log(stdout.decode("utf-8").strip() + "\n")
+        log(stdout.decode("utf-8").strip() + "\n")
 
     if proc.returncode != 0:
         raise ProcessException(proc.returncode, command[0], ' '.join(command), getcwd())
