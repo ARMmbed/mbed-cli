@@ -117,8 +117,7 @@ jobs:
       - run: cd .tests && mbed new new-test
       - run: |-
           cd .tests/new-test/mbed-os
-          git fetch origin refs/pull/6886/head:pr6886
-          git checkout pr6886
+          git checkout master
       - run: cd .tests/new-test && mbed ls
       - run: cd .tests/new-test && mbed releases -r
       - run: cd .tests/new-test && mbed compile --source=. --source=mbed-os/TESTS/integration/basic -j 0
