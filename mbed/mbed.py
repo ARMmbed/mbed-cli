@@ -42,7 +42,7 @@ import shutil
 import stat
 import errno
 import ctypes
-from itertools import chain, repeat
+import time
 import zipfile
 import argparse
 
@@ -1223,7 +1223,9 @@ class Repo(object):
                         os.makedirs(os.path.split(path)[0])
 
                     info("Carbon copy from \"%s\" to \"%s\"" % (cache, path))
+                    self.cache_lock(url)
                     shutil.copytree(cache, path)
+                    self.cache_unlock(url)
 
                     with cd(path):
                         scm.seturl(formaturl(url, protocol))
@@ -1253,7 +1255,9 @@ class Repo(object):
             self.url = url
             self.path = os.path.abspath(path)
             self.ignores()
+            self.cache_lock(url)
             self.set_cache(url)
+            self.cache_unlock(url)
             return True
 
         if offline:
@@ -1335,6 +1339,70 @@ class Repo(object):
             except Exception:
                 warning("Unable to cache \"%s\" to \"%s\"" % (self.path, cpath))
         return False
+
+    def cache_lock(self, url):
+        cpath = self.url2cachedir(url)
+        if cpath:
+            lock_file = os.path.join(cpath, '.lock')
+            try:
+                if not os.path.isdir(cpath):
+                    os.makedirs(cpath)
+
+                can_lock = False
+                # this loop is handling a lock file from another process if exists
+                for i in range(300): 
+                    if os.path.exists(lock_file):
+                       # lock file exists, but we need to check pid as well in case the process died 
+                        with open(lock_file) as f:
+                            pid = f.read(200)
+                        if pid and int(pid) != os.getpid():
+                            if self.pid_exists(pid):
+                                time.sleep(1)
+                                continue
+                        else:
+                            info("Cache lock file exists, but process is dead. Cleaning up")
+                            os.unlink(lock_file)
+                    can_lock = True
+                    break
+
+                if can_lock:
+                    with open(lock_file, 'wb') as f:
+                        f.write(str(os.getpid()))
+                else:
+                    error("Exceeded 5 minutes limit while waiting for other process to finish caching")
+            except Exception:
+                error("Unable to lock cache dir \"%s\"" % (cpath))
+        return False
+
+    def cache_unlock(self, url):
+        cpath = self.url2cachedir(url)
+        if cpath:
+            lock_file = os.path.join(cpath, '.lock')
+            if os.path.isfile(os.path.join(cpath, '.lock')):
+                try:
+                    with open(lock_file) as f:
+                        pid = f.read(200)
+                    if int(pid) == os.getpid():
+                        os.unlink(os.path.join(cpath, '.lock'))
+                    else:
+                        error("Cache lock file exists with a different pid (\"%s\" vs \"%s\")" % (pid, os.getpid()))
+                except Exception:
+                    error("Unable to unlock cache dir \"%s\"" % (cpath))
+            return True
+        return False
+
+    def pid_exists(self, pid):
+        try:
+            os.kill(int(pid), 0)
+        except OSError as err:
+            if err.errno == errno.ESRCH:
+                return False
+            elif err.errno == errno.EPERM:
+                return True
+            else:
+                raise err
+        else:
+            return True
 
     def can_update(self, clean, clean_deps):
         err = None
