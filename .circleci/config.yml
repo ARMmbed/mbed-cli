@@ -123,20 +123,6 @@ jobs:
       - run: cd .tests/new-test && mbed compile --source=. --source=mbed-os/TESTS/integration/basic -j 0
       - run: cd .tests/new-test && mbed test --compile -n mbed-os-tests-integration-basic -j 0
 
-      - run: cd .tests && mbed import https://developer.mbed.org/teams/Morpheus/code/mbed-Client-Morpheus-hg hg-test
-      - run: cd .tests/hg-test && mbed ls
-      - run: cd .tests/hg-test && mbed releases -r
-      - run: cd .tests/hg-test && mbed update b02527cafcde8612ff051fea57e9975aca598807 --clean
-      - run: cd .tests/hg-test && mbed update --clean
-      - run: cd .tests/hg-test && mbed compile -j 0
-
-      - run: cd .tests && mbed import https://developer.mbed.org/users/samux/code/USBSerial_HelloWorld bld-test
-      - run: cd .tests/bld-test && mbed ls
-      - run: cd .tests/bld-test && mbed releases -r
-      - run: cd .tests/bld-test/mbed && mbed update 85 --clean
-      - run: cd .tests/bld-test && mbed update --clean
-      - run: cd .tests/bld-test && mbed compile -m LPC1768 -j 0
-
 workflows:
   version: 2
   build:
