@@ -1,5 +1,4 @@
-
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 # Copyright (c) 2016 ARM Limited, All Rights Reserved
 # SPDX-License-Identifier: Apache-2.0
@@ -43,7 +42,7 @@ class MbedTerminal(object):
             self.serial.flush()
             self.serial.reset_input_buffer()
         except Exception as e:
-            print 'error'
+            print('error')
             self.serial = None
             return False
 
