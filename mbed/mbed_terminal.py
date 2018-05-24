@@ -42,7 +42,6 @@ class MbedTerminal(object):
             self.serial.flush()
             self.serial.reset_input_buffer()
         except Exception as e:
-            print('error')
             self.serial = None
             return False
 
