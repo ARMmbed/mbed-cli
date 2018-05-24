@@ -1779,7 +1779,7 @@ def formaturl(url, format="default"):
 # Wrapper for the MbedTermnal functionality
 def mbed_sterm(port, baudrate=9600, echo=True, reset=False, sterm=False):
     try:
-        from mbed_terminal import MbedTerminal
+        from .mbed_terminal import MbedTerminal
     except (IOError, ImportError, OSError):
         error("The serial terminal functionality requires that the 'mbed-terminal' python module is installed.\nYou can install mbed-terminal by running 'pip install mbed-terminal'.", 1)
 
