@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 # Copyright (c) 2016 ARM Limited, All Rights Reserved
 # SPDX-License-Identifier: Apache-2.0
@@ -18,6 +18,18 @@
 # pylint: disable=too-many-nested-blocks, too-many-public-methods, too-many-instance-attributes, too-many-statements
 # pylint: disable=invalid-name, missing-docstring, bad-continuation
 
+from __future__ import print_function
+from future.builtins.iterators import zip
+from past.builtins import basestring
+
+try:
+  from urllib.parse import urlparse, quote
+  from urllib.request  import urlopen
+except ImportError:
+  from urlparse import urlparse
+  from urllib2 import urlopen
+  from urllib import quote
+
 import traceback
 import sys
 import re
@@ -28,13 +40,10 @@ import shutil
 import stat
 import errno
 import ctypes
-from itertools import chain, izip, repeat
-from urlparse import urlparse
-import urllib
-import urllib2
-import zipfile
+from itertools import chain, repeat
 import argparse
 import tempfile
+import zipfile
 
 
 # Application version
@@ -184,7 +193,7 @@ def progress_cursor():
 progress_spinner = progress_cursor()
 
 def progress():
-    sys.stdout.write(progress_spinner.next())
+    sys.stdout.write(next(progress_spinner))
     sys.stdout.flush()
     sys.stdout.write('\b')
 
@@ -211,10 +220,10 @@ def popen(command, stdin=None, **kwargs):
     try:
         proc = subprocess.Popen(command, **kwargs)
     except OSError as e:
-        if e[0] == errno.ENOENT:
+        if e.args[0] == errno.ENOENT:
             error(
                 "Could not execute \"%s\".\n"
-                "Please verify that it's installed and accessible from your current path by executing \"%s\".\n" % (command[0], command[0]), e[0])
+                "Please verify that it's installed and accessible from your current path by executing \"%s\".\n" % (command[0], command[0]), e.args[0])
         else:
             raise e
 
@@ -227,10 +236,10 @@ def pquery(command, output_callback=None, stdin=None, **kwargs):
     try:
         proc = subprocess.Popen(command, bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
     except OSError as e:
-        if e[0] == errno.ENOENT:
+        if e.args[0] == errno.ENOENT:
             error(
                 "Could not execute \"%s\".\n"
-                "Please verify that it's installed and accessible from your current path by executing \"%s\".\n" % (command[0], command[0]), e[0])
+                "Please verify that it's installed and accessible from your current path by executing \"%s\".\n" % (command[0], command[0]), e.args[0])
         else:
             raise e
 
@@ -251,12 +260,12 @@ def pquery(command, output_callback=None, stdin=None, **kwargs):
     stdout, _ = proc.communicate(stdin)
 
     if very_verbose:
-        log(str(stdout).strip()+"\n")
+        log(stdout.decode("utf-8").strip() + "\n")
 
     if proc.returncode != 0:
         raise ProcessException(proc.returncode, command[0], ' '.join(command), getcwd())
 
-    return stdout
+    return stdout.decode("utf-8")
 
 def rmtree_readonly(directory):
     if os.path.islink(directory):
@@ -346,7 +355,7 @@ class Bld(object):
         except Exception as e:
             if os.path.isdir(path):
                 rmtree_readonly(path)
-            error(e[1], e[0])
+            error(e.args[1], e.args[0])
 
     def fetch_rev(url, rev):
         rev_file = os.path.join('.'+Bld.name, '.rev-' + rev + '.zip')
@@ -354,7 +363,7 @@ class Bld(object):
             if not os.path.exists(rev_file):
                 action("Downloading library build \"%s\" (might take a minute)" % rev)
                 outfd = open(rev_file, 'wb')
-                inurl = urllib2.urlopen(url)
+                inurl = urlopen(url)
                 outfd.write(inurl.read())
                 outfd.close()
         except:
@@ -393,7 +402,7 @@ class Bld(object):
                 Bld.unpack_rev(rev)
                 Bld.seturl(url+'/'+rev)
             except Exception as e:
-                error(e[1], e[0])
+                error(e.args[1], e.args[0])
 
     def update(rev=None, clean=False, clean_files=False, is_local=False):
         return Bld.checkout(rev, clean)
@@ -513,7 +522,7 @@ class Hg(object):
             pquery([hg_cmd, 'outgoing'])
             return 1
         except ProcessException as e:
-            if e[0] != 1:
+            if e.args[0] != 1:
                 raise e
             return 0
 
@@ -567,8 +576,9 @@ class Hg(object):
 
     def getrev():
         if os.path.isfile(os.path.join('.hg', 'dirstate')):
+            from io import open
             with open(os.path.join('.hg', 'dirstate'), 'rb') as f:
-                return ''.join('%02x'%ord(i) for i in f.read(6))
+                return "".join('{:02x}'.format(x) for x in bytearray(f.read(6)))
         else:
             return ""
 
@@ -1282,7 +1292,7 @@ class Repo(object):
 
         ref = url.rstrip('/') + '/' + (('' if self.is_build else '#') + self.rev if self.rev else '')
         action("Updating reference \"%s\" -> \"%s\"" % (relpath(cwd_root, self.path) if cwd_root != self.path else self.name, ref))
-        with open(self.lib, 'wb') as f:
+        with open(self.lib, 'w') as f:
             f.write(ref+"\n")
 
     def rm_untracked(self):
@@ -1295,7 +1305,7 @@ class Repo(object):
     def url2cachedir(self, url):
         up = urlparse(formaturl(url, 'https'))
         if self.cache and up and up.netloc:
-            return os.path.join(self.cache, urllib.quote(up.netloc), urllib.quote(re.sub(r'^/', '', up.path)))
+            return os.path.join(self.cache, quote(up.netloc), quote(re.sub(r'^/', '', up.path)))
 
     def get_cache(self, url, scm):
         cpath = self.url2cachedir(url)
@@ -1992,7 +2002,7 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, insecure=Fa
                 if ignore:
                     warning(err)
                 else:
-                    error(err, e[0])
+                    error(err, e.args[0])
     else:
         err = "Unable to clone repository (%s)" % url
         if ignore:
@@ -2142,7 +2152,7 @@ def publish(all_refs=None, msg=None, top=True):
             if top:
                 action("Nothing to publish to the remote repository (the source tree is unmodified)")
     except ProcessException as e:
-        if e[0] != 1:
+        if e.args[0] != 1:
             raise e
 
 
@@ -2209,7 +2219,7 @@ def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=Fa
             if ignore:
                 warning(err)
             else:
-                error(err, e[0])
+                error(err, e.args[0])
 
         repo.rm_untracked()
         if top and cwd_type == 'library':
@@ -2341,7 +2351,7 @@ def sync(recursive=True, keep_refs=False, top=True):
 def list_(detailed=False, prefix='', p_path=None, ignore=False):
     repo = Repo.fromrepo()
 
-    print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url + ('#' + str(repo.rev)[:12] if repo.rev else '') if detailed else repo.revtype(repo.rev, fmt=6)) or 'no revision'))
+    print("%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url + ('#' + str(repo.rev)[:12] if repo.rev else '') if detailed else repo.revtype(repo.rev, fmt=6)) or 'no revision')))
 
     for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.path)):
         nprefix = (prefix[:-3] + ('|  ' if prefix[-3] == '|' else '   ')) if prefix else ''
@@ -2374,16 +2384,16 @@ def releases_(detailed=False, unstable=False, recursive=False, prefix='', p_path
             rels.append(tag[1] + " %s%s" % ('#' + tag[0] if detailed else "", " <- current" if tag[1] in revtags else ""))
 
     # Print header
-    print "%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url + ('#' + str(repo.rev)[:12] if repo.rev else '') if detailed else repo.revtype(repo.rev, fmt=6)) or 'no revision'))
+    print("%s (%s)" % (prefix + (relpath(p_path, repo.path) if p_path else repo.name), ((repo.url + ('#' + str(repo.rev)[:12] if repo.rev else '') if detailed else repo.revtype(repo.rev, fmt=6)) or 'no revision')))
 
     # Print list of tags
     rprefix = (prefix[:-3] + ('|  ' if prefix[-3] == '|' else '   ')) if recursive and prefix else ''
     rprefix += '| ' if recursive and len(repo.libs) > 1 else '  '
     if len(rels):
         for rel in rels:
-            print rprefix + '* ' + rel
+            print(rprefix + '* ' + rel)
     else:
-        print rprefix + 'No release tags detected'
+        print(rprefix + 'No release tags detected')
 
     if recursive:
         for i, lib in enumerate(sorted(repo.libs, key=lambda l: l.path)):
@@ -2466,8 +2476,8 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
         # Compile configuration
         popen([python_cmd, os.path.join(tools_dir, 'get_config.py')]
               + ['-t', tchain, '-m', target]
-              + list(chain.from_iterable(izip(repeat('--profile'), profile or [])))
-              + list(chain.from_iterable(izip(repeat('--source'), source)))
+              + list(chain.from_iterable(zip(repeat('--profile'), profile or [])))
+              + list(chain.from_iterable(zip(repeat('--source'), source)))
               + (['-v'] if verbose else [])
               + (list(chain.from_iterable(izip(repeat('--prefix'), config_prefix))) if config_prefix else []),
               env=env)
@@ -2484,10 +2494,10 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                 build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, 'libraries', os.path.basename(orig_path), target, tchain)
 
             popen([python_cmd, '-u', os.path.join(tools_dir, 'build.py')]
-                  + list(chain.from_iterable(izip(repeat('-D'), macros)))
+                  + list(chain.from_iterable(zip(repeat('-D'), macros)))
                   + ['-t', tchain, '-m', target]
-                  + list(chain.from_iterable(izip(repeat('--profile'), profile or [])))
-                  + list(chain.from_iterable(izip(repeat('--source'), source)))
+                  + list(chain.from_iterable(zip(repeat('--profile'), profile or [])))
+                  + list(chain.from_iterable(zip(repeat('--source'), source)))
                   + ['--build', build_path]
                   + (['-c'] if clean else [])
                   + (['--artifact-name', artifact_name] if artifact_name else [])
@@ -2500,10 +2510,10 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                 build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, target, tchain)
 
             popen([python_cmd, '-u', os.path.join(tools_dir, 'make.py')]
-                  + list(chain.from_iterable(izip(repeat('-D'), macros)))
+                  + list(chain.from_iterable(zip(repeat('-D'), macros)))
                   + ['-t', tchain, '-m', target]
-                  + list(chain.from_iterable(izip(repeat('--profile'), profile or [])))
-                  + list(chain.from_iterable(izip(repeat('--source'), source)))
+                  + list(chain.from_iterable(zip(repeat('--profile'), profile or [])))
+                  + list(chain.from_iterable(zip(repeat('--source'), source)))
                   + ['--build', build_path]
                   + (['-c'] if clean else [])
                   + (['--artifact-name', artifact_name] if artifact_name else [])
@@ -2590,9 +2600,9 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
 
         if compile_list:
             popen([python_cmd, '-u', os.path.join(tools_dir, 'test.py'), '--list']
-                  + list(chain.from_iterable(izip(repeat('--profile'), profile or [])))
+                  + list(chain.from_iterable(list(izip(repeat('--profile'), profile or []))))
                   + ['-t', tchain, '-m', target]
-                  + list(chain.from_iterable(izip(repeat('--source'), source)))
+                  + list(chain.from_iterable(zip(repeat('--source'), source)))
                   + (['-n', tests_by_name] if tests_by_name else [])
                   + (['-v'] if verbose else [])
                   + (['--app-config', app_config] if app_config else [])
@@ -2606,11 +2616,11 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
                 program.ignore_build_dir()
 
             popen([python_cmd, '-u', os.path.join(tools_dir, 'test.py')]
-                  + list(chain.from_iterable(izip(repeat('-D'), macros)))
-                  + list(chain.from_iterable(izip(repeat('--profile'), profile or [])))
+                  + list(chain.from_iterable(zip(repeat('-D'), macros)))
+                  + list(chain.from_iterable(zip(repeat('--profile'), profile or [])))
                   + ['-t', tchain, '-m', target]
                   + (['-c'] if clean else [])
-                  + list(chain.from_iterable(izip(repeat('--source'), source)))
+                  + list(chain.from_iterable(zip(repeat('--source'), source)))
                   + ['--build', build_path]
                   + ['--test-spec', test_spec]
                   + (['-n', tests_by_name] if tests_by_name else [])
@@ -2947,7 +2957,7 @@ def cache_(on=False, off=False, dir=None, ls=False, purge=False, global_cfg=Fals
         action("Repository cache is %s." % str(cfg['cache']).upper())
         action("Cache location \"%s\"" % cfg['cache_dir'])
     else:
-        print cmd
+        print(cmd)
         error("Invalid cache command. Please see \"mbed cache --help\" for valid commands.")
 
 
@@ -2962,11 +2972,6 @@ def main():
 
     # Help messages adapt based on current dir
     cwd_root = getcwd()
-
-    if sys.version_info[0] != 2 or sys.version_info[1] < 7:
-        error(
-            "mbed CLI is compatible with Python version >= 2.7 and < 3.0\n"
-            "Please refer to the online guide available at https://github.com/ARMmbed/mbed-cli")
 
     # Parse/run command
     if len(sys.argv) <= 1:
@@ -2988,14 +2993,14 @@ def main():
     except ProcessException as e:
         error(
             "\"%s\" returned error code %d.\n"
-            "Command \"%s\" in \"%s\"" % (e[1], e[0], e[2], e[3]), e[0])
+            "Command \"%s\" in \"%s\"" % (e.args[1], e.args[0], e.args[2], e.args[3]), e.args[0])
     except OSError as e:
-        if e[0] == errno.ENOENT:
+        if e.args[0] == errno.ENOENT:
             error(
                 "Could not detect one of the command-line tools.\n"
-                "You could retry the last command with \"-v\" flag for verbose output\n", e[0])
+                "You could retry the last command with \"-v\" flag for verbose output\n", e.args[0])
         else:
-            error('OS Error: %s' % e[1], e[0])
+            error('OS Error: %s' % e.args[1], e.args[0])
     except KeyboardInterrupt:
         info('User aborted!', -1)
         sys.exit(255)

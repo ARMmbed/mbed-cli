@@ -17,7 +17,7 @@ def test_add(mbed, testrepos):
     test3 = testrepos[2]
 
     with cd('test1'):
-        popen(['python', mbed, 'add', test3])
+        popen(['python', mbed, 'add', test3, "-vv"])
 
     assertls(mbed, 'test1', [
         "test1",
@@ -34,7 +34,7 @@ def test_import_after_add(mbed, testrepos):
     mkcommit('test1')
 
     test1 = testrepos[0]
-    popen(['python', mbed, 'import', test1, 'testimport'])
+    popen(['python', mbed, 'import', test1, 'testimport', "-vv"])
 
     assertls(mbed, 'testimport', [
         "testimport",

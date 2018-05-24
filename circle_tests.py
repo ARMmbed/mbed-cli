@@ -13,6 +13,8 @@
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
 # either express or implied.
 
+from __future__ import print_function
+
 import os
 import sys
 import subprocess
