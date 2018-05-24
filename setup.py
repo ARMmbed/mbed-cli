@@ -18,8 +18,8 @@ LICENSE = open('LICENSE').read()
 
 setup(
     name="mbed-cli",
-    version="1.6.0",
-    description="ARM mbed command line tool for repositories version control, publishing and updating code from remotely hosted repositories (GitHub, GitLab and mbed.org), and invoking mbed OS own build system and export functions, among other operations",
+    version="1.7.0",
+    description="Arm Mbed command line tool for repositories version control, publishing and updating code from remotely hosted repositories (GitHub, GitLab and mbed.com), and invoking Mbed OS own build system and export functions, among other operations",
     long_description=LONG_DESC,
     url='http://github.com/ARMmbed/mbed-cli',
     author='ARM mbed',
@@ -32,5 +32,5 @@ setup(
             'mbed-cli=mbed.mbed:main',
         ]
     },
-    python_requires='>=2.7.10, <3',
+    python_requires='>=2.7.10,!=3.0.*,!=3.1.*,<4',
 )

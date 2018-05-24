@@ -47,7 +47,7 @@ import zipfile
 
 
 # Application version
-ver = '1.6.0'
+ver = '1.7.0'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
