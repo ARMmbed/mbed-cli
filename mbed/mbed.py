@@ -19,16 +19,18 @@
 # pylint: disable=invalid-name, missing-docstring, bad-continuation
 
 from __future__ import print_function
-from future.builtins.iterators import zip
-from past.builtins import basestring
 
 try:
-  from urllib.parse import urlparse, quote
-  from urllib.request  import urlopen
-except ImportError:
-  from urlparse import urlparse
-  from urllib2 import urlopen
-  from urllib import quote
+    # Python 2
+    basestring = (unicode, str)
+    from urlparse import urlparse
+    from urllib2 import urlopen
+    from urllib import quote
+except NameError:
+    # Python 3
+    basestring = str
+    from urllib.parse import urlparse, quote
+    from urllib.request  import urlopen
 
 import traceback
 import sys
@@ -47,7 +49,7 @@ import zipfile
 
 
 # Application version
-ver = '1.7.0'
+ver = '1.7.1'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'

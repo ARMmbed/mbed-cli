@@ -18,7 +18,7 @@ LICENSE = open('LICENSE').read()
 
 setup(
     name="mbed-cli",
-    version="1.7.0",
+    version="1.7.1",
     description="Arm Mbed command line tool for repositories version control, publishing and updating code from remotely hosted repositories (GitHub, GitLab and mbed.com), and invoking Mbed OS own build system and export functions, among other operations",
     long_description=LONG_DESC,
     url='http://github.com/ARMmbed/mbed-cli',

@@ -9,7 +9,7 @@ jobs:
 
       - run: python --version
       - run: pip --version
-      - run: pip install pytest future
+      - run: pip install pytest
       - run: git config --global user.email "test@mbed.org"
       - run: git config --global user.name "mbed Test"
       - run: echo -e "[ui]\nusername = mbed Test <test@mbed.org>\n" > ~/.hgrc
@@ -100,7 +100,7 @@ jobs:
 
       - run: python --version
       - run: pip --version
-      - run: pip install pytest future
+      - run: pip install pytest
       - run: git config --global user.email "test@mbed.org"
       - run: git config --global user.name "mbed Test"
       - run: echo -e "[ui]\nusername = mbed Test <test@mbed.org>\n" > ~/.hgrc
