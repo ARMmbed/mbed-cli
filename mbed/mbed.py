@@ -353,7 +353,10 @@ class Bld(object):
         try:
             Bld.init(path)
             with cd(path):
-                Bld.seturl(url+'/tip')
+                rev = Hg.remoteid(m.group(1), 'tip')
+                if not rev:
+                    error("Unable to fetch library build information")
+                Bld.seturl(url+'/'+rev)
         except Exception as e:
             if os.path.isdir(path):
                 rmtree_readonly(path)
@@ -363,7 +366,7 @@ class Bld(object):
         rev_file = os.path.join('.'+Bld.name, '.rev-' + rev + '.zip')
         try:
             if not os.path.exists(rev_file):
-                action("Downloading library build \"%s\" (might take a minute)" % rev)
+                action("Downloading library build \"%s\" (might take a while)" % rev)
                 outfd = open(rev_file, 'wb')
                 inurl = urlopen(url)
                 outfd.write(inurl.read())
@@ -1008,7 +1011,7 @@ class Repo(object):
             repo.path = os.path.abspath(path or os.path.join(getcwd(), repo.name))
             repo.url = formaturl(m_repo_ref.group(1))
             repo.rev = m_repo_ref.group(3)
-            if repo.rev and repo.rev != 'latest' and not re.match(r'^([a-fA-F0-9]{6,40})$', repo.rev):
+            if repo.rev and repo.rev != 'latest' and repo.rev != 'tip' and not re.match(r'^([a-fA-F0-9]{6,40})$', repo.rev):
                 error('Invalid revision (%s)' % repo.rev, -1)
         else:
             error('Invalid repository (%s)' % url.strip(), -1)
@@ -1927,7 +1930,7 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
         p.path = cwd_root
         p.set_root()
         if not create_only and not p.get_os_dir() and not p.get_mbedlib_dir():
-            url = mbed_lib_url if mbedlib else mbed_os_url+'#latest'
+            url = mbed_lib_url+'#tip' if mbedlib else mbed_os_url+'#latest'
             d = 'mbed' if mbedlib else 'mbed-os'
             try:
                 with cd(d_path):
