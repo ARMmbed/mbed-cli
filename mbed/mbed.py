@@ -2493,7 +2493,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
         if compile_library:
             # Compile as a library (current dir is default)
             if not build_path:
-                build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, 'libraries', os.path.basename(orig_path), target, tchain)
+                build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, 'libraries', os.path.basename(orig_path), target.upper(), tchain.upper())
 
             popen([python_cmd, '-u', os.path.join(tools_dir, 'build.py')]
                   + list(chain.from_iterable(zip(repeat('-D'), macros)))
@@ -2509,7 +2509,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
         else:
             # Compile as application (root is default)
             if not build_path:
-                build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, target, tchain)
+                build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, target.upper(), tchain.upper())
 
             popen([python_cmd, '-u', os.path.join(tools_dir, 'make.py')]
                   + list(chain.from_iterable(zip(repeat('-D'), macros)))
@@ -2591,7 +2591,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
         # Setup the build path if not specified
         build_path = build
         if not build_path:
-            build_path = os.path.join(program.path, program.build_dir, 'tests', target, tchain)
+            build_path = os.path.join(program.path, program.build_dir, 'tests', target.upper(), tchain.upper())
 
         if test_spec:
             # Preserve path to given test spec
