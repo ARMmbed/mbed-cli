@@ -42,7 +42,7 @@ import shutil
 import stat
 import errno
 import ctypes
-from itertools import chain, repeat
+from itertools import chain, izip, repeat
 import argparse
 import tempfile
 import zipfile
@@ -2484,7 +2484,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
               + list(chain.from_iterable(zip(repeat('--profile'), profile or [])))
               + list(chain.from_iterable(zip(repeat('--source'), source)))
               + (['-v'] if verbose else [])
-              + (list(chain.from_iterable(izip(repeat('--prefix'), config_prefix))) if config_prefix else []),
+              + (list(chain.from_iterable(zip(repeat('--prefix'), config_prefix))) if config_prefix else []),
               env=env)
     else:
         # If the user hasn't supplied a build directory, ignore the default build directory
