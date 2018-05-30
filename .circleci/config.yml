@@ -45,66 +45,78 @@ jobs:
           echo "Testing mbed-os-5.8.5"
           cd mbed-os
           mbed update --clean --clean-files "mbed-os-5.8.5"
-          mbed compile -S
+          mbed compile --supported
           mbed compile --config --prefix mbed
-          mbed toolchain -S
-          mbed target -S
-          mbed export -S
+          mbed toolchain --supported
+          mbed target --supported
+          mbed export --supported
           mbed test --compile-list
       - run: |-
           cd .tests/supported-tests
           echo "Testing mbed-os-5.7.6"
           cd mbed-os
           mbed update --clean --clean-files "mbed-os-5.7.5"
-          mbed compile -S
-          mbed toolchain -S
-          mbed target -S
-          mbed export -S
+          mbed compile --supported
+          mbed compile --config --prefix mbed
+          mbed toolchain --supported
+          mbed target --supported
+          mbed export --supported
+          mbed test --compile-list
       - run: |-
           cd .tests/supported-tests
           echo "Testing mbed-os-5.6.6"
           cd mbed-os
           mbed update --clean --clean-files "mbed-os-5.6.5"
-          mbed compile -S
-          mbed toolchain -S
-          mbed target -S
-          mbed export -S
+          mbed compile --supported
+          mbed compile --config --prefix mbed
+          mbed toolchain --supported
+          mbed target --supported
+          mbed export --supported
+          mbed test --compile-list
       - run: |-
           cd .tests/supported-tests
           echo "Testing mbed-os-5.5.6"
           cd mbed-os
           mbed update --clean --clean-files "mbed-os-5.5.5"
-          mbed compile -S
-          mbed toolchain -S
-          mbed target -S
-          mbed export -S
+          mbed compile --supported
+          mbed compile --config --prefix mbed
+          mbed toolchain --supported
+          mbed target --supported
+          mbed export --supported
+          mbed test --compile-list
       - run: |-
           cd .tests/supported-tests
           echo "Testing mbed-os-5.4.6"
           cd mbed-os
           mbed update --clean --clean-files "mbed-os-5.4.5"
-          mbed compile -S
-          mbed toolchain -S
-          mbed target -S
-          mbed export -S
+          mbed compile --supported
+          mbed compile --config --prefix mbed
+          mbed toolchain --supported
+          mbed target --supported
+          mbed export --supported
+          mbed test --compile-list
       - run: |-
           cd .tests/supported-tests
           echo "Testing mbed-os-5.2.3"
           cd mbed-os
           mbed update --clean --clean-files "mbed-os-5.2.3"
-          mbed compile -S
-          mbed toolchain -S
-          mbed target -S
-          mbed export -S
+          mbed compile --supported
+          mbed compile --config --prefix mbed
+          mbed toolchain --supported
+          mbed target --supported
+          mbed export --supported
+          mbed test --compile-list
       - run: |-
           cd .tests/supported-tests
           echo "Testing mbed-os-5.1.5"
           cd mbed-os
           mbed update --clean --clean-files "mbed-os-5.1.5"
-          mbed compile -S
-          mbed toolchain -S
-          mbed target -S
-          mbed export -S
+          mbed compile --supported
+          mbed compile --config --prefix mbed
+          mbed toolchain --supported
+          mbed target --supported
+          mbed export --supported
+          mbed test --compile-list
 
   py3:
     machine: true
