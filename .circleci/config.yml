@@ -42,48 +42,65 @@ jobs:
       - run: cd .tests && mbed new supported-tests
       - run: |-
           cd .tests/supported-tests
-          echo "Testing mbed-os-5.6.0"
-          mbed update --clean "mbed-os-5.6.0"
+          echo "Testing mbed-os-5.8.5"
+          cd mbed-os
+          mbed update --clean --clean-files "mbed-os-5.8.5"
+          mbed compile -S
+          mbed compile --config --prefix mbed
+          mbed toolchain -S
+          mbed target -S
+          mbed export -S
+          mbed test --compile-list
+      - run: |-
+          cd .tests/supported-tests
+          echo "Testing mbed-os-5.7.6"
+          cd mbed-os
+          mbed update --clean --clean-files "mbed-os-5.7.5"
           mbed compile -S
           mbed toolchain -S
           mbed target -S
           mbed export -S
       - run: |-
           cd .tests/supported-tests
-          echo "Testing mbed-os-5.5.0"
-          mbed update --clean "mbed-os-5.5.0"
+          echo "Testing mbed-os-5.6.6"
+          cd mbed-os
+          mbed update --clean --clean-files "mbed-os-5.6.5"
           mbed compile -S
           mbed toolchain -S
           mbed target -S
           mbed export -S
       - run: |-
           cd .tests/supported-tests
-          echo "Testing mbed-os-5.4.0"
-          mbed update --clean "mbed-os-5.4.0"
-          mbed compile -S
-          mbed toolchain -S
-          mbed target -S
-          mbed export -S 
-      - run: |-
-          cd .tests/supported-tests
-          echo "Testing mbed-os-5.3.0"
-          mbed update --clean "mbed-os-5.3.0"
+          echo "Testing mbed-os-5.5.6"
+          cd mbed-os
+          mbed update --clean --clean-files "mbed-os-5.5.5"
           mbed compile -S
           mbed toolchain -S
           mbed target -S
           mbed export -S
       - run: |-
           cd .tests/supported-tests
-          echo "Testing mbed-os-5.2.0"
-          mbed update --clean "mbed-os-5.2.0"
+          echo "Testing mbed-os-5.4.6"
+          cd mbed-os
+          mbed update --clean --clean-files "mbed-os-5.4.5"
           mbed compile -S
           mbed toolchain -S
           mbed target -S
           mbed export -S
       - run: |-
           cd .tests/supported-tests
-          echo "Testing mbed-os-5.1.0"
-          mbed update --clean "mbed-os-5.1.0"
+          echo "Testing mbed-os-5.2.3"
+          cd mbed-os
+          mbed update --clean --clean-files "mbed-os-5.2.3"
+          mbed compile -S
+          mbed toolchain -S
+          mbed target -S
+          mbed export -S
+      - run: |-
+          cd .tests/supported-tests
+          echo "Testing mbed-os-5.1.5"
+          cd mbed-os
+          mbed update --clean --clean-files "mbed-os-5.1.5"
           mbed compile -S
           mbed toolchain -S
           mbed target -S
