@@ -49,7 +49,7 @@ import zipfile
 
 
 # Application version
-ver = '1.7.1'
+ver = '1.7.2'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
@@ -2484,7 +2484,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
               + list(chain.from_iterable(zip(repeat('--profile'), profile or [])))
               + list(chain.from_iterable(zip(repeat('--source'), source)))
               + (['-v'] if verbose else [])
-              + (list(chain.from_iterable(izip(repeat('--prefix'), config_prefix))) if config_prefix else []),
+              + (list(chain.from_iterable(zip(repeat('--prefix'), config_prefix))) if config_prefix else []),
               env=env)
     else:
         # If the user hasn't supplied a build directory, ignore the default build directory
@@ -2605,7 +2605,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
 
         if compile_list:
             popen([python_cmd, '-u', os.path.join(tools_dir, 'test.py'), '--list']
-                  + list(chain.from_iterable(list(izip(repeat('--profile'), profile or []))))
+                  + list(chain.from_iterable(list(zip(repeat('--profile'), profile or []))))
                   + ['-t', tchain, '-m', target]
                   + list(chain.from_iterable(zip(repeat('--source'), source)))
                   + (['-n', tests_by_name] if tests_by_name else [])
@@ -2696,11 +2696,11 @@ def export(ide=None, target=None, source=False, clean=False, supported=False, ap
     program.ignore_build_dir()
 
     popen([python_cmd, '-u', os.path.join(tools_dir, 'project.py')]
-          + list(chain.from_iterable(izip(repeat('-D'), macros)))
+          + list(chain.from_iterable(zip(repeat('-D'), macros)))
           + ['-i', ide.lower()]
           + ['-m', target]
           + (['-c'] if clean else [])
-          + list(chain.from_iterable(izip(repeat('--source'), source)))
+          + list(chain.from_iterable(zip(repeat('--source'), source)))
           + (['--app-config', app_config] if app_config else [])
           + args,
           env=env)
