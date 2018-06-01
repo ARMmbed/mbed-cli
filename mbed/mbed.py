@@ -42,7 +42,7 @@ import shutil
 import stat
 import errno
 import ctypes
-from itertools import chain, repeat
+from itertools import chain, izip, repeat
 import argparse
 import tempfile
 import zipfile
