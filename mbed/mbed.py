@@ -3013,6 +3013,11 @@ def main():
         if very_verbose:
             traceback.print_exc(file=sys.stdout)
         error("Unknown Error: %s" % e, 255)
+    finally:
+        # Warn user if Python 3 might have caused an exception.
+        if status and sys.version_info[0] == 3:
+            warning("Using Python 3 with Mbed OS 5.8 and earlier can cause errors with compiling, testing and exporting");
+
     sys.exit(status or 0)
 
 
