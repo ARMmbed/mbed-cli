@@ -2989,7 +2989,7 @@ def main():
 
     # Python 3 backwards compatability warning
     if sys.version_info[0] == 3:
-        warning("Usage of Python 3 requires Mbed OS >= v5.9")
+        warning("If you're using Python 3 with Mbed OS 5.8 and earlier versions, Python errors will occur when compiling, testing and exporting")
 
     pargs, remainder = parser.parse_known_args()
     status = 1
