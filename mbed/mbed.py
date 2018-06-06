@@ -1351,17 +1351,24 @@ class Repo(object):
                 can_lock = False
                 # this loop is handling a lock file from another process if exists
                 for i in range(300): 
-                    if os.path.exists(lock_file):
-                       # lock file exists, but we need to check pid as well in case the process died 
-                        with open(lock_file) as f:
-                            pid = f.read(200)
-                        if pid and int(pid) != os.getpid():
-                            if self.pid_exists(pid):
-                                time.sleep(1)
+                    if i:
+                        time.sleep(1)
+                    if os.path.isfile(lock_file):
+                        try:
+                            # lock file exists, but we need to check pid as well in case the process died
+                            with open(lock_file, 'r') as f:
+                                pid = f.read(8)
+                            if pid and int(pid) != os.getpid():
+                                if self.pid_exists(pid):
+                                    continue
+                            else:
+                                info("Cache lock file exists, but process is dead. Cleaning up")
+                                os.remove(lock_file)
                                 continue
-                        else:
-                            info("Cache lock file exists, but process is dead. Cleaning up")
-                            os.unlink(lock_file)
+                        except (IOError, OSError):
+                            continue
+                            pass
+
                     can_lock = True
                     break
 
@@ -1378,12 +1385,12 @@ class Repo(object):
         cpath = self.url2cachedir(url)
         if cpath:
             lock_file = os.path.join(cpath, '.lock')
-            if os.path.isfile(os.path.join(cpath, '.lock')):
+            if os.path.isfile(lock_file):
                 try:
                     with open(lock_file) as f:
-                        pid = f.read(200)
+                        pid = f.read(8)
                     if int(pid) == os.getpid():
-                        os.unlink(os.path.join(cpath, '.lock'))
+                        os.remove(lock_file)
                     else:
                         error("Cache lock file exists with a different pid (\"%s\" vs \"%s\")" % (pid, os.getpid()))
                 except Exception:
