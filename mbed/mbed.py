@@ -1356,7 +1356,7 @@ class Repo(object):
                     if os.path.isfile(lock_file):
                         try:
                             # lock file exists, but we need to check pid as well in case the process died
-                            with open(lock_file, 'r') as f:
+                            with open(lock_file, 'r', 0) as f:
                                 pid = f.read(8)
                             if pid and int(pid) != os.getpid():
                                 if self.pid_exists(pid):
@@ -1373,8 +1373,10 @@ class Repo(object):
                     break
 
                 if can_lock:
-                    with open(lock_file, 'wb') as f:
+                    with open(lock_file, 'wb', 0) as f:
                         f.write(str(os.getpid()))
+                        f.flush()
+
                 else:
                     error("Exceeded 5 minutes limit while waiting for other process to finish caching")
             except Exception:
@@ -1387,7 +1389,7 @@ class Repo(object):
             lock_file = os.path.join(cpath, '.lock')
             if os.path.isfile(lock_file):
                 try:
-                    with open(lock_file) as f:
+                    with open(lock_file, 'r', 0) as f:
                         pid = f.read(8)
                     if int(pid) == os.getpid():
                         os.remove(lock_file)
