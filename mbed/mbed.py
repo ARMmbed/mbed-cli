@@ -42,6 +42,7 @@ import shutil
 import stat
 import errno
 import ctypes
+from itertools import chain, repeat
 import time
 import zipfile
 import argparse
