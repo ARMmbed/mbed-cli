@@ -1344,43 +1344,46 @@ class Repo(object):
         cpath = self.url2cachedir(url)
         if cpath:
             lock_file = os.path.join(cpath, '.lock')
-            try:
-                if not os.path.isdir(cpath):
-                    os.makedirs(cpath)
+            if not os.path.isdir(cpath):
+                os.makedirs(cpath)
 
-                can_lock = False
-                # this loop is handling a lock file from another process if exists
-                for i in range(300): 
-                    if i:
-                        time.sleep(1)
-                    if os.path.isfile(lock_file):
-                        try:
-                            # lock file exists, but we need to check pid as well in case the process died
-                            with open(lock_file, 'r', 0) as f:
-                                pid = f.read(8)
-                            if pid and int(pid) != os.getpid():
-                                if self.pid_exists(pid):
-                                    continue
-                            else:
-                                info("Cache lock file exists, but process is dead. Cleaning up")
-                                os.remove(lock_file)
+            can_lock = False
+            # this loop is handling a lock file from another process if exists
+            for i in range(300): 
+                if i:
+                    time.sleep(1)
+                if os.path.isfile(lock_file):
+                    try:
+                        # lock file exists, but we need to check pid as well in case the process died
+                        with open(lock_file, 'r', 0) as f:
+                            pid = f.read(8)
+                        if pid and int(pid) != os.getpid():
+                            if self.pid_exists(pid):
+                                info("Cache lock file exists and process %s is alive." % pid)
                                 continue
-                        except (IOError, OSError):
+                        else:
+                            info("Cache lock file exists, but process is dead. Cleaning up")
+                            os.remove(lock_file)
                             continue
-                            pass
+                    except (IOError, OSError):
+                        continue
+                        pass
 
-                    can_lock = True
-                    break
+                can_lock = True
+                break
 
-                if can_lock:
+            if can_lock:
+                try:
                     with open(lock_file, 'wb', 0) as f:
+                        info("Writing cache lock file for pid %s" % os.getpid())
                         f.write(str(os.getpid()))
                         f.flush()
+                        os.fsync(f)
+                except (IOError, OSError):
+                    error("Unable to lock cache dir \"%s\"" % (cpath))
 
-                else:
-                    error("Exceeded 5 minutes limit while waiting for other process to finish caching")
-            except Exception:
-                error("Unable to lock cache dir \"%s\"" % (cpath))
+            else:
+                error("Exceeded 5 minutes limit while waiting for other process to finish caching")
         return False
 
     def cache_unlock(self, url):
