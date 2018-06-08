@@ -133,9 +133,9 @@ mbed_base_url = 'https://github.com/ARMmbed'
 # default mbed OS url
 mbed_os_url = 'https://github.com/ARMmbed/mbed-os'
 # default mbed library url
-mbed_lib_url = 'https://mbed.org/users/mbed_official/code/mbed/builds/'
+mbed_lib_url = 'https://developer.mbed.org/users/mbed_official/code/mbed/builds/'
 # mbed SDK tools needed for programs based on mbed SDK library
-mbed_sdk_tools_url = 'https://mbed.org/users/mbed_official/code/mbed-sdk-tools'
+mbed_sdk_tools_url = 'https://developer.mbed.org/users/mbed_official/code/mbed-sdk-tools'
 
 # a list of public SCM service (github/butbucket) which support http, https and ssh schemas
 public_scm_services = ['bitbucket.org', 'github.com', 'gitlab.com']
