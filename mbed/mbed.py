@@ -2589,12 +2589,12 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
     with cd(program.path):
         # Setup the source path if not specified
         if not source or len(source) == 0:
-            source = [program.path]
+            source = [os.path.relpath(program.path, orig_path)]
 
         # Setup the build path if not specified
         build_path = build
         if not build_path:
-            build_path = os.path.join(program.path, program.build_dir, 'tests', target.upper(), tchain.upper())
+            build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, 'tests', target.upper(), tchain.upper())
 
         if test_spec:
             # Preserve path to given test spec
