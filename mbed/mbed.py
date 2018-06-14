@@ -45,7 +45,7 @@ import ctypes
 from itertools import chain, repeat
 import time
 import zipfile
-import argparse
+from random import randint
 
 
 # Application version
@@ -156,7 +156,7 @@ def log(msg, is_error=False):
     sys.stderr.write(msg) if is_error else sys.stdout.write(msg)
 
 def message(msg):
-    return "[mbed] %s\n" % msg
+    return "[mbed-%s] %s\n" % (os.getpid(), msg)
 
 def info(msg, level=1):
     if level <= 0 or verbose:
@@ -1345,6 +1345,7 @@ class Repo(object):
         cpath = self.url2cachedir(url)
         if cpath:
             lock_file = os.path.join(cpath, '.lock')
+
             if not os.path.isdir(cpath):
                 os.makedirs(cpath)
 
@@ -1353,35 +1354,29 @@ class Repo(object):
             for i in range(300): 
                 if i:
                     time.sleep(1)
-                if os.path.isfile(lock_file):
-                    try:
-                        # lock file exists, but we need to check pid as well in case the process died
-                        with open(lock_file, 'r', 0) as f:
-                            pid = f.read(8)
-                        if pid and int(pid) != os.getpid():
-                            if self.pid_exists(pid):
-                                info("Cache lock file exists and process %s is alive." % pid)
-                                continue
-                        else:
-                            info("Cache lock file exists, but process is dead. Cleaning up")
-                            os.remove(lock_file)
-                            continue
-                    except (IOError, OSError):
-                        continue
-                        pass
 
-                can_lock = True
-                break
-
-            if can_lock:
                 try:
+                    # lock file exists, but we need to check pid as well in case the process died
+                    if os.path.isfile(lock_file):
+                        with open(lock_file, 'r', 0) as f:
+                            pid = int(f.read(8))
+                        if pid != os.getpid() and self.pid_exists(pid):
+                            info("Cache lock file exists and process %s is alive." % pid)
+                        else:
+                            info("Cache lock file exists, but %s is dead. Cleaning up" % pid)
+                            os.remove(lock_file)
+                        continue
+
                     with open(lock_file, 'wb', 0) as f:
-                        info("Writing cache lock file for pid %s" % os.getpid())
+                        info("Writing cache lock file %s for pid %s" % (lock_file, os.getpid()))
                         f.write(str(os.getpid()))
                         f.flush()
                         os.fsync(f)
+                        break
                 except (IOError, OSError):
-                    error("Unable to lock cache dir \"%s\"" % (cpath))
+                    error("OS error occurred")
+                except Exception as e:
+                    error("Weird error occurred")
 
             else:
                 error("Exceeded 5 minutes limit while waiting for other process to finish caching")
