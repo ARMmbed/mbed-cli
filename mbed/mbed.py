@@ -1343,61 +1343,76 @@ class Repo(object):
 
     def cache_lock(self, url):
         cpath = self.url2cachedir(url)
-        if cpath:
-            lock_file = os.path.join(cpath, '.lock')
+        if not cpath:
+            return False
 
-            if not os.path.isdir(cpath):
-                os.makedirs(cpath)
+        if not os.path.isdir(cpath):
+            os.makedirs(cpath)
 
-            can_lock = False
-            # this loop is handling a lock file from another process if exists
-            for i in range(300): 
-                if i:
-                    time.sleep(1)
+        lock_dir = os.path.join(cpath, '.lock')
+        lock_file = os.path.join(lock_dir, 'pid')
 
+        # this loop is handling a lock file from another process if exists
+        for i in range(300): 
+            if i:
+                time.sleep(1)
+
+            # lock file exists, but we need to check pid as well in case the process died
+            if os.path.exists(lock_dir):
+                if os.path.isfile(lock_file):
+                    with open(lock_file, 'r', 0) as f:
+                        pid = int(f.read(8))
+                    if pid != os.getpid() and self.pid_exists(pid):
+                        info("Cache lock file exists and process %s is alive." % pid)
+                    else:
+                        info("Cache lock file exists, but %s is dead. Cleaning up" % pid)
+                        os.remove(lock_file)
+                        os.rmdir(lock_dir)
+                else:
+                    os.rmdir(lock_dir)
+                continue
+            else:
                 try:
-                    # lock file exists, but we need to check pid as well in case the process died
-                    if os.path.isfile(lock_file):
-                        with open(lock_file, 'r', 0) as f:
-                            pid = int(f.read(8))
-                        if pid != os.getpid() and self.pid_exists(pid):
-                            info("Cache lock file exists and process %s is alive." % pid)
-                        else:
-                            info("Cache lock file exists, but %s is dead. Cleaning up" % pid)
-                            os.remove(lock_file)
-                        continue
-
+                    os.mkdir(lock_dir)
                     with open(lock_file, 'wb', 0) as f:
                         info("Writing cache lock file %s for pid %s" % (lock_file, os.getpid()))
                         f.write(str(os.getpid()))
                         f.flush()
                         os.fsync(f)
-                        break
-                except (IOError, OSError):
-                    error("OS error occurred")
-                except Exception as e:
-                    error("Weird error occurred")
-
-            else:
-                error("Exceeded 5 minutes limit while waiting for other process to finish caching")
-        return False
+                    break
+                except (OSError, WindowsError) as e:
+                    ## Windows:  
+                    ##   <type 'exceptions.WindowsError'>    17 [Error 183] Cannot create a file when that file already exists: 'testing'
+                    ##   or when concurrent:                 13 WindowsError(5, 'Access is denied')
+                    ## Linux:    <type 'exceptions.OSError'> 17 [Errno 17] File exists: 'testing' 
+                    ##   or when concurrent & virtualbox     71, OSError(71, 'Protocol error')
+                    ##   or when full:                       28, OSError(28, 'No space left on device')
+                    if e.errno in (17,13,71,28):
+                        continue
+                    else:
+                        raise e
+        else:
+            error("Exceeded 5 minutes limit while waiting for other process to finish caching")
+        return True
 
     def cache_unlock(self, url):
         cpath = self.url2cachedir(url)
-        if cpath:
-            lock_file = os.path.join(cpath, '.lock')
+        if not cpath:
+            return False
+        lock_dir = os.path.join(cpath, '.lock')
+        lock_file = os.path.join(lock_dir, 'pid')
+        if os.path.exists(lock_dir):
             if os.path.isfile(lock_file):
                 try:
                     with open(lock_file, 'r', 0) as f:
                         pid = f.read(8)
-                    if int(pid) == os.getpid():
-                        os.remove(lock_file)
-                    else:
+                    if int(pid) != os.getpid():
                         error("Cache lock file exists with a different pid (\"%s\" vs \"%s\")" % (pid, os.getpid()))
-                except Exception:
+                except OSError:
                     error("Unable to unlock cache dir \"%s\"" % (cpath))
-            return True
-        return False
+                os.remove(lock_file)
+            os.rmdir(lock_dir)
+        return True
 
     def pid_exists(self, pid):
         try:
