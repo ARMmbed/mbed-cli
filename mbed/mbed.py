@@ -1352,12 +1352,10 @@ class Repo(object):
         lock_dir = os.path.join(cpath, '.lock')
         lock_file = os.path.join(lock_dir, 'pid')
 
-        # this loop is handling a lock file from another process if exists
         for i in range(300): 
             if i:
                 time.sleep(1)
 
-            # lock file exists, but we need to check pid as well in case the process died
             if os.path.exists(lock_dir):
                 if os.path.isfile(lock_file):
                     with open(lock_file, 'r', 0) as f:
@@ -1399,6 +1397,7 @@ class Repo(object):
         cpath = self.url2cachedir(url)
         if not cpath:
             return False
+
         lock_dir = os.path.join(cpath, '.lock')
         lock_file = os.path.join(lock_dir, 'pid')
         if os.path.exists(lock_dir):
