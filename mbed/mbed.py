@@ -1378,7 +1378,7 @@ class Repo(object):
                         f.flush()
                         os.fsync(f)
                     break
-                except (OSError, WindowsError) as e:
+                except (OSError) as e:
                     ## Windows:  
                     ##   <type 'exceptions.WindowsError'>    17 [Error 183] Cannot create a file when that file already exists: 'testing'
                     ##   or when concurrent:                 13 WindowsError(5, 'Access is denied')
