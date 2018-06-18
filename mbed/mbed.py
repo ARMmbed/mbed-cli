@@ -151,8 +151,8 @@ cwd_root = ""
 _cwd = os.getcwd()
 
 # Logging and output
-def log(msg):
-    sys.stdout.write(msg)
+def log(msg, is_error=False):
+    sys.stderr.write(msg) if is_error else sys.stdout.write(msg)
 
 def message(msg):
     return "[mbed] %s\n" % msg
@@ -168,17 +168,17 @@ def action(msg):
 
 def warning(msg):
     lines = msg.splitlines()
-    log(message("WARNING: %s" % lines.pop(0)))
+    log(message("WARNING: %s" % lines.pop(0)), True)
     for line in lines:
-        log("       %s\n" % line)
-    log("---\n")
+        log("       %s\n" % line, True)
+    log("---\n", True)
 
 def error(msg, code=-1):
     lines = msg.splitlines()
-    log(message("ERROR: %s" % lines.pop(0)))
+    log(message("ERROR: %s" % lines.pop(0)), True)
     for line in lines:
-        log("       %s\n" % line)
-    log("---\n")
+        log("       %s\n" % line, True)
+    log("---\n", True)
     sys.exit(code)
 
 def offline_warning(offline, top=True):
