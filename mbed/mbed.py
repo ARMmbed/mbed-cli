@@ -1934,7 +1934,7 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
             d = 'mbed' if mbedlib else 'mbed-os'
             try:
                 with cd(d_path):
-                    add(url, depth=depth, protocol=protocol, top=False)
+                    add(url, path=d, depth=depth, protocol=protocol, top=False)
             except Exception as e:
                 if os.path.isdir(os.path.join(d_path, d)):
                     rmtree_readonly(os.path.join(d_path, d))
