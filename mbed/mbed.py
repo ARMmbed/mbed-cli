@@ -43,9 +43,8 @@ import stat
 import errno
 import ctypes
 from itertools import chain, repeat
-import argparse
-import tempfile
 import zipfile
+import argparse
 
 
 # Application version
@@ -152,8 +151,8 @@ cwd_root = ""
 _cwd = os.getcwd()
 
 # Logging and output
-def log(msg):
-    sys.stdout.write(msg)
+def log(msg, is_error=False):
+    sys.stderr.write(msg) if is_error else sys.stdout.write(msg)
 
 def message(msg):
     return "[mbed] %s\n" % msg
@@ -168,14 +167,18 @@ def action(msg):
         log(message(line))
 
 def warning(msg):
-    for line in msg.splitlines():
-        sys.stderr.write("[mbed] WARNING: %s\n" % line)
-    sys.stderr.write("---\n")
+    lines = msg.splitlines()
+    log(message("WARNING: %s" % lines.pop(0)), True)
+    for line in lines:
+        log("       %s\n" % line, True)
+    log("---\n", True)
 
 def error(msg, code=-1):
-    for line in msg.splitlines():
-        sys.stderr.write("[mbed] ERROR: %s\n" % line)
-    sys.stderr.write("---\n")
+    lines = msg.splitlines()
+    log(message("ERROR: %s" % lines.pop(0)), True)
+    for line in lines:
+        log("       %s\n" % line, True)
+    log("---\n", True)
     sys.exit(code)
 
 def offline_warning(offline, top=True):
@@ -217,15 +220,15 @@ class ProcessException(Exception):
 
 def popen(command, stdin=None, **kwargs):
     # print for debugging
-    info('Exec "'+' '.join(command)+'" in '+getcwd())
+    info("Exec \"%s\" in \"%s\"" % (' '.join(command), getcwd()))
     proc = None
     try:
         proc = subprocess.Popen(command, **kwargs)
     except OSError as e:
         if e.args[0] == errno.ENOENT:
             error(
-                "Could not execute \"%s\".\n"
-                "Please verify that it's installed and accessible from your current path by executing \"%s\".\n" % (command[0], command[0]), e.args[0])
+                "Could not execute \"%s\" in \"%s\".\n"
+                "You can verify that it's installed and accessible from your current path by executing \"%s\".\n" % (' '.join(command), getcwd(), command[0]), e.args[0])
         else:
             raise e
 
@@ -234,14 +237,14 @@ def popen(command, stdin=None, **kwargs):
 
 def pquery(command, output_callback=None, stdin=None, **kwargs):
     if very_verbose:
-        info('Query "'+' '.join(command)+'" in '+getcwd())
+        info("Exec \"%s\" in \"%s\"" % (' '.join(command), getcwd()))
     try:
         proc = subprocess.Popen(command, bufsize=0, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
     except OSError as e:
         if e.args[0] == errno.ENOENT:
             error(
-                "Could not execute \"%s\".\n"
-                "Please verify that it's installed and accessible from your current path by executing \"%s\".\n" % (command[0], command[0]), e.args[0])
+                "Could not execute \"%s\" in \"%s\".\n"
+                "You can verify that it's installed and accessible from your current path by executing \"%s\".\n" % (' '.join(command), getcwd(), command[0]), e.args[0])
         else:
             raise e
 
@@ -785,9 +788,9 @@ class Git(object):
             else:
                 err = "Unable to update \"%s\" in \"%s\"." % (os.path.basename(getcwd()), getcwd())
                 if not remote:
-                    info(err+" The local repository is not associated with a remote one.")
+                    info(err+"\nThe local repository is not associated with a remote one.\nYou should associate your repository with a remote one.")
                 if not branch:
-                    info(err+" Working set is not on a branch.")
+                    info(err+"\nThe working set is not on a branch.\nYou should switch to a branch or create a new one from the current revision.")
 
     def status():
         return pquery([git_cmd, 'status', '-s'] + (['-v'] if very_verbose else []))
@@ -971,9 +974,9 @@ class Git(object):
             if m.group(1) == "Receiving objects":
                 show_progress('Downloading', (float(m.group(3)) / float(m.group(4))) * 80)
             if m.group(1) == "Resolving deltas":
-                show_progress('Downloading', (float(m.group(3)) / float(m.group(4))) * 10 + 80)
+                show_progress('Downloading', (float(m.group(3)) / float(m.group(4))) * 20 + 80)
             if m.group(1) == "Checking out files":
-                show_progress('Downloading', (float(m.group(3)) / float(m.group(4))) * 10 + 90)
+                show_progress('Checking out', (float(m.group(3)) / float(m.group(4))) * 100)
 
 
 # Repository object
@@ -1496,23 +1499,23 @@ class Program(object):
                         pquery([python_cmd, '-m', 'pip', 'install', '-q', '-r', os.path.join(req_path, req_file)])
                         missing = []
                     except ProcessException:
-                        warning("Unable to auto-install required Python modules.")
+                        pass
 
         except (IOError, ImportError, OSError):
             pass
 
         if missing:
-            err = (
-                "-----------------------------------------------------------------\n"
+            msg = (
+                "Unable to auto-install required Python modules.\n"
                 "The mbed OS tools in this program require the following Python modules: %s\n"
                 "You can install all missing modules by running \"pip install -r %s\" in \"%s\"" % (', '.join(missing), req_file, req_path))
             if os.name == 'posix':
-                err += "\nOn Posix systems (Linux, Mac, etc) you might have to switch to superuser account or use \"sudo\""
+                msg += "\nOn Posix systems (Linux, Mac, etc) you might have to switch to superuser account or use \"sudo\""
 
             if show_warning:
-                warning(err)
+                warning(msg)
             else:
-                error(err, 1)
+                error(msg, 1)
 
 
     # Routines after cloning mbed-os
@@ -1562,7 +1565,7 @@ class Program(object):
     def get_tools(self):
         mbed_tools_path = self.get_tools_dir()
         if not mbed_tools_path:
-            error('The mbed tools were not found in "%s". \nRun `mbed deploy` to install dependencies and tools. ' % self.path, -1)
+            error("The mbed tools were not found in \"%s\". \nYou can run \"mbed deploy\" to install dependencies and tools." % self.path, -1)
         return mbed_tools_path
 
     def get_env(self):
@@ -1585,14 +1588,14 @@ class Program(object):
                 target = detected['name']
 
         if target is None:
-            error("Please specify target using the -m switch or set default target using command 'mbed target'", 1)
+            error("Please specify target using the -m switch or set default target using command \"mbed target\"", 1)
         return target
 
     def get_toolchain(self, toolchain=None):
         toolchain_cfg = self.get_cfg('TOOLCHAIN')
         tchain = toolchain if toolchain else toolchain_cfg
         if tchain is None:
-            error("Please specify toolchain using the -t switch or set default toolchain using command 'mbed toolchain'", 1)
+            error("Please specify toolchain using the -t switch or set default toolchain using command \"mbed toolchain\"", 1)
         return tchain
 
     def set_defaults(self, target=None, toolchain=None):
@@ -1623,7 +1626,7 @@ class Program(object):
     def detect_target(self, info=None):
         targets = self.get_detected_targets()
         if targets == False:
-            error("The target detection requires that the 'mbed-ls' python module is installed.\nYou can install mbed-ls by running 'pip install mbed-ls'.", 1)
+            error("The target detection requires that the 'mbed-ls' python module is installed.\nYou can install mbed-ls by running \"pip install mbed-ls\".", 1)
         elif len(targets) > 1:
             error("Multiple targets were detected.\nOnly 1 target board should be connected to your system.", 1)
         elif len(targets) == 0:
@@ -1785,6 +1788,8 @@ def formaturl(url, format="default"):
 def mbed_sterm(port, baudrate=9600, echo=True, reset=False, sterm=False):
     try:
         from .mbed_terminal import MbedTerminal
+    except(ValueError): # relative import fails on Python 2 in non-package mode
+        from mbed_terminal import MbedTerminal
     except (IOError, ImportError, OSError):
         error("The serial terminal functionality requires that the 'mbed-terminal' python module is installed.\nYou can install mbed-terminal by running 'pip install mbed-terminal'.", 1)
 
@@ -1808,7 +1813,7 @@ def mbed_sterm(port, baudrate=9600, echo=True, reset=False, sterm=False):
 
 # Subparser handling
 parser = argparse.ArgumentParser(prog='mbed',
-    description="Command-line code management tool for ARM mbed OS - http://www.mbed.com\nversion %s\n\nUse 'mbed <command> -h|--help' for detailed help.\nOnline manual and guide available at https://github.com/ARMmbed/mbed-cli" % ver,
+    description="Command-line code management tool for ARM mbed OS - http://www.mbed.com\nversion %s\n\nUse \"mbed <command> -h|--help\" for detailed help.\nOnline manual and guide available at https://github.com/ARMmbed/mbed-cli" % ver,
     formatter_class=argparse.RawTextHelpFormatter)
 subparsers = parser.add_subparsers(title="Commands", metavar="           ")
 parser.add_argument("--version", action="store_true", dest="version", help="print version number and exit")
@@ -1963,7 +1968,7 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
     description=(
         "Imports mbed program and its dependencies from a source control based URL\n"
         "(GitHub, Bitbucket, mbed.org) into the current directory or specified\npath.\n"
-        "Use 'mbed add <URL>' to add a library into an existing program."))
+        "Use \"mbed add <URL>\" to add a library into an existing program."))
 def import_(url, path=None, ignore=False, depth=None, protocol=None, insecure=False, offline=False, top=True):
     global cwd_root
     offline_warning(offline, top)
@@ -2041,7 +2046,7 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, insecure=Fa
     description=(
         "Adds mbed library and its dependencies from a source control based URL\n"
         "(GitHub, Bitbucket, mbed.org) into an existing program.\n"
-        "Use 'mbed import <URL>' to import as a program"))
+        "Use \"mbed import <URL>\" to import as a program"))
 def add(url, path=None, ignore=False, depth=None, protocol=None, insecure=False, offline=False, top=True):
     offline_warning(offline, top)
 
@@ -2065,7 +2070,7 @@ def add(url, path=None, ignore=False, depth=None, protocol=None, insecure=False,
     hidden_aliases=['rm', 'rem'],
     description=(
         "Remove specified library, its dependencies and references from the current\n"
-        "You can re-add the library from its URL via 'mbed add <library URL>'."))
+        "You can re-add the library from its URL via \"mbed add <URL>\"."))
 def remove(path):
     repo = Repo.fromrepo()
     if not Repo.isrepo(path):
@@ -2088,8 +2093,8 @@ def remove(path):
     help='Find and add missing libraries',
     description=(
         "Import missing dependencies in an existing program or library.\n"
-        "Use 'mbed import <URL>' and 'mbed add <URL>' instead of cloning manually and\n"
-        "then running 'mbed deploy'"))
+        "Hint: Use \"mbed import <URL>\" and \"mbed add <URL>\" instead of cloning\n"
+        "manually and then running \"mbed deploy\""))
 def deploy(ignore=False, depth=None, protocol=None, insecure=False, offline=False, top=True):
     offline_warning(offline, top)
 
@@ -2444,7 +2449,7 @@ def status_(ignore=False):
     dict(name=['--sterm'], action='store_true', help='Open serial terminal after compiling. Can be chained with --flash'),
     dict(name=['-N', '--artifact-name'], help='Name of the built program or library'),
     dict(name=['-S', '--supported'], dest='supported', const=True, choices=["matrix", "toolchains", "targets"], nargs="?", help='Shows supported matrix of targets and toolchains'),
-    dict(name='--app-config', dest="app_config", help="Path of an app configuration file (Default is to look for 'mbed_app.json')"),
+    dict(name='--app-config', dest="app_config", help="Path of an application configuration file. Default is to look for \"mbed_app.json\"."),
     help='Compile code using the mbed build tools',
     description="Compile this program using the mbed build tools.")
 def compile_(toolchain=None, target=None, profile=False, compile_library=False, compile_config=False, config_prefix=None, source=False, build=False, clean=False, flash=False, sterm=False, artifact_name=None, supported=False, app_config=None):
@@ -2532,7 +2537,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                 try:
                     from mbed_host_tests.host_tests_toolbox import flash_dev
                 except (IOError, ImportError, OSError):
-                    error("The '-f/--flash' option requires that the 'mbed-greentea' python module is installed.\nYou can install mbed-greentea by running 'pip install mbed-greentea'.", 1)
+                    error("The '-f/--flash' option requires that the 'mbed-greentea' python module is installed.\nYou can install mbed-greentea by running \"%s -m pip install mbed-greentea\"." % python_cmd, 1)
 
             if flash:
                 fw_name = artifact_name if artifact_name else program.name
@@ -2540,7 +2545,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                 fw_file = fw_fbase + ('.hex' if os.path.exists(fw_fbase+'.hex') else '.bin')
                 if not os.path.exists(fw_file):
                     error("Build program file (firmware) not found \"%s\"" % fw_file, 1)
-                if not flash_dev(detected['msd'], fw_file, program_cycle_s=2):
+                if not flash_dev(detected['msd'], fw_file, program_cycle_s=4):
                     error("Unable to flash the target board connected to your system.", 1)
 
             if flash or sterm:
@@ -2564,7 +2569,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
     dict(name=['--profile'], action='append', help='Path of a build profile configuration file. Example: mbed-os/tools/profiles/debug.json'),
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
     dict(name='--test-spec', dest="test_spec", help="Path used for the test spec file used when building and running tests (the default path is the build directory)"),
-    dict(name='--app-config', dest="app_config", help="Path of an app configuration file (Default is to look for 'mbed_app.json')"),
+    dict(name='--app-config', dest="app_config", help="Path of an application configuration file. Default is to look for \"mbed_app.json\""),
     dict(name='--test-config', dest="test_config", help="Path or mbed OS keyword of a test configuration file. Example: ethernet, odin_wifi, or path/to/config.json"),
     help='Find, build and run tests',
     description="Find, build, and run tests in a program and libraries")
@@ -2659,7 +2664,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
     dict(name=['-S', '--supported'], dest='supported', const=True, choices=['matrix', 'ides'], nargs='?', help='Shows supported matrix of targets and toolchains'),
-    dict(name='--app-config', dest="app_config", help="Path of an app configuration file (Default is to look for 'mbed_app.json')"),
+    dict(name='--app-config', dest="app_config", help="Path of an application configuration file. Default is to look for \"mbed_app.json\""),
     help='Generate an IDE project',
     description=(
         "Generate IDE project files for the current program."))
@@ -2751,7 +2756,7 @@ def detect():
 
             if unknown_found:
                 warning("If you're developing a new target, you can mock the device to continue your development. "
-"Use 'mbedls --mock ID:NAME' to do so (see 'mbedls --help' for more information)")
+                    "Use \"mbedls --mock ID:NAME\" to do so. See \"mbedls --help\" for more information.")
 
 
 # Serial terminal command
@@ -2851,7 +2856,7 @@ def config_(var=None, value=None, global_cfg=False, unset=False, list_config=Fal
             if program.is_cwd and not var == 'ROOT':
                 error(
                     "Could not find mbed program in current path \"%s\".\n"
-                    "Change the current directory to a valid mbed program, set the current directory as an mbed program with 'mbed config root .', or use the '--global' option to set global configuration." % program.path)
+                    "Change the current directory to a valid mbed program, set the current directory as an mbed program with \"mbed config root .\", or use the '--global' option to set global configuration." % program.path)
             with cd(program.path):
                 if unset:
                     program.set_cfg(var, None)
@@ -2874,7 +2879,7 @@ def config_(var=None, value=None, global_cfg=False, unset=False, list_config=Fal
     help='Set or get default target',
     description=(
         "Set or get default toolchain\n"
-        "This is an alias to 'mbed config [--global] target [name]'\n"))
+        "This is an alias to \"mbed config [--global] target [name]\"\n"))
 def target_(name=None, global_cfg=False, supported=False):
     if supported:
         return compile_(supported=supported)
@@ -2888,7 +2893,7 @@ def target_(name=None, global_cfg=False, supported=False):
     help='Set or get default toolchain',
     description=(
         "Set or get default toolchain\n"
-        "This is an alias to 'mbed config [--global] toolchain [name]'\n"))
+        "This is an alias to \"mbed config [--global] toolchain [name]\"\n"))
 def toolchain_(name=None, global_cfg=False, supported=False):
     if supported:
         return compile_(supported=supported)
@@ -3001,8 +3006,11 @@ def main():
         status = pargs.command(pargs)
     except ProcessException as e:
         error(
-            "\"%s\" returned error code %d.\n"
-            "Command \"%s\" in \"%s\"" % (e.args[1], e.args[0], e.args[2], e.args[3]), e.args[0])
+            "\"%s\" returned error.\n"
+            "Code: %d\n"
+            "Path: \"%s\"\n"
+            "Command: \"%s\"\n"
+            "Tip: You could retry the last command with \"-v\" flag for verbose output\n" % (e.args[1], e.args[0], e.args[3], e.args[2]), e.args[0])
     except OSError as e:
         if e.args[0] == errno.ENOENT:
             error(
