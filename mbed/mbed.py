@@ -1793,22 +1793,21 @@ def mbed_sterm(port, baudrate=9600, echo=True, reset=False, sterm=False):
     except (IOError, ImportError, OSError):
         error("The serial terminal functionality requires that the 'mbed-terminal' python module is installed.\nYou can install mbed-terminal by running 'pip install mbed-terminal'.", 1)
 
-    result = False
     mbed_serial = MbedTerminal(port, baudrate=baudrate, echo=echo)
     if mbed_serial.serial:
         if reset:
-            mbed_serial.reset()
-
+            if not mbed_serial.reset():
+                error("Unable to reset the target board connected to your system.\nThis might be caused by an old interface firmware.\nPlease check the board page for new firmware.", 1)
         if sterm:
             # Some boards will reset the COM port after SendBreak, e.g. STLink based
             if not mbed_serial.serial.is_open:
                 mbed_serial = MbedTerminal(port, baudrate=baudrate, echo=echo)
 
             try:
-                result = mbed_serial.terminal()
+                if not mbed_serial.terminal():
+                    error("Unable to open serial terminal.\nMost likely your pyserial is dated and needs to be updated with 'pip install --upgrade pyserial")
             except:
                 pass
-    return result
 
 
 # Subparser handling
@@ -2549,8 +2548,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                     error("Unable to flash the target board connected to your system.", 1)
 
             if flash or sterm:
-                if not mbed_sterm(detected['port'], reset=flash, sterm=sterm):
-                    error("Unable to reset the target board connected to your system.\nThis might be caused by an old interface firmware.\nPlease check the board page for new firmware.", 1)
+                mbed_sterm(detected['port'], reset=flash, sterm=sterm)
 
     program.set_defaults(target=target, toolchain=tchain)
 
