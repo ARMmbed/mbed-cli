@@ -1358,23 +1358,26 @@ class Repo(object):
                 time.sleep(1)
 
             if os.path.exists(lock_dir):
-                if os.path.isfile(lock_file):
-                    with open(lock_file, 'r', 0) as f:
-                        pid = f.read(8)
-                    if not pid:
-                        if int(os.path.getmtime(lock_file)) + timeout < int(time.time()):
-                            info("Cache lock file exists, but is empty. Cleaning up")
+                try:
+                    if os.path.isfile(lock_file):
+                        with open(lock_file, 'r', 0) as f:
+                            pid = f.read(8)
+                        if not pid:
+                            if int(os.path.getmtime(lock_file)) + timeout < int(time.time()):
+                                info("Cache lock file exists, but is empty. Cleaning up")
+                                os.remove(lock_file)
+                                os.rmdir(lock_dir)
+                        elif int(pid) != os.getpid() and self.pid_exists(pid):
+                            info("Cache lock file exists and process %s is alive." % pid)
+                        else:
+                            info("Cache lock file exists, but %s is dead. Cleaning up" % pid)
                             os.remove(lock_file)
                             os.rmdir(lock_dir)
-                    elif int(pid) != os.getpid() and self.pid_exists(pid):
-                        info("Cache lock file exists and process %s is alive." % pid)
                     else:
-                        info("Cache lock file exists, but %s is dead. Cleaning up" % pid)
-                        os.remove(lock_file)
                         os.rmdir(lock_dir)
-                else:
-                    os.rmdir(lock_dir)
-                continue
+                    continue
+                except (OSError) as e:
+                    continue
             else:
                 try:
                     os.mkdir(lock_dir)
