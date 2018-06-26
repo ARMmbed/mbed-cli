@@ -1409,17 +1409,20 @@ class Repo(object):
 
         lock_dir = os.path.join(cpath, '.lock')
         lock_file = os.path.join(lock_dir, 'pid')
-        if os.path.exists(lock_dir):
-            if os.path.isfile(lock_file):
-                try:
-                    with open(lock_file, 'r', 0) as f:
-                        pid = f.read(8)
-                    if int(pid) != os.getpid():
-                        error("Cache lock file exists with a different pid (\"%s\" vs \"%s\")" % (pid, os.getpid()))
-                except OSError:
-                    error("Unable to unlock cache dir \"%s\"" % (cpath))
-                os.remove(lock_file)
-            os.rmdir(lock_dir)
+        try:
+            if os.path.exists(lock_dir):
+                if os.path.isfile(lock_file):
+                    try:
+                        with open(lock_file, 'r', 0) as f:
+                            pid = f.read(8)
+                        if int(pid) != os.getpid():
+                            error("Cache lock file exists with a different pid (\"%s\" vs \"%s\")" % (pid, os.getpid()))
+                    except OSError:
+                        error("Unable to unlock cache dir \"%s\"" % (cpath))
+                    os.remove(lock_file)
+                os.rmdir(lock_dir)
+        except (OSError) as e:
+            pass
         return True
 
     def pid_exists(self, pid):
