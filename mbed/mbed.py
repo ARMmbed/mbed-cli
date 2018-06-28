@@ -2433,6 +2433,21 @@ def status_(ignore=False):
                 status_(ignore)
 
 
+# Helper function for compile subcommand
+def _safe_append_profile_to_build_path(build_path, profile):
+    append_str = 'DEFAULT'
+
+    if profile:
+        if isinstance(profile, basestring):
+            append_str = profile
+        else:
+            append_str = profile[0]
+
+    build_path = os.path.join(build_path, os.path.splitext(os.path.basename(append_str))[0].upper())
+
+    return build_path
+
+
 # Compile command which invokes the mbed OS native build system
 @subcommand('compile',
     dict(name=['-t', '--toolchain'], help='Compile toolchain. Example: ARM, GCC_ARM, IAR'),
@@ -2501,6 +2516,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
             # Compile as a library (current dir is default)
             if not build_path:
                 build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, 'libraries', os.path.basename(orig_path), target.upper(), tchain.upper())
+                build_path = _safe_append_profile_to_build_path(build_path, profile)
 
             popen([python_cmd, '-u', os.path.join(tools_dir, 'build.py')]
                   + list(chain.from_iterable(zip(repeat('-D'), macros)))
@@ -2517,6 +2533,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
             # Compile as application (root is default)
             if not build_path:
                 build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, target.upper(), tchain.upper())
+                build_path = _safe_append_profile_to_build_path(build_path, profile)
 
             popen([python_cmd, '-u', os.path.join(tools_dir, 'make.py')]
                   + list(chain.from_iterable(zip(repeat('-D'), macros)))
