@@ -2435,15 +2435,14 @@ def status_(ignore=False):
 
 # Helper function for compile subcommand
 def _safe_append_profile_to_build_path(build_path, profile):
-    append_str = 'DEFAULT'
+    if profile:
+        # profile is (or can be) a list, so just get the first element
+        if not isinstance(profile, basestring):
+            profile = profile[0]
 
     if profile:
-        if isinstance(profile, basestring):
-            append_str = profile
-        else:
-            append_str = profile[0]
-
-    build_path = os.path.join(build_path, os.path.splitext(os.path.basename(append_str))[0].upper())
+        profile_name_without_extension = os.path.splitext(os.path.basename(profile))[0].upper()
+        build_path += '__' + profile_name_without_extension
 
     return build_path
 
