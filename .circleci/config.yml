@@ -146,7 +146,7 @@ jobs:
       - run: cd .tests && mbed new new-test
       - run: |-
           cd .tests/new-test/mbed-os
-          git checkout master
+          git checkout mbed-os-5.9.0
       - run: cd .tests/new-test && mbed ls
       - run: cd .tests/new-test && mbed releases -r
       - run: cd .tests/new-test && mbed compile --source=. --source=mbed-os/TESTS/integration/basic -j 0
