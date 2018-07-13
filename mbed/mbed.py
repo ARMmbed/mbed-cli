@@ -1583,7 +1583,7 @@ class Program(object):
         target = target if target else target_cfg
 
         if target and (target.lower() == 'detect' or target.lower() == 'auto'):
-            detected = self.detect_target()
+            detected = self.detect_single_target()
             if detected:
                 target = detected['name']
 
@@ -1623,7 +1623,7 @@ class Program(object):
             except IOError:
                 error("Unable to write build ignore file in \"%s\"" % os.path.join(build_path, '.mbedignore'), 1)
 
-    def detect_target(self, info=None):
+    def detect_single_target(self, info=None):
         targets = self.get_detected_targets()
         if targets == False:
             error("The target detection requires that the 'mbed-ls' python module is installed.\nYou can install mbed-ls by running \"pip install mbed-ls\".", 1)
@@ -1633,7 +1633,7 @@ class Program(object):
             error("No targets were detected.\nPlease make sure a target board is connected to this system.", 1)
         else:
             action("Detected \"%s\" connected to \"%s\" and using com port \"%s\"" % (targets[0]['name'], targets[0]['mount'], targets[0]['serial']))
-            info = {'msd': targets[0]['mount'], 'port': targets[0]['serial'], 'name': targets[0]['name']}
+            info = targets[0]
 
         if info is None:
             error("The detected target doesn't support Mass Storage Device capability (MSD)", 1)
@@ -2532,23 +2532,36 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                   env=env)
 
             if flash or sterm:
-                detected = program.detect_target()
                 try:
                     from mbed_host_tests.host_tests_toolbox import flash_dev
                 except (IOError, ImportError, OSError):
                     error("The '-f/--flash' option requires that the 'mbed-greentea' python module is installed.\nYou can install mbed-greentea by running \"%s -m pip install mbed-greentea\"." % python_cmd, 1)
 
-            if flash:
-                fw_name = artifact_name if artifact_name else program.name
-                fw_fbase = os.path.join(build_path, fw_name)
-                fw_file = fw_fbase + ('.hex' if os.path.exists(fw_fbase+'.hex') else '.bin')
-                if not os.path.exists(fw_file):
-                    error("Build program file (firmware) not found \"%s\"" % fw_file, 1)
-                if not flash_dev(detected['msd'], fw_file, program_cycle_s=4):
-                    error("Unable to flash the target board connected to your system.", 1)
+                connected = False
+                targets = program.get_detected_targets()
+                if targets:
+                    for _target in targets:
+                        if _target['name'] is None:
+                            continue
+                        elif _target['name'].upper() == target.upper():
+                            connected = _target
 
-            if flash or sterm:
-                mbed_sterm(detected['port'], reset=flash, sterm=sterm)
+                            # apply new firmware
+                            if flash:
+                                fw_name = artifact_name if artifact_name else program.name
+                                fw_fbase = os.path.join(build_path, fw_name)
+                                fw_file = fw_fbase + ('.hex' if os.path.exists(fw_fbase+'.hex') else '.bin')
+                                if not os.path.exists(fw_file):
+                                    error("Build program file (firmware) not found \"%s\"" % fw_file, 1)
+                                if not flash_dev(connected['mount'], fw_file, program_cycle_s=4):
+                                    error("Unable to flash the target board connected to your system.", 1)
+
+                            # reset board and/or connect to serial port
+                            if flash or sterm:
+                                mbed_sterm(connected['serial'], reset=flash, sterm=sterm)
+
+                if not connected:
+                    error("The target board you compiled for is not connected to your system.\nPlease reconnect it and retry the last command.", 1)
 
     program.set_defaults(target=target, toolchain=tchain)
 
