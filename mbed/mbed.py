@@ -2433,6 +2433,20 @@ def status_(ignore=False):
                 status_(ignore)
 
 
+# Helper function for compile and test subcommands
+def _safe_append_profile_to_build_path(build_path, profile):
+    if profile:
+        # profile is (or can be) a list, so just get the first element
+        if not isinstance(profile, basestring):
+            profile = profile[0]
+
+    if profile:
+        profile_name_without_extension = os.path.splitext(os.path.basename(profile))[0].upper()
+        build_path += '-' + profile_name_without_extension
+
+    return build_path
+
+
 # Compile command which invokes the mbed OS native build system
 @subcommand('compile',
     dict(name=['-t', '--toolchain'], help='Compile toolchain. Example: ARM, GCC_ARM, IAR'),
@@ -2501,6 +2515,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
             # Compile as a library (current dir is default)
             if not build_path:
                 build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, 'libraries', os.path.basename(orig_path), target.upper(), tchain.upper())
+                build_path = _safe_append_profile_to_build_path(build_path, profile)
 
             popen([python_cmd, '-u', os.path.join(tools_dir, 'build.py')]
                   + list(chain.from_iterable(zip(repeat('-D'), macros)))
@@ -2517,6 +2532,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
             # Compile as application (root is default)
             if not build_path:
                 build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, target.upper(), tchain.upper())
+                build_path = _safe_append_profile_to_build_path(build_path, profile)
 
             popen([python_cmd, '-u', os.path.join(tools_dir, 'make.py')]
                   + list(chain.from_iterable(zip(repeat('-D'), macros)))
@@ -2611,6 +2627,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
         build_path = build
         if not build_path:
             build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, 'tests', target.upper(), tchain.upper())
+            build_path = _safe_append_profile_to_build_path(build_path, profile)
 
         if test_spec:
             # Preserve path to given test spec
