@@ -2442,7 +2442,7 @@ def _safe_append_profile_to_build_path(build_path, profile):
 
     if profile:
         profile_name_without_extension = os.path.splitext(os.path.basename(profile))[0].upper()
-        build_path += '__' + profile_name_without_extension
+        build_path += '-' + profile_name_without_extension
 
     return build_path
 
