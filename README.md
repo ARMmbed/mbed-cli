@@ -222,17 +222,20 @@ You can create multiple Mbed projects and use the same Mbed OS library directory
 
 ```
 $ cd <projects directory>
-$ git clone https://github.com/ARMmbed/mbed-os
+$ mbed import mbed-os
 $ mbed config -G MBED_OS_DIR <projects directory>/mbed-os
+[mbed] <projects directory>/mbed-os now set as global MBED_OS_DIR
 $ mbed new project1
+[mbed] Creating new program "project1" (git)
 $ mbed new project2
+[mbed] Creating new program "project2" (git)
 ```
 
-Add your `main.cpp` file and other project files to the `project1` and `project2` directories. Then compile each project with the same Mbed OS source directory from the `<projects directory>` directory with the following example commands:
+Add your `main.cpp` file and other project files to the `project1` and `project2` directories. Then compile each project from the root `<projects directory>` with the following example commands:
 
 ```
-mbed compile -t ARM -m LPC1768 --source project1 --source mbed-os --build BUILD/project1
-mbed compile -t ARM -m K64F --source project2 --source mbed-os --build BUILD/project2  
+$ mbed compile -t ARM -m LPC1768 --source project1 --source mbed-os --build BUILD/project1
+$ mbed compile -t ARM -m K64F --source project2 --source mbed-os --build BUILD/project2  
 ```
 
 ### Importing an existing program
