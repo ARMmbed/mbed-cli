@@ -323,7 +323,7 @@ Methods for configuring toolchains that appear earlier in the above list overrid
 Edit `mbed_settings.py` to set your toolchain:
 
 * To use [Arm Compiler 5](https://developer.arm.com/products/software-development-tools/compilers/arm-compiler-5/downloads), set `ARM_PATH` to the *base* directory of your Arm Compiler installation (example: C:\Program Files\ARM\armcc5.06). Use version 5.06 of Arm Compiler 5.
-* To use [Arm Compiler 6](https://developer.arm.com/products/software-development-tools/compilers/arm-compiler-6/downloads), set `ARMC6_PATH` to the *binary* directory of your Arm Compiler installation (example: C:\Program Files\ARM\armcc6.8\bin). Use version 6.8 of Arm Compiler 6.
+* To use [Arm Compiler 6](https://developer.arm.com/products/software-development-tools/compilers/arm-compiler-6/downloads), set `ARMC6_PATH` to the *binary* directory of your Arm Compiler installation (example: C:\Program Files\ARM\armcc6.10\bin). Use version 6.10 of Arm Compiler 6.
 * To use the [GNU Arm Embedded toolchain (GCC) version 6](https://developer.arm.com/open-source/gnu-toolchain/gnu-rm/downloads), set `GCC_ARM_PATH` to the *binary* directory of your GCC Arm installation (example: C:\Program Files\GNU Tools ARM Embedded\6 2017q2\bin). Use version 6 of GCC Arm Embedded; version 5.0 or any older version might be incompatible with the tools.
 * To use the [IAR EWARM toolchain](https://www.iar.com/iar-embedded-workbench/#!?architecture=ARM), set `IAR_PATH` to the *base* directory of your IAR installation (example: C:\Program Files (x86)\IAR Systems\Embedded Workbench 7.5\arm). Use versions 7.70 to 7.80.x of the IAR EWARM; newer (or older) versions might be incompatible with the tools.
 
