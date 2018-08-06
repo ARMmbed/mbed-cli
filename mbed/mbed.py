@@ -1519,7 +1519,7 @@ class Program(object):
 
 
     # Routines after cloning mbed-os
-    def post_action(self):
+    def post_action(self, check_reqs=True):
         mbed_tools_path = self.get_tools_dir()
 
         if not mbed_tools_path and self.is_classic:
@@ -1534,7 +1534,8 @@ class Program(object):
                 os.path.isfile(os.path.join(mbed_tools_path, 'default_settings.py'))):
             shutil.copy(os.path.join(mbed_tools_path, 'default_settings.py'), os.path.join(self.path, 'mbed_settings.py'))
 
-        self.check_requirements(True)
+        if check_reqs:
+            self.check_requirements(True)
 
     def add_tools(self, path):
         if not os.path.exists(path):
@@ -2177,13 +2178,14 @@ def publish(all_refs=None, msg=None, top=True):
     dict(name='--insecure', action='store_true', help='Allow insecure repository URLs. By default mbed CLI imports only "safe" URLs, e.g. based on standard ports - 80, 443 and 22. This option enables the use of arbitrary URLs/ports.'),
     dict(name='--offline', action='store_true', help='Offline mode will force the use of locally cached repositories and prevent requests to remote repositories.'),
     dict(name=['-l', '--latest-deps'], action='store_true', help='Update all dependencies to the latest revision of their current branch. WARNING: Ignores lib files'),
+    dict(name='--no-requirements', action='store_true', help='Disables checking for and installing any requirements.'),
     hidden_aliases=['up'],
     help='Update to branch, tag, revision or latest',
     description=(
         "Updates the current program or library and its dependencies to specified\nbranch, tag or revision.\n"
         "Alternatively fetches from associated remote repository URL and updates to the\n"
         "latest revision in the current branch."))
-def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=False, depth=None, protocol=None, insecure=False, offline=False, latest_deps=False, top=True):
+def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=False, depth=None, protocol=None, insecure=False, offline=False, latest_deps=False, no_requirements=False, top=True):
     offline_warning(offline, top)
 
     if top and clean:
@@ -2284,7 +2286,7 @@ def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=Fa
     if top:
         program = Program(repo.path)
         program.set_root()
-        program.post_action()
+        program.post_action(not no_requirements)
         if program.is_classic:
             program.update_tools(os.path.join(getcwd(), '.temp'))
 
