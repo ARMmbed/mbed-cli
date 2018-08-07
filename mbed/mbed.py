@@ -2051,7 +2051,6 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, insecure=Fa
         "(GitHub, Bitbucket, mbed.org) into an existing program.\n"
         "Use \"mbed import <URL>\" to import as a program"))
 def add(url, path=None, ignore=False, depth=None, protocol=None, insecure=False, offline=False, no_requirements=False, top=True):
-
     offline_warning(offline, top)
 
     repo = Repo.fromrepo()
