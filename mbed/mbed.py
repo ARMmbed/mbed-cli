@@ -2639,9 +2639,6 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
     # Check if current Mbed OS support icetea
     icetea_supported = program.requirements_contains('icetea')
 
-    # TODO: Remove next line when publishing this commit
-    icetea_supported = True
-
     # Disable icetea if not supported
     if not icetea_supported:
         icetea = False
