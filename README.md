@@ -216,6 +216,28 @@ $ mbed new mbed-classic-program --mbedlib
 
 You can create plain (empty) programs, without either Mbed OS 5 or Mbed OS 2, by using the `--create-only` option.
 
+### Managing multiple Mbed projects
+
+You can create multiple Mbed projects and use the same Mbed OS library directory for each of these projects with the following commands:
+
+```
+$ cd <projects directory>
+$ mbed import mbed-os
+$ mbed config -G MBED_OS_DIR <projects directory>/mbed-os
+[mbed] <projects directory>/mbed-os now set as global MBED_OS_DIR
+$ mbed new project1
+[mbed] Creating new program "project1" (git)
+$ mbed new project2
+[mbed] Creating new program "project2" (git)
+```
+
+Add your `main.cpp` file and other project files to the `project1` and `project2` directories. Then compile each project from the root `<projects directory>` with the following example commands:
+
+```
+$ mbed compile -t ARM -m LPC1768 --source project1 --source mbed-os --build BUILD/project1
+$ mbed compile -t ARM -m K64F --source project2 --source mbed-os --build BUILD/project2  
+```
+
 ### Importing an existing program
 
 Use `mbed import` to clone an existing program and all its dependencies to your machine:
