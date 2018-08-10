@@ -43,7 +43,6 @@ import stat
 import errno
 import ctypes
 from itertools import chain, repeat
-from urlparse import urlparse
 import zipfile
 import argparse
 
