@@ -2710,7 +2710,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
                 applications_to_add = proc.stdout.read()
                 # Filter right row in case that debugger print something there
                 if applications_to_add and 'TEST_APPS-' in applications_to_add:
-                    applications_to_add = filter(lambda x: 'TEST_APPS-' in x, applications_to_add.split('\n'))[0]
+                    applications_to_add = list(filter(lambda x: 'TEST_APPS-' in x, applications_to_add.split('\n')))[0]
                     if tests_by_name_temp:
                         tests_by_name_temp += ','
                     tests_by_name_temp += applications_to_add
