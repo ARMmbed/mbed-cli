@@ -2685,6 +2685,49 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
     program.set_defaults(target=target, toolchain=tchain)
 
 
+# device management commands
+@subcommand('device-management',
+    dict(name=['-t', '--toolchain'], help='Toolchain used for mbed compile'),
+    dict(name=['-m', '--target'], help='Target used for compile for target MCU. Example: K64F, NUCLEO_F401RE, NRF51822...'),
+    dict(name=['--profile'], help=""),
+    dict(name='--build', help='Build directory. Default: build/'),
+    help='device management supcommand',
+    hidden_aliases=['dev-mgmt', 'dm'],
+    description=("Manage Device with Palion"))
+def dev_mgmt(toolchain=None, target=None, source=False, profile=False, build=False):
+    program = Program(getcwd(), True)
+    program.check_requirements(True)
+    with cd(program.path):
+        tools_dir = program.get_tools()
+
+    script = os.path.join(tools_dir, 'device_management.py')
+    if not os.path.exists(script):
+        error('device management is not supported by this version of Mbed OS. Please upgrade.')
+
+
+    target = target or program.get_cfg("TARGET")
+    toolchain = toolchain or program.get_cfg("TOOLCHAIN")
+
+    if build:
+        build_path = build
+    elif not build and target and toolchain:
+        build_path = os.path.join(
+                os.path.relpath(program.path, orig_path),
+                program.build_dir,
+                target.upper(),
+                toolchain.upper()
+                )
+        build_path = _safe_append_profile_to_build_path(build_path, profile)
+    else:
+        build_path = None
+
+    popen([python_cmd, '-u', script]
+          + (['-t', toolchain] if toolchain else [])
+          + (['-m', target] if target else [])
+          + (['--build', build_path] if build_path else [])
+          + remainder,
+          env=program.get_env())
+
 # Export command
 @subcommand('export',
     dict(name=['-i', '--ide'], help='IDE to create project files for. Example: UVISION4, UVISION5, GCC_ARM, IAR, COIDE'),
