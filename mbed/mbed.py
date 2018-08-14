@@ -2691,10 +2691,12 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
     dict(name=['-m', '--target'], help='Target used for compile for target MCU. Example: K64F, NUCLEO_F401RE, NRF51822...'),
     dict(name=['--profile'], help=""),
     dict(name='--build', help='Build directory. Default: build/'),
+    dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
     help='device management supcommand',
     hidden_aliases=['dev-mgmt', 'dm'],
     description=("Manage Device with Palion"))
 def dev_mgmt(toolchain=None, target=None, source=False, profile=False, build=False):
+    orig_path = getcwd()
     program = Program(getcwd(), True)
     program.check_requirements(True)
     with cd(program.path):
@@ -2712,20 +2714,23 @@ def dev_mgmt(toolchain=None, target=None, source=False, profile=False, build=Fal
         build_path = build
     elif not build and target and toolchain:
         build_path = os.path.join(
-                os.path.relpath(program.path, orig_path),
-                program.build_dir,
-                target.upper(),
-                toolchain.upper()
-                )
+            os.path.relpath(program.path, orig_path),
+            program.build_dir,
+            target.upper(),
+            toolchain.upper()
+        )
         build_path = _safe_append_profile_to_build_path(build_path, profile)
     else:
         build_path = None
 
+    args = remainder
+    if args[0] in ('update', 'create'):
+        args += (['--toolchain', toolchain] if toolchain else [])
+        args += (['--mcu', target] if target else [])
+        args += (['--build', build_path] if build_path else [])
     popen([python_cmd, '-u', script]
-          + (['-t', toolchain] if toolchain else [])
-          + (['-m', target] if target else [])
-          + (['--build', build_path] if build_path else [])
-          + remainder,
+          + args
+          + list(chain.from_iterable(zip(repeat('--source'), source or []))),
           env=program.get_env())
 
 # Export command
