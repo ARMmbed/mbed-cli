@@ -1575,6 +1575,10 @@ class Program(object):
         for c in compilers:
             if self.get_cfg(c+'_PATH'):
                 env['MBED_'+c+'_PATH'] = self.get_cfg(c+'_PATH')
+        config_options = ['COLOR', 'CLOUD_SDK_API_KEY', 'CLOUD_SDK_HOST']
+        for opt in config_options:
+            if self.get_cfg(opt):
+                env['MBED_' + opt] = self.get_cfg(opt)
 
         return env
 
