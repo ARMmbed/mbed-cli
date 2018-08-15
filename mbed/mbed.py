@@ -1519,7 +1519,7 @@ class Program(object):
 
 
     # Routines after cloning mbed-os
-    def post_action(self):
+    def post_action(self, check_reqs=True):
         mbed_tools_path = self.get_tools_dir()
 
         if not mbed_tools_path and self.is_classic:
@@ -1534,7 +1534,8 @@ class Program(object):
                 os.path.isfile(os.path.join(mbed_tools_path, 'default_settings.py'))):
             shutil.copy(os.path.join(mbed_tools_path, 'default_settings.py'), os.path.join(self.path, 'mbed_settings.py'))
 
-        self.check_requirements(True)
+        if check_reqs:
+            self.check_requirements(True)
 
     def add_tools(self, path):
         if not os.path.exists(path):
@@ -1876,13 +1877,14 @@ def subcommand(name, *args, **kwargs):
     dict(name='--depth', nargs='?', help='Number of revisions to fetch the mbed OS repository when creating new program. Default: all revisions.'),
     dict(name='--protocol', nargs='?', help='Transport protocol when fetching the mbed OS repository when creating new program. Supported: https, http, ssh, git. Default: inferred from URL.'),
     dict(name='--offline', action='store_true', help='Offline mode will force the use of locally cached repositories and prevent requests to remote repositories.'),
+    dict(name='--no-requirements', action='store_true', help='Disables checking for and installing any requirements.'),
     help='Create new mbed program or library',
     description=(
         "Creates a new mbed program if executed within a non-program location.\n"
         "Alternatively creates an mbed library if executed within an existing program.\n"
         "When creating new program, the latest mbed-os release will be downloaded/added\n unless --create-only is specified.\n"
         "Supported source control management: git, hg"))
-def new(name, scm='git', program=False, library=False, mbedlib=False, create_only=False, depth=None, protocol=None, offline=False):
+def new(name, scm='git', program=False, library=False, mbedlib=False, create_only=False, depth=None, protocol=None, offline=False, no_requirements=False):
     global cwd_root
     offline_warning(offline)
 
@@ -1950,7 +1952,7 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
         with cd(p_path):
             sync()
 
-    Program(d_path).post_action()
+    Program(d_path).post_action(not no_requirements)
 
 
 # Import command
@@ -1962,13 +1964,14 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     dict(name='--insecure', action='store_true', help='Allow insecure repository URLs. By default mbed CLI imports only "safe" URLs, e.g. based on standard ports - 80, 443 and 22. This option enables the use of arbitrary URLs/ports.'),
     dict(name='--offline', action='store_true', help='Offline mode will force the use of locally cached repositories and prevent requests to remote repositories.'),
+    dict(name='--no-requirements', action='store_true', help='Disables checking for and installing any requirements.'),
     hidden_aliases=['im', 'imp'],
     help='Import program from URL',
     description=(
         "Imports mbed program and its dependencies from a source control based URL\n"
         "(GitHub, Bitbucket, mbed.org) into the current directory or specified\npath.\n"
         "Use \"mbed add <URL>\" to add a library into an existing program."))
-def import_(url, path=None, ignore=False, depth=None, protocol=None, insecure=False, offline=False, top=True):
+def import_(url, path=None, ignore=False, depth=None, protocol=None, insecure=False, offline=False, no_requirements=False, top=True):
     global cwd_root
     offline_warning(offline, top)
 
@@ -2028,7 +2031,7 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, insecure=Fa
         deploy(ignore=ignore, depth=depth, protocol=protocol, insecure=insecure, offline=offline, top=False)
 
     if top:
-        Program(repo.path).post_action()
+        Program(repo.path).post_action(not no_requirements)
 
 
 # Add library command
@@ -2040,13 +2043,14 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, insecure=Fa
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     dict(name='--insecure', action='store_true', help='Allow insecure repository URLs. By default mbed CLI imports only "safe" URLs, e.g. based on standard ports - 80, 443 and 22. This option enables the use of arbitrary URLs/ports.'),
     dict(name='--offline', action='store_true', help='Offline mode will force the use of locally cached repositories and prevent requests to remote repositories.'),
+    dict(name='--no-requirements', action='store_true', help='Disables checking for and installing any requirements.'),
     hidden_aliases=['ad'],
     help='Add library from URL',
     description=(
         "Adds mbed library and its dependencies from a source control based URL\n"
         "(GitHub, Bitbucket, mbed.org) into an existing program.\n"
         "Use \"mbed import <URL>\" to import as a program"))
-def add(url, path=None, ignore=False, depth=None, protocol=None, insecure=False, offline=False, top=True):
+def add(url, path=None, ignore=False, depth=None, protocol=None, insecure=False, offline=False, no_requirements=False, top=True):
     offline_warning(offline, top)
 
     repo = Repo.fromrepo()
@@ -2059,7 +2063,7 @@ def add(url, path=None, ignore=False, depth=None, protocol=None, insecure=False,
     repo.add(lib.lib)
 
     if top:
-        Program(repo.path).post_action()
+        Program(repo.path).post_action(not no_requirements)
 
 
 # Remove library
@@ -2089,12 +2093,13 @@ def remove(path):
     dict(name='--protocol', nargs='?', help='Transport protocol for the source control management. Supported: https, http, ssh, git. Default: inferred from URL.'),
     dict(name='--insecure', action='store_true', help='Allow insecure repository URLs. By default mbed CLI imports only "safe" URLs, e.g. based on standard ports - 80, 443 and 22. This option enables the use of arbitrary URLs/ports.'),
     dict(name='--offline', action='store_true', help='Offline mode will force the use of locally cached repositories and prevent requests to remote repositories.'),
+    dict(name='--no-requirements', action='store_true', help='Disables checking for and installing any requirements.'),
     help='Find and add missing libraries',
     description=(
         "Import missing dependencies in an existing program or library.\n"
         "Hint: Use \"mbed import <URL>\" and \"mbed add <URL>\" instead of cloning\n"
         "manually and then running \"mbed deploy\""))
-def deploy(ignore=False, depth=None, protocol=None, insecure=False, offline=False, top=True):
+def deploy(ignore=False, depth=None, protocol=None, insecure=False, offline=False, no_requirements=False, top=True):
     offline_warning(offline, top)
 
     repo = Repo.fromrepo()
@@ -2110,7 +2115,7 @@ def deploy(ignore=False, depth=None, protocol=None, insecure=False, offline=Fals
 
     if top:
         program = Program(repo.path)
-        program.post_action()
+        program.post_action(not no_requirements)
         if program.is_classic:
             program.update_tools(os.path.join(getcwd(), '.temp'))
 
@@ -2177,13 +2182,14 @@ def publish(all_refs=None, msg=None, top=True):
     dict(name='--insecure', action='store_true', help='Allow insecure repository URLs. By default mbed CLI imports only "safe" URLs, e.g. based on standard ports - 80, 443 and 22. This option enables the use of arbitrary URLs/ports.'),
     dict(name='--offline', action='store_true', help='Offline mode will force the use of locally cached repositories and prevent requests to remote repositories.'),
     dict(name=['-l', '--latest-deps'], action='store_true', help='Update all dependencies to the latest revision of their current branch. WARNING: Ignores lib files'),
+    dict(name='--no-requirements', action='store_true', help='Disables checking for and installing any requirements.'),
     hidden_aliases=['up'],
     help='Update to branch, tag, revision or latest',
     description=(
         "Updates the current program or library and its dependencies to specified\nbranch, tag or revision.\n"
         "Alternatively fetches from associated remote repository URL and updates to the\n"
         "latest revision in the current branch."))
-def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=False, depth=None, protocol=None, insecure=False, offline=False, latest_deps=False, top=True):
+def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=False, depth=None, protocol=None, insecure=False, offline=False, latest_deps=False, no_requirements=False, top=True):
     offline_warning(offline, top)
 
     if top and clean:
@@ -2284,7 +2290,7 @@ def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=Fa
     if top:
         program = Program(repo.path)
         program.set_root()
-        program.post_action()
+        program.post_action(not no_requirements)
         if program.is_classic:
             program.update_tools(os.path.join(getcwd(), '.temp'))
 
