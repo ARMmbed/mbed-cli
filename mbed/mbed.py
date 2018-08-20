@@ -3011,6 +3011,51 @@ def help_():
     return parser.print_help()
 
 
+@subcommand('unittest',
+    dict(name='--skip-build', action='store_true', help='skip build step'),
+    dict(name='--skip-run', action='store_true', help='skip run step'),
+    dict(name='--clean', action='store_true', help='clean build data'),
+    dict(name=['-d', '--debug'], action='store_true', help='enable debug build'),
+    dict(name='--coverage', choices=['html', 'xml', 'both'], help='generate code coverage report'),
+    dict(name=['-m', '--make-program'], choices=['gmake', 'make', 'mingw32-make', 'ninja'], help='which make program to use'),
+    dict(name=['-g', '--generator'], choices=['Unix Makefiles', 'MinGW Makefiles', 'Ninja'], help='which CMake generator to use'),
+    dict(name=['-r', '--regex'], help='run tests matching regular expression'),
+    dict(name='--build-path', help='specify build path'),
+    dict(name='--new', help='generate files for a new unit test', metavar="FILEPATH"),
+    help='Create, build and run unit tests')
+def unittest_(skip_build=False, skip_run=False, clean=False, debug=False, coverage=None, make_program=None, generator=None, regex=None, build_path=None, new=None):
+    program = Program(getcwd(), False)
+    program.check_requirements(True)
+
+    mbed_os_dir = program.get_os_dir()
+    if mbed_os_dir is None:
+        error("No Mbed OS directory found.")
+    unittests_dir = os.path.join(mbed_os_dir, "UNITTESTS")
+
+    tool = os.path.join(unittests_dir, "mbed_unittest.py")
+
+    # Prepare environment variables
+    env = program.get_env()
+
+    if os.path.exists(tool):
+        popen([python_cmd, tool]
+                + (["--skip-build"] if skip_build else [])
+                + (["--skip-run"] if skip_run else [])
+                + (["--clean"] if clean else [])
+                + (["--debug"] if debug else [])
+                + (["--coverage", coverage] if coverage else [])
+                + (["--make-program", make_program] if make_program else [])
+                + (["--generator", generator] if generator else [])
+                + (["--regex", regex] if regex else [])
+                + (["--build-path", build_path] if build_path else [])
+                + (["--new", new] if new else [])
+                + (["--verbose"] if verbose else [])
+                + remainder,
+                env=env)
+    else:
+        warning("Unit testing is not supported with this Mbed OS version.")
+
+
 def main():
     global verbose, very_verbose, remainder, cwd_root
 

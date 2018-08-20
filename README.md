@@ -25,6 +25,7 @@ This document covers the installation and usage of Mbed CLI.
     2. [Compiling and running tests](#compiling-and-running-tests)
     3. [Limiting the test scope](#limiting-the-test-scope)
     4. [Test directory structure](#test-directory-structure)
+1. [Unit testing](#unit-testing)
 1. [Publishing your changes](#publishing-your-changes)
     1. [Checking status](#checking-status)
     2. [Pushing upstream](#pushing-upstream)
@@ -726,6 +727,25 @@ mbed-os-program
 As shown above, tests exist inside `TESTS\testgroup\testcase\` directories. Please note that `TESTS` is a special upper case directory that is excluded from module sources while compiling.
 
 <span class="notes">**Note:** `mbed test` does not work in applications that contain a  `main` function that is outside of a `TESTS` directory.</span>
+
+## Unit testing
+
+Use the `mbed unittest` command to build and run unit tests, and to generate files for new unit tests.
+
+Build and run unit tests with `mbed unittest`. The arguments are:
+
+* `--skip-build` to skip building unit tests.
+* `--skip-run` to skip running unit tests.
+* `--clean` to clean previous build data.
+* `-d` or `--debug` to prepare debug build.
+* `--coverage <TYPE>` to generate code coverage report where TYPE can be "html", "xml" or "both".
+* `-m <NAME>` or `--make-program <NAME>` to select which make build tool to use where NAME can be "make", "gmake", "mingw32-make" or "ninja".
+* `-g <NAME>` or `--generator <NAME>` to select which CMake generator to use where NAME can be "Unix Makefiles", "MinGW Makefiles" or "Ninja".
+* `-r <EXPRESSION>` or `--regex <EXPRESSION>` to run tests matching the regular expression.
+* `--build-path <PATH>` to specify build path.
+* `-v` or `--verbose` for verbose diagnostic output.
+
+Generate files for a new unit test with `mbed unittest --new <FILE>`.
 
 ## Publishing your changes
 
