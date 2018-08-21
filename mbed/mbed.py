@@ -2680,7 +2680,8 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
         if build_data:
             # Preserve path to given build data
             build_data = os.path.relpath(os.path.join(orig_path, build_data), program.path)
-        else:
+        elif icetea_supported:
+            # Build data needed only if icetea is supported
             # Create the path to the test build data file
             build_data = os.path.join(build_path, 'build_data.json')
 
@@ -2727,7 +2728,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
                   + list(chain.from_iterable(zip(repeat('--source'), source)))
                   + ['--build', build_path]
                   + ['--test-spec', test_spec]
-                  + ['--build-data', build_data]
+                  + (['--build-data', build_data] if build_data else [])
                   + (['-n', tests_by_name_temp] if tests_by_name_temp else [])
                   + (['-v'] if verbose else [])
                   + (['--app-config', app_config] if app_config else [])
