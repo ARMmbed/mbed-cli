@@ -2698,7 +2698,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
     help='device management supcommand',
     hidden_aliases=['dev-mgmt', 'dm'],
-    description=("Manage Device with Palion"))
+    description=("Manage Device with Pelion"))
 def dev_mgmt(toolchain=None, target=None, source=False, profile=False, build=False):
     orig_path = getcwd()
     program = Program(getcwd(), True)
@@ -2716,7 +2716,7 @@ def dev_mgmt(toolchain=None, target=None, source=False, profile=False, build=Fal
 
     if build:
         build_path = build
-    elif not build and target and toolchain:
+    elif (not build) and target and toolchain:
         build_path = os.path.join(
             os.path.relpath(program.path, orig_path),
             program.build_dir,
