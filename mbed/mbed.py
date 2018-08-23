@@ -1599,11 +1599,18 @@ class Program(object):
             error("Please specify toolchain using the -t switch or set default toolchain using command \"mbed toolchain\"", 1)
         return tchain
 
-    def set_defaults(self, target=None, toolchain=None):
+    def get_profile(self, profile=None):
+        profile_cfg = self.get_cfg('PROFILE')
+        profile_cfg = profile_cfg.split() if profile_cfg else []
+        return profile if profile else profile_cfg
+
+    def set_defaults(self, target=None, toolchain=None, profile=None):
         if target and not self.get_cfg('TARGET'):
             self.set_cfg('TARGET', target)
         if toolchain and not self.get_cfg('TOOLCHAIN'):
             self.set_cfg('TOOLCHAIN', toolchain)
+        if profile and not self.get_cfg('PROFILE'):
+            self.set_cfg('PROFILE', (' ').join(profile))
 
     def get_macros(self):
         macros = []
@@ -2499,6 +2506,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
 
     target = program.get_target(target)
     tchain = program.get_toolchain(toolchain)
+    profile = program.get_profile(profile)
     macros = program.get_macros()
 
     if compile_config:
@@ -2585,7 +2593,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                 if not connected:
                     error("The target board you compiled for is not connected to your system.\nPlease reconnect it and retry the last command.", 1)
 
-    program.set_defaults(target=target, toolchain=tchain)
+    program.set_defaults(target=target, toolchain=tchain, profile=profile)
 
 
 # Test command
@@ -2617,6 +2625,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
 
     target = program.get_target(target)
     tchain = program.get_toolchain(toolchain)
+    profile = program.get_profile(profile)
     macros = program.get_macros()
     tools_dir = program.get_tools()
     build_and_run_tests = not compile_list and not run_list and not compile_only and not run_only
@@ -2688,7 +2697,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
                   + args,
                   env=env)
 
-    program.set_defaults(target=target, toolchain=tchain)
+    program.set_defaults(target=target, toolchain=tchain, profile=profile)
 
 
 # Export command
@@ -2843,7 +2852,7 @@ def sterm(port=None, baudrate=None, echo=None, reset=False, sterm=True):
         "Gets, sets or unsets mbed tool configuration options.\n"
         "Options can be global (via the --global switch) or local (per program)\n"
         "Global options are always overridden by local/program options.\n"
-        "Currently supported options: target, toolchain, protocol, depth, cache"))
+        "Currently supported options: target, toolchain, profile, protocol, depth, cache"))
 def config_(var=None, value=None, global_cfg=False, unset=False, list_config=False):
     name = var
     var = str(var).upper()
@@ -2875,6 +2884,9 @@ def config_(var=None, value=None, global_cfg=False, unset=False, list_config=Fal
         if global_cfg:
             # Global configuration
             g = Global()
+            if var == 'PROFILE':
+                action('profile is a local-only option')
+                return
             if unset:
                 g.set_cfg(var, None)
                 action('Unset global %s' % name)
@@ -2932,6 +2944,26 @@ def toolchain_(name=None, global_cfg=False, supported=False):
     if supported:
         return compile_(supported=supported)
     return config_('toolchain', name, global_cfg=global_cfg)
+
+@subcommand('profile',
+    dict(name='path', nargs='+', help='Default profile path. Example: mbed-os/tools/profiles/develop.json, ./profile-cxx11.json'),
+    dict(name=['-G', '--global'], dest='global_cfg', action='store_true', help='Use global settings, not local'),
+    help='Set or get default profile(s)\n\n',
+    description=(
+        "Set or get default profile\n"
+        "This is an alias to 'mbed config [--global] profile [path ...]'\n"))
+def profile_(path=None, global_cfg=False):
+    return config_('profile', (' ').join(path), global_cfg=global_cfg)
+
+@subcommand('profile',
+    dict(name='path', nargs='*', help='Default profile path. Example: mbed-os/tools/profiles/develop.json, ./profile-cxx11.json'),
+    dict(name=['-G', '--global'], dest='global_cfg', action='store_true', help='Use global settings, not local'),
+    help='Set or get default profile(s)\n\n',
+    description=(
+        "Set or get default profile\n"
+        "This is an alias to 'mbed config [--global] profile [path ...]'\n"))
+def profile_(path=None, global_cfg=False):
+    return config_('profile', (' ').join(path), global_cfg=global_cfg)
 
 
 @subcommand('cache',
