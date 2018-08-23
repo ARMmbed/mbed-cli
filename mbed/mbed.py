@@ -3012,18 +3012,18 @@ def help_():
 
 
 @subcommand('unittest',
-    dict(name='--skip-build', action='store_true', help='skip build step'),
-    dict(name='--skip-run', action='store_true', help='skip run step'),
-    dict(name='--clean', action='store_true', help='clean build data'),
-    dict(name=['-d', '--debug'], action='store_true', help='enable debug build'),
-    dict(name='--coverage', choices=['html', 'xml', 'both'], help='generate code coverage report'),
-    dict(name=['-m', '--make-program'], choices=['gmake', 'make', 'mingw32-make', 'ninja'], help='which make program to use'),
-    dict(name=['-g', '--generator'], choices=['Unix Makefiles', 'MinGW Makefiles', 'Ninja'], help='which CMake generator to use'),
-    dict(name=['-r', '--regex'], help='run tests matching regular expression'),
-    dict(name='--build-path', help='specify build path'),
+    dict(name='--compile', action='store_true', dest="compile_only", help='Only compile unit tests'),
+    dict(name='--run', action='store_true', dest="run_only", help='Only run unit tests'),
+    dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory'),
+    dict(name=['-d', '--debug'], action='store_true', help='Enable debug build'),
+    dict(name='--coverage', choices=['html', 'xml', 'both'], help='Generate code coverage report'),
+    dict(name=['-m', '--make-program'], choices=['gmake', 'make', 'mingw32-make', 'ninja'], help='Which make program to use'),
+    dict(name=['-g', '--generator'], choices=['Unix Makefiles', 'MinGW Makefiles', 'Ninja'], help='Which CMake generator to use'),
+    dict(name=['-r', '--regex'], help='Run tests matching regular expression'),
+    dict(name='--build', help='Build directory. Default: mbed-os/UNITTESTS/build/'),
     dict(name='--new', help='generate files for a new unit test', metavar="FILEPATH"),
     help='Create, build and run unit tests')
-def unittest_(skip_build=False, skip_run=False, clean=False, debug=False, coverage=None, make_program=None, generator=None, regex=None, build_path=None, new=None):
+def unittest_(compile_only=False, run_only=False, clean=False, debug=False, coverage=None, make_program=None, generator=None, regex=None, build=None, new=None):
     program = Program(getcwd(), False)
     program.check_requirements(True)
 
@@ -3039,15 +3039,15 @@ def unittest_(skip_build=False, skip_run=False, clean=False, debug=False, covera
 
     if os.path.exists(tool):
         popen([python_cmd, tool]
-                + (["--skip-build"] if skip_build else [])
-                + (["--skip-run"] if skip_run else [])
+                + (["--compile"] if compile_only else [])
+                + (["--run"] if run_only else [])
                 + (["--clean"] if clean else [])
                 + (["--debug"] if debug else [])
                 + (["--coverage", coverage] if coverage else [])
                 + (["--make-program", make_program] if make_program else [])
                 + (["--generator", generator] if generator else [])
                 + (["--regex", regex] if regex else [])
-                + (["--build-path", build_path] if build_path else [])
+                + (["--build", build] if build else [])
                 + (["--new", new] if new else [])
                 + (["--verbose"] if verbose else [])
                 + remainder,

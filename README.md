@@ -734,31 +734,31 @@ Use the `mbed unittest` command to build and run unit tests, or to generate file
 
 Build and run unit tests with `mbed unittest`. The arguments are:
 
-* `--skip-build` to skip building unit tests.
-* `--skip-run` to skip running unit tests.
-* `--clean` to clean previous build data.
+* `--compile` to only compile unit tests.
+* `--run` to only run unit tests.
+* `-c` or `--clean` to clean build directory.
 * `-d` or `--debug` to prepare debug build.
 * `--coverage <TYPE>` to generate code coverage report where TYPE can be "html", "xml" or "both".
 * `-m <NAME>` or `--make-program <NAME>` to select which make build tool to use where NAME can be "make", "gmake", "mingw32-make" or "ninja".
 * `-g <NAME>` or `--generator <NAME>` to select which CMake generator to use where NAME can be "Unix Makefiles", "MinGW Makefiles" or "Ninja".
 * `-r <EXPRESSION>` or `--regex <EXPRESSION>` to run tests matching the regular expression.
-* `--build-path <PATH>` to specify build path.
+* `--build <PATH>` to specify build directory.
 * `-v` or `--verbose` for verbose diagnostic output.
 
 Generate files for a new unit test with `mbed unittest --new <FILE>`.
 
 ### Building and running unit tests
 
-You can specify to only **build** the unit tests by using the `--skip-run` option:
+You can specify to only **build** the unit tests by using the `--compile option:
 
 ```
-$ mbed unittest --skip-run
+$ mbed unittest --compile
 ```
 
-You can specify to only **run** the unit tests by using the `--skip-build` option:
+You can specify to only **run** the unit tests by using the `--run` option:
 
 ```
-$ mbed unittest --skip-build
+$ mbed unittest --run
 ```
 
 If you do not specify any of these, `mbed unittest` will build all available unit tests and run them.
