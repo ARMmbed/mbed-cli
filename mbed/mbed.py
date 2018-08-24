@@ -3020,12 +3020,15 @@ def help_():
     dict(name=['-m', '--make-program'], choices=['gmake', 'make', 'mingw32-make', 'ninja'], help='Which make program to use'),
     dict(name=['-g', '--generator'], choices=['Unix Makefiles', 'MinGW Makefiles', 'Ninja'], help='Which CMake generator to use'),
     dict(name=['-r', '--regex'], help='Run tests matching regular expression'),
-    dict(name='--build', help='Build directory. Default: mbed-os/UNITTESTS/build/'),
+    dict(name='--build', help='Build directory. Default: BUILD/unittests/'),
     dict(name='--new', help='generate files for a new unit test', metavar="FILEPATH"),
     help='Create, build and run unit tests')
 def unittest_(compile_only=False, run_only=False, clean=False, debug=False, coverage=None, make_program=None, generator=None, regex=None, build=None, new=None):
+    # Find the root of the program
     program = Program(getcwd(), False)
     program.check_requirements(True)
+    # Save original working directory
+    orig_path = getcwd()
 
     mbed_os_dir = program.get_os_dir()
     if mbed_os_dir is None:
@@ -3038,20 +3041,27 @@ def unittest_(compile_only=False, run_only=False, clean=False, debug=False, cove
     env = program.get_env()
 
     if os.path.exists(tool):
-        popen([python_cmd, tool]
-                + (["--compile"] if compile_only else [])
-                + (["--run"] if run_only else [])
-                + (["--clean"] if clean else [])
-                + (["--debug"] if debug else [])
-                + (["--coverage", coverage] if coverage else [])
-                + (["--make-program", make_program] if make_program else [])
-                + (["--generator", generator] if generator else [])
-                + (["--regex", regex] if regex else [])
-                + (["--build", build] if build else [])
-                + (["--new", new] if new else [])
-                + (["--verbose"] if verbose else [])
-                + remainder,
-                env=env)
+        with cd(program.path):
+            # Setup the build path if not specified
+            build_path = build
+            if not build_path:
+                build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, 'unittests')
+
+            # Run unit testing tools
+            popen([python_cmd, tool]
+                    + (["--compile"] if compile_only else [])
+                    + (["--run"] if run_only else [])
+                    + (["--clean"] if clean else [])
+                    + (["--debug"] if debug else [])
+                    + (["--coverage", coverage] if coverage else [])
+                    + (["--make-program", make_program] if make_program else [])
+                    + (["--generator", generator] if generator else [])
+                    + (["--regex", regex] if regex else [])
+                    + ["--build", build_path]
+                    + (["--new", new] if new else [])
+                    + (["--verbose"] if verbose else [])
+                    + remainder,
+                    env=env)
     else:
         warning("Unit testing is not supported with this Mbed OS version.")
 
