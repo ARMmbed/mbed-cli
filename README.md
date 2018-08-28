@@ -539,7 +539,7 @@ For example, to export to uVision, run:
 $ mbed export -i uvision -m K64F
 ```
 
-Mbed CLI creates a `.uvprojx` file in the projectfiles/uvision folder. You can open the project file with uVision.
+Mbed CLI creates a `.uvprojx` file in the root project directory. You can open the project file with uVision.
 
 ### Serial terminal
 
