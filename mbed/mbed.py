@@ -1576,6 +1576,10 @@ class Program(object):
         for c in compilers:
             if self.get_cfg(c+'_PATH'):
                 env['MBED_'+c+'_PATH'] = self.get_cfg(c+'_PATH')
+        config_options = ['COLOR', 'CLOUD_SDK_API_KEY', 'CLOUD_SDK_HOST']
+        for opt in config_options:
+            if self.get_cfg(opt):
+                env['MBED_' + opt] = self.get_cfg(opt)
 
         return env
 
@@ -2690,6 +2694,57 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
 
     program.set_defaults(target=target, toolchain=tchain)
 
+
+# device management commands
+@subcommand('device-management',
+    dict(name=['-t', '--toolchain'], help='Toolchain used for mbed compile'),
+    dict(name=['-m', '--target'], help='Target used for compile for target MCU. Example: K64F, NUCLEO_F401RE, NRF51822...'),
+    dict(name=['--profile'], help=""),
+    dict(name='--build', help='Build directory. Default: build/'),
+    dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
+    help='device management supcommand',
+    hidden_aliases=['dev-mgmt', 'dm'],
+    description=("Manage Device with Pelion"))
+def dev_mgmt(toolchain=None, target=None, source=False, profile=False, build=False):
+    orig_path = getcwd()
+    program = Program(getcwd(), True)
+    program.check_requirements(True)
+    with cd(program.path):
+        tools_dir = program.get_tools()
+
+    script = os.path.join(tools_dir, 'device_management.py')
+    if not os.path.exists(script):
+        error('device management is not supported by this version of Mbed OS. Please upgrade.')
+
+
+    target = target or program.get_cfg("TARGET")
+    toolchain = toolchain or program.get_cfg("TOOLCHAIN")
+
+    if build:
+        build_path = build
+    elif (not build) and target and toolchain:
+        build_path = os.path.join(
+            os.path.relpath(program.path, orig_path),
+            program.build_dir,
+            target.upper(),
+            toolchain.upper()
+        )
+        build_path = _safe_append_profile_to_build_path(build_path, profile)
+    else:
+        build_path = None
+
+    args = remainder
+    if args[0] in ('update', 'create'):
+        args += (['--toolchain', toolchain] if toolchain else [])
+        args += (['--mcu', target] if target else [])
+        args += (['--build', build_path] if build_path else [])
+    env = program.get_env()
+    if "MBED_CLOUD_SDK_HOST" not in env:
+        env["MBED_CLOUD_SDK_HOST"] = "https://api.us-east-1.mbedcloud.com"
+    popen([python_cmd, '-u', script]
+          + args
+          + list(chain.from_iterable(zip(repeat('--source'), source or []))),
+          env=env)
 
 # Export command
 @subcommand('export',
