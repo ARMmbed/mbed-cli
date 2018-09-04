@@ -18,7 +18,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="mbed-cli",
-    version="1.7.5",
+    version="1.8.0",
     description="Arm Mbed command line tool for repositories version control, publishing and updating code from remotely hosted repositories (GitHub, GitLab and mbed.com), and invoking Mbed OS own build system and export functions, among other operations",
     long_description=long_description,
     long_description_content_type="text/markdown",
