@@ -730,14 +730,14 @@ As shown above, tests exist inside `TESTS\testgroup\testcase\` directories. Plea
 
 ## Unit testing
 
-Use the `mbed unittest` command to build and run unit tests, or to generate files for new unit tests.
+Use the `mbed test --unittests` command to build and run unit tests, or to generate files for new unit tests.
 
-Build and run unit tests with `mbed unittest`. The arguments are:
+Build and run unit tests with `mbed test --unittests`. The arguments are:
 
 * `--compile` to only compile unit tests.
 * `--run` to only run unit tests.
 * `-c` or `--clean` to clean build directory.
-* `-d` or `--debug` to prepare debug build.
+* `--profile debug` to prepare debug build.
 * `--coverage <TYPE>` to generate code coverage report where TYPE can be "html", "xml" or "both".
 * `-m <NAME>` or `--make-program <NAME>` to select which make build tool to use where NAME can be "make", "gmake", "mingw32-make" or "ninja".
 * `-g <NAME>` or `--generator <NAME>` to select which CMake generator to use where NAME can be "Unix Makefiles", "MinGW Makefiles" or "Ninja".
@@ -745,30 +745,30 @@ Build and run unit tests with `mbed unittest`. The arguments are:
 * `--build <PATH>` to specify build directory.
 * `-v` or `--verbose` for verbose diagnostic output.
 
-Generate files for a new unit test with `mbed unittest --new <FILE>`.
+Generate files for a new unit test with `mbed test --unittests --new <FILE>`.
 
 ### Building and running unit tests
 
 You can specify to only **build** the unit tests by using the `--compile option:
 
 ```
-$ mbed unittest --compile
+$ mbed test --unittests --compile
 ```
 
 You can specify to only **run** the unit tests by using the `--run` option:
 
 ```
-$ mbed unittest --run
+$ mbed test --unittests --run
 ```
 
-If you do not specify any of these, `mbed unittest` will build all available unit tests and run them.
+If you do not specify any of these, `mbed test --unittests` will build all available unit tests and run them.
 
 ### Running a subset of tests
 
 You can run a **limited set** of unit tests by using the `-r` or `--regex` option. This takes a regular expression, which it compares against the test names. For example to run all cellular unit tests you can specify:
 
 ```
-$ mbed unittest -r cellular
+$ mbed test --unittests -r cellular
 ```
 
 ### Getting code coverage
@@ -776,7 +776,7 @@ $ mbed unittest -r cellular
 You can generate a code coverage report by using the `--coverage` option. For example to create an html report you can specify:
 
 ```
-$ mbed unittest --coverage html
+$ mbed test --unittests --coverage html
 ```
 
 ### Creating new unit tests
@@ -784,7 +784,7 @@ $ mbed unittest --coverage html
 All unit tests are under `mbed-os/UNITTESTS` directory. You can **generate** the necessary files for a unit test by using the `--new` option. For example to create the files for `rtos/Semaphore.cpp` you can specify:
 
 ```
-$ mbed unittest --new rtos/Semaphore.cpp
+$ mbed test --unittests --new rtos/Semaphore.cpp
 ```
 
 ## Publishing your changes
