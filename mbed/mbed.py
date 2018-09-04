@@ -2604,9 +2604,19 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
     dict(name='--test-spec', dest="test_spec", help="Path used for the test spec file used when building and running tests (the default path is the build directory)"),
     dict(name='--app-config', dest="app_config", help="Path of an application configuration file. Default is to look for \"mbed_app.json\""),
     dict(name='--test-config', dest="test_config", help="Path or mbed OS keyword of a test configuration file. Example: ethernet, odin_wifi, or path/to/config.json"),
+    dict(name='--coverage', choices=['html', 'xml', 'both'], help='Generate code coverage report for unit tetsts'),
+    dict(name=['--make-program'], choices=['gmake', 'make', 'mingw32-make', 'ninja'], help='Which make program to use for unit tests'),
+    dict(name=['--generator'], choices=['Unix Makefiles', 'MinGW Makefiles', 'Ninja'], help='Which CMake generator to use for unit tests'),
+    dict(name='--new', help='generate files for a new unit test', metavar="FILEPATH"),
+    dict(name=['-r', '--regex'], help='Run unit tests matching regular expression'),
+    dict(name=['--unittests'], action="store_true", help='Run only unit tests'),
     help='Find, build and run tests',
     description="Find, build, and run tests in a program and libraries")
-def test_(toolchain=None, target=None, compile_list=False, run_list=False, compile_only=False, run_only=False, tests_by_name=None, source=False, profile=False, build=False, clean=False, test_spec=None, app_config=None, test_config=None):
+def test_(toolchain=None, target=None, compile_list=False, run_list=False,
+          compile_only=False, run_only=False, tests_by_name=None, source=False,
+          profile=False, build=False, clean=False, test_spec=None,
+          app_config=None, test_config=None, coverage=None, make_program=None,
+          new=None, generator=None, regex=None, unittests=None):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
@@ -2625,68 +2635,100 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False, compi
     env = program.get_env()
 
     with cd(program.path):
-        # Setup the source path if not specified
-        if not source or len(source) == 0:
-            source = [os.path.relpath(program.path, orig_path)]
+        if unittests:
+            mbed_os_dir = program.get_os_dir()
+            if mbed_os_dir is None:
+                error("No Mbed OS directory found.")
+            unittests_dir = os.path.join(mbed_os_dir, "UNITTESTS")
 
-        # Setup the build path if not specified
-        build_path = build
-        if not build_path:
-            build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, 'tests', target.upper(), tchain.upper())
-            build_path = _safe_append_profile_to_build_path(build_path, profile)
+            tool = os.path.join(unittests_dir, "mbed_unittest.py")
+            if os.path.exists(tool):
+                # Setup the build path if not specified
+                build_path = build
+                if not build_path:
+                    build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, 'unittests')
 
-        if test_spec:
-            # Preserve path to given test spec
-            test_spec = os.path.relpath(os.path.join(orig_path, test_spec), program.path)
+                # Run unit testing tools
+                popen([python_cmd, tool]
+                        + (["--compile"] if compile_only else [])
+                        + (["--run"] if run_only else [])
+                        + (["--clean"] if clean else [])
+                        + (["--debug"] if profile and "debug" in profile else [])
+                        + (["--coverage", coverage] if coverage else [])
+                        + (["--make-program", make_program] if make_program else [])
+                        + (["--generator", generator] if generator else [])
+                        + (["--regex", regex] if regex else [])
+                        + ["--build", build_path]
+                        + (["--new", new] if new else [])
+                        + (["--verbose"] if verbose else [])
+                        + remainder,
+                        env=env)
+            else:
+                warning("Unit testing is not supported with this Mbed OS version.")
         else:
-            # Create the path to the test spec file
-            test_spec = os.path.join(build_path, 'test_spec.json')
+            # Setup the source path if not specified
+            if not source or len(source) == 0:
+                source = [os.path.relpath(program.path, orig_path)]
 
-        if compile_list:
-            popen([python_cmd, '-u', os.path.join(tools_dir, 'test.py'), '--list']
-                  + list(chain.from_iterable(list(zip(repeat('--profile'), profile or []))))
-                  + ['-t', tchain, '-m', target]
-                  + list(chain.from_iterable(zip(repeat('--source'), source)))
-                  + (['-n', tests_by_name] if tests_by_name else [])
-                  + (['-v'] if verbose else [])
-                  + (['--app-config', app_config] if app_config else [])
-                  + (['--test-config', test_config] if test_config else [])
-                  + args,
-                  env=env)
+            # Setup the build path if not specified
+            build_path = build
+            if not build_path:
+                build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, 'tests', target.upper(), tchain.upper())
+                build_path = _safe_append_profile_to_build_path(build_path, profile)
 
-        if compile_only or build_and_run_tests:
-            # If the user hasn't supplied a build directory, ignore the default build directory
-            if not build:
-                program.ignore_build_dir()
+            if test_spec:
+                # Preserve path to given test spec
+                test_spec = os.path.relpath(os.path.join(orig_path, test_spec), program.path)
+            else:
+                # Create the path to the test spec file
+                test_spec = os.path.join(build_path, 'test_spec.json')
 
-            popen([python_cmd, '-u', os.path.join(tools_dir, 'test.py')]
-                  + list(chain.from_iterable(zip(repeat('-D'), macros)))
-                  + list(chain.from_iterable(zip(repeat('--profile'), profile or [])))
-                  + ['-t', tchain, '-m', target]
-                  + (['-c'] if clean else [])
-                  + list(chain.from_iterable(zip(repeat('--source'), source)))
-                  + ['--build', build_path]
-                  + ['--test-spec', test_spec]
-                  + (['-n', tests_by_name] if tests_by_name else [])
-                  + (['-v'] if verbose else [])
-                  + (['--app-config', app_config] if app_config else [])
-                  + (['--test-config', test_config] if test_config else [])
-                  + args,
-                  env=env)
+            if compile_list:
+                popen([python_cmd, '-u', os.path.join(tools_dir, 'test.py'), '--list']
+                      + list(chain.from_iterable(list(zip(repeat('--profile'), profile or []))))
+                      + ['-t', tchain, '-m', target]
+                      + list(chain.from_iterable(zip(repeat('--source'), source)))
+                      + (['-n', tests_by_name] if tests_by_name else [])
+                      + (['-v'] if verbose else [])
+                      + (['--app-config', app_config] if app_config else [])
+                      + (['--test-config', test_config] if test_config else [])
+                      + args,
+                      env=env)
 
-        if run_list:
-            popen(['mbedgt', '--test-spec', test_spec, '--list']
-                  + (['-n', tests_by_name] if tests_by_name else [])
-                  + (['-V'] if verbose else [])
-                  + args,
-                  env=env)
+            if compile_only or build_and_run_tests:
+                # If the user hasn't supplied a build directory, ignore the default build directory
+                if not build:
+                    program.ignore_build_dir()
 
-        if run_only or build_and_run_tests:
-            popen(['mbedgt', '--test-spec', test_spec]
-                  + (['-n', tests_by_name] if tests_by_name else [])
-                  + (['-V'] if verbose else [])
-                  + args,
-                  env=env)
+                popen([python_cmd, '-u', os.path.join(tools_dir, 'test.py')]
+                      + list(chain.from_iterable(zip(repeat('-D'), macros)))
+                      + list(chain.from_iterable(zip(repeat('--profile'), profile or [])))
+                      + ['-t', tchain, '-m', target]
+                      + (['-c'] if clean else [])
+                      + list(chain.from_iterable(zip(repeat('--source'), source)))
+                      + ['--build', build_path]
+                      + ['--test-spec', test_spec]
+                      + (['-n', tests_by_name] if tests_by_name else [])
+                      + (['-v'] if verbose else [])
+                      + (['--app-config', app_config] if app_config else [])
+                      + (['--test-config', test_config] if test_config else [])
+                      + args,
+                      env=env)
+
+            if run_list:
+                popen(['mbedgt', '--test-spec', test_spec, '--list']
+                      + (['-n', tests_by_name] if tests_by_name else [])
+                      + (['-V'] if verbose else [])
+                      + args,
+                      env=env)
+
+            if run_only or build_and_run_tests:
+                popen(['mbedgt', '--test-spec', test_spec]
+                      + (['-n', tests_by_name] if tests_by_name else [])
+                      + (['-V'] if verbose else [])
+                      + args,
+                      env=env)
+
 
     program.set_defaults(target=target, toolchain=tchain)
 
@@ -3010,60 +3052,6 @@ def cache_(on=False, off=False, dir=None, ls=False, purge=False, global_cfg=Fals
 def help_():
     return parser.print_help()
 
-
-@subcommand('unittest',
-    dict(name='--compile', action='store_true', dest="compile_only", help='Only compile unit tests'),
-    dict(name='--run', action='store_true', dest="run_only", help='Only run unit tests'),
-    dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory'),
-    dict(name=['-d', '--debug'], action='store_true', help='Enable debug build'),
-    dict(name='--coverage', choices=['html', 'xml', 'both'], help='Generate code coverage report'),
-    dict(name=['-m', '--make-program'], choices=['gmake', 'make', 'mingw32-make', 'ninja'], help='Which make program to use'),
-    dict(name=['-g', '--generator'], choices=['Unix Makefiles', 'MinGW Makefiles', 'Ninja'], help='Which CMake generator to use'),
-    dict(name=['-r', '--regex'], help='Run tests matching regular expression'),
-    dict(name='--build', help='Build directory. Default: BUILD/unittests/'),
-    dict(name='--new', help='generate files for a new unit test', metavar="FILEPATH"),
-    help='Create, build and run unit tests')
-def unittest_(compile_only=False, run_only=False, clean=False, debug=False, coverage=None, make_program=None, generator=None, regex=None, build=None, new=None):
-    # Find the root of the program
-    program = Program(getcwd(), False)
-    program.check_requirements(True)
-    # Save original working directory
-    orig_path = getcwd()
-
-    mbed_os_dir = program.get_os_dir()
-    if mbed_os_dir is None:
-        error("No Mbed OS directory found.")
-    unittests_dir = os.path.join(mbed_os_dir, "UNITTESTS")
-
-    tool = os.path.join(unittests_dir, "mbed_unittest.py")
-
-    # Prepare environment variables
-    env = program.get_env()
-
-    if os.path.exists(tool):
-        with cd(program.path):
-            # Setup the build path if not specified
-            build_path = build
-            if not build_path:
-                build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, 'unittests')
-
-            # Run unit testing tools
-            popen([python_cmd, tool]
-                    + (["--compile"] if compile_only else [])
-                    + (["--run"] if run_only else [])
-                    + (["--clean"] if clean else [])
-                    + (["--debug"] if debug else [])
-                    + (["--coverage", coverage] if coverage else [])
-                    + (["--make-program", make_program] if make_program else [])
-                    + (["--generator", generator] if generator else [])
-                    + (["--regex", regex] if regex else [])
-                    + ["--build", build_path]
-                    + (["--new", new] if new else [])
-                    + (["--verbose"] if verbose else [])
-                    + remainder,
-                    env=env)
-    else:
-        warning("Unit testing is not supported with this Mbed OS version.")
 
 
 def main():
