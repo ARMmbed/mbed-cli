@@ -2658,16 +2658,9 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False,
     # Save original working directory
     orig_path = getcwd()
 
-    target = program.get_target(target)
-    tchain = program.get_toolchain(toolchain)
     macros = program.get_macros()
     tools_dir = program.get_tools()
     build_and_run_tests = not compile_list and not run_list and not compile_only and not run_only
-
-    icetea_command_base = [python_cmd, '-u', os.path.join(tools_dir, 'run_icetea.py')] \
-                          + (['-m', target, '-t', tchain]) \
-                          + (['-n', tests_by_name] if tests_by_name else []) \
-                          + (['-v'] if verbose else [])
 
     # Prepare environment variables
     env = program.get_env()
@@ -2704,6 +2697,14 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False,
             else:
                 warning("Unit testing is not supported with this Mbed OS version.")
         else:
+            target = program.get_target(target)
+            tchain = program.get_toolchain(toolchain)
+
+            icetea_command_base = [python_cmd, '-u', os.path.join(tools_dir, 'run_icetea.py')] \
+                  + (['-m', target, '-t', tchain]) \
+                  + (['-n', tests_by_name] if tests_by_name else []) \
+                  + (['-v'] if verbose else [])
+
             # Setup the source path if not specified
             if not source or len(source) == 0:
                 source = [os.path.relpath(program.path, orig_path)]
