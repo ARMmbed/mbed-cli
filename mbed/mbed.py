@@ -157,7 +157,10 @@ def log(msg, is_error=False):
     sys.stderr.write(msg) if is_error else sys.stdout.write(msg)
 
 def message(msg):
-    return "[mbed-%s] %s\n" % (os.getpid(), msg)
+    if very_verbose:
+        return "[mbed-%s] %s\n" % (os.getpid(), msg)
+    else:
+        return "[mbed] %s\n" % msg
 
 def info(msg, level=1):
     if level <= 0 or verbose:
@@ -1361,7 +1364,7 @@ class Repo(object):
             if os.path.exists(lock_dir):
                 try:
                     if os.path.isfile(lock_file):
-                        with open(lock_file, 'r', 0) as f:
+                        with open(lock_file, 'r') as f:
                             pid = f.read(8)
                         if not pid:
                             if int(os.path.getmtime(lock_file)) + timeout < int(time.time()):
@@ -1382,7 +1385,7 @@ class Repo(object):
             else:
                 try:
                     os.mkdir(lock_dir)
-                    with open(lock_file, 'wb', 0) as f:
+                    with open(lock_file, 'w') as f:
                         info("Writing cache lock file %s for pid %s" % (lock_file, os.getpid()))
                         f.write(str(os.getpid()))
                         f.flush()
@@ -1414,7 +1417,7 @@ class Repo(object):
             if os.path.exists(lock_dir):
                 if os.path.isfile(lock_file):
                     try:
-                        with open(lock_file, 'r', 0) as f:
+                        with open(lock_file, 'r') as f:
                             pid = f.read(8)
                         if int(pid) != os.getpid():
                             error("Cache lock file exists with a different pid (\"%s\" vs \"%s\")" % (pid, os.getpid()))
