@@ -3330,7 +3330,6 @@ def main():
                 "You could retry the last command with \"-v\" flag for verbose output\n", e.args[0])
         else:
             error('OS Error: %s' % e.args[1], e.args[0])
-        traceback.print_exc(file=sys.stdout)
     except KeyboardInterrupt:
         info('User aborted!', -1)
         sys.exit(255)
