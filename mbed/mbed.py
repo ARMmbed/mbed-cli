@@ -47,6 +47,7 @@ import time
 import zipfile
 import argparse
 from random import randint
+from contextlib import contextmanager
 
 
 # Application version
@@ -1228,9 +1229,8 @@ class Repo(object):
                         os.makedirs(os.path.split(path)[0])
 
                     info("Carbon copy from \"%s\" to \"%s\"" % (cache, path))
-                    self.cache_lock(url)
-                    shutil.copytree(cache, path)
-                    self.cache_unlock(url)
+                    with self.cache_lock_held(url):
+                        shutil.copytree(cache, path)
 
                     with cd(path):
                         scm.seturl(formaturl(url, protocol))
@@ -1260,9 +1260,8 @@ class Repo(object):
             self.url = url
             self.path = os.path.abspath(path)
             self.ignores()
-            self.cache_lock(url)
-            self.set_cache(url)
-            self.cache_unlock(url)
+            with self.cache_lock_held(url):
+                self.set_cache(url)
             return True
 
         if offline:
@@ -1430,6 +1429,14 @@ class Repo(object):
         except (OSError) as e:
             pass
         return True
+
+    @contextmanager
+    def cache_lock_held(self, url):
+        self.cache_lock(url)
+        try:
+            yield
+        finally:
+            self.cache_unlock(url)
 
     def pid_exists(self, pid):
         try:
