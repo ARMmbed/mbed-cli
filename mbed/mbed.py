@@ -1421,6 +1421,8 @@ class Repo(object):
                             pid = f.read(8)
                         if int(pid) != os.getpid():
                             error("Cache lock file exists with a different pid (\"%s\" vs \"%s\")" % (pid, os.getpid()))
+                        else:
+                            info("Cache lock file exists with my pid (\"%s\"). Cleaning up." % (pid))
                     except OSError:
                         error("Unable to unlock cache dir \"%s\"" % (cpath))
                     os.remove(lock_file)
