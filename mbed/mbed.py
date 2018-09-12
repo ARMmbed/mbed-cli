@@ -1612,7 +1612,8 @@ class Program(object):
                 pkg_list = pquery([python_cmd, '-m', 'pip', 'list', '-l']) or ""
                 installed_packages = [re.sub(r'-', '_', pkg.split()[0].lower()) for pkg in pkg_list.splitlines() if len(pkg.split())]
                 for line in f.read().splitlines():
-                    pkg = re.sub(r'-', '_', re.sub(r'^([\w-]+).*$', r'\1', line).lower())
+                    pkg = re.sub(r'-', '_', re.sub(r'^([^<>=@]+).*$', r'\1', line).lower())
+                    pkg = re.sub(r'^(git|hg|svn|bzr)\+(.*)/([\w.-]+?)(\.(git|hg))?$', r'\3', pkg)
                     if not pkg in installed_packages:
                         missing.append(pkg)
 
