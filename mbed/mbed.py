@@ -2753,6 +2753,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False,
           app_config=None, test_config=None, coverage=None, make_program=None,
           new=None, generator=None, regex=None, unittests=None, 
           build_data=None, greentea=None, icetea=None):
+
     # Default behaviour is to run only greentea tests
     if not (greentea or icetea or unittests):
         greentea = True
@@ -2927,7 +2928,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False,
                 if run_only or build_and_run_tests:
                     popen(icetea_command)
 
-    program.set_defaults(target=target, toolchain=tchain)
+            program.set_defaults(target=target, toolchain=tchain)
 
 
 # device management commands
