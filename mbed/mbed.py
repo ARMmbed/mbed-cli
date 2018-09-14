@@ -2771,6 +2771,9 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False,
     # Disable icetea if not supported
     if not icetea_supported:
         icetea = False
+    if not os.path.exists(os.path.join(getcwd(), 'TEST_APPS')):
+        warning("Cannot run icetea tests. Current folder does not contain TEST_APPS folder.")
+        icetea = False
 
     # Save original working directory
     orig_path = getcwd()
@@ -2813,7 +2816,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False,
                         env=env)
             else:
                 warning("Unit testing is not supported with this Mbed OS version.")
-        else:
+        elif icetea or greentea:
             target = program.get_target(target)
             tchain = program.get_toolchain(toolchain)
 
