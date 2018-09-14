@@ -2994,15 +2994,17 @@ def dev_mgmt(toolchain=None, target=None, source=False, profile=False, build=Fal
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
     dict(name=['-S', '--supported'], dest='supported', const=True, choices=['matrix', 'ides'], nargs='?', help='Shows supported matrix of targets and toolchains'),
     dict(name='--app-config', dest="app_config", help="Path of an application configuration file. Default is to look for \"mbed_app.json\""),
+    dict(name='--no-requirements', action='store_true', help='Disables checking for and installing any requirements.'),
     help='Generate an IDE project',
     description=(
         "Generate IDE project files for the current program."))
-def export(ide=None, target=None, source=False, clean=False, supported=False, app_config=None):
+def export(ide=None, target=None, source=False, clean=False, supported=False, app_config=None, no_requirements=False):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
     program = Program(getcwd(), True)
-    program.check_requirements(True)
+    if not no_requirements:
+        program.check_requirements(True)
     # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
     orig_path = getcwd()
     # Change directories to the program root to use mbed OS tools
