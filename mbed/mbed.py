@@ -37,6 +37,7 @@ import sys
 import re
 import subprocess
 import os
+import platform
 import contextlib
 import shutil
 import stat
@@ -1633,8 +1634,10 @@ class Program(object):
                 "Unable to auto-install required Python modules.\n"
                 "The mbed OS tools in this program require the following Python modules: %s\n"
                 "You can install all missing modules by running \"pip install -r %s\" in \"%s\"" % (', '.join(missing), req_file, req_path))
-            if os.name == 'posix':
-                msg += "\nOn Posix systems (Linux, Mac, etc) you might have to switch to superuser account or use \"sudo\""
+            if os.name == 'posix' and platform.system() == 'Darwin':
+                msg += "\nOn Mac you might have to install packages as your user by adding the \"--user\" flag"
+            elif os.name == 'posix':
+                msg += "\nOn Posix systems (Linux, etc) you might have to switch to superuser account or use \"sudo\""
 
             if show_warning:
                 warning(msg)
