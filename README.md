@@ -1114,3 +1114,9 @@ Here is a list of configuration settings and their defaults:
 
 ### Various issues when running Mbed CLI in Cygwin environment
 Currently Mbed CLI is not compatible with Cygwin environment and cannot be executed inside it (https://github.com/ARMmbed/mbed-cli/issues/299).
+
+### Unable to download Mbed 2 library build
+Mbed 2 library builds can be quite big, and may require a download manager on slower connections. You may download the library manually with the following steps:
+ 1. Go to Mbed OS 2 releases and choose a revision - https://os.mbed.com/users/mbed_official/code/mbed/graph/
+ 2. Click on revision of your choice, for example, the revision `4f6c30876dfa` is located at https://os.mbed.com/users/mbed_official/code/mbed/rev/4f6c30876dfa/
+ 3. In the URL, change `rev` to `archive` and append `zip`. For example, the url found above, https://os.mbed.com/users/mbed_official/code/mbed/rev/4f6c30876dfa/, is modified to https://os.mbed.com/users/mbed_official/code/mbed/archive/4f6c30876dfa/zip
