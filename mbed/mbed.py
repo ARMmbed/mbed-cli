@@ -1635,7 +1635,7 @@ class Program(object):
                 "The mbed OS tools in this program require the following Python modules: %s\n"
                 "You can install all missing modules by running \"pip install -r %s\" in \"%s\"" % (', '.join(missing), req_file, req_path))
             if os.name == 'posix' and platform.system() == 'Darwin':
-                msg += "\nOn Posix systems (Linux, etc) you might have to install packages as your user by adding the \"--user\" flag"
+                msg += "\nOn Mac you might have to install packages as your user by adding the \"--user\" flag"
             elif os.name == 'posix':
                 msg += "\nOn Posix systems (Linux, etc) you might have to switch to superuser account or use \"sudo\""
 
