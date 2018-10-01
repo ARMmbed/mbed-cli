@@ -35,7 +35,8 @@ class MbedTerminal(object):
         try:
             from serial import Serial, SerialException
         except (IOError, ImportError, OSError):
-            return False
+            self.serial = None
+            return
 
         try:
             self.serial = Serial(self.port, baudrate=self.baudrate, timeout=self.timeout)
@@ -43,7 +44,7 @@ class MbedTerminal(object):
             self.serial.reset_input_buffer()
         except Exception as e:
             self.serial = None
-            return False
+            return
 
     def terminal(self, print_header=True):
         try:
