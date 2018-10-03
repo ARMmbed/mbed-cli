@@ -156,7 +156,10 @@ _cwd = os.getcwd()
 
 # Logging and output
 def log(msg, is_error=False):
-    sys.stderr.write(msg) if is_error else sys.stdout.write(msg)
+    if sys.version_info[0] > 2 and isinstance(msg, bytes):
+        sys.stderr.buffer.write(msg) if is_error else sys.stdout.buffer.write(msg)
+    else:
+        sys.stderr.write(msg) if is_error else sys.stdout.write(msg)
 
 def message(msg):
     if very_verbose:
