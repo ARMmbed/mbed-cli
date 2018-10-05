@@ -274,12 +274,12 @@ def pquery(command, output_callback=None, stdin=None, **kwargs):
     stdout, _ = proc.communicate(stdin)
 
     if very_verbose:
-        log(stdout.decode("utf-8").strip() + "\n")
+        log(stdout.decode(sys.getfilesystemencoding()).strip() + "\n")
 
     if proc.returncode != 0:
         raise ProcessException(proc.returncode, command[0], ' '.join(command), getcwd())
 
-    return stdout.decode("utf-8")
+    return stdout.decode(sys.getfilesystemencoding())
 
 def rmtree_readonly(directory):
     if os.path.islink(directory):
