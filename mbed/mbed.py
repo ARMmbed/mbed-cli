@@ -1601,7 +1601,7 @@ class Program(object):
     def requirements_contains(self, library_name):
         req_path = self.get_requirements()
         if not req_path:
-            return None
+            return False
 
         req_file = 'requirements.txt'
         with open(os.path.join(req_path, req_file), 'r') as f:
