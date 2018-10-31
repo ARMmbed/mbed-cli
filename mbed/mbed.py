@@ -1714,13 +1714,11 @@ class Program(object):
         target_cfg = self.get_cfg('TARGET')
         target = target if target else target_cfg
 
-        if target and (target.lower() == 'detect' or target.lower() == 'auto'):
+        if not target or (target.lower() == 'detect' or target.lower() == 'auto'):
             detected = self.detect_single_target()
             if detected:
                 target = detected['name']
 
-        if target is None:
-            error("Please specify target using the -m switch or set default target using command \"mbed target\"", 1)
         return target
 
     def get_toolchain(self, toolchain=None):
@@ -1762,7 +1760,7 @@ class Program(object):
         elif len(targets) > 1:
             error("Multiple targets were detected.\nOnly 1 target board should be connected to your system.", 1)
         elif len(targets) == 0:
-            error("No targets were detected.\nPlease make sure a target board is connected to this system.", 1)
+            error("No targets were detected.\nPlease make sure a target board is connected to this system.\nAlternatively, you can specify target using the -m switch or set default target using command \"mbed target\"", 1)
         else:
             action("Detected \"%s\" connected to \"%s\" and using com port \"%s\"" % (targets[0]['name'], targets[0]['mount'], targets[0]['serial']))
             info = targets[0]
