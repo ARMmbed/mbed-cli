@@ -2774,9 +2774,8 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False,
     # Disable icetea if not supported
     if not icetea_supported:
         icetea = False
-    if not os.path.exists(os.path.join(getcwd(), 'TEST_APPS')):
-        warning("Cannot run icetea tests. Current folder does not contain TEST_APPS folder.")
-        icetea = False
+    if icetea and not os.path.exists(os.path.join(getcwd(), 'TEST_APPS')):
+        error("Cannot run icetea tests. Current folder does not contain TEST_APPS folder.", 1)
 
     # Save original working directory
     orig_path = getcwd()
@@ -2870,7 +2869,6 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False,
                 popen(icetea_command_base + ['--compile-list'])
 
             if compile_only or build_and_run_tests:
-
                 # Add icetea binaries in compile list
                 tests_by_name_temp = tests_by_name if tests_by_name else ''
                 if icetea:
