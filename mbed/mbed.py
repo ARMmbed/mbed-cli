@@ -1599,13 +1599,19 @@ class Program(object):
         return None
 
     def requirements_contains(self, library_name):
-        req_path = self.get_requirements() or self.path
+        req_path = self.get_requirements()
+        if not req_path:
+            return None
+
         req_file = 'requirements.txt'
         with open(os.path.join(req_path, req_file), 'r') as f:
             return library_name in f.read()
 
     def check_requirements(self, show_warning=False):
         req_path = self.get_requirements() or self.path
+        if not req_path:
+            return False
+
         req_file = 'requirements.txt'
         missing = []
         try:
@@ -1615,17 +1621,17 @@ class Program(object):
                 for line in f.read().splitlines():
                     pkg = re.sub(r'-', '_', re.sub(r'^([^<>=@]+).*$', r'\1', line).lower())
                     pkg = re.sub(r'^(git|hg|svn|bzr)\+(.*)/([\w.-]+?)(\.(git|hg))?$', r'\3', pkg)
+                    pkg = re.sub(r'\[([\w]+)\]', '', pkg)
                     if not pkg in installed_packages:
                         missing.append(pkg)
 
                 if missing and install_requirements:
                     try:
-                        action("Auto-installing missing Python modules...")
+                        action("Auto-installing missing Python modules (%s)..." % ', '.join(missing))
                         pquery([python_cmd, '-m', 'pip', 'install', '-q', '-r', os.path.join(req_path, req_file)])
                         missing = []
                     except ProcessException:
                         pass
-
         except (IOError, ImportError, OSError):
             pass
 
@@ -1643,6 +1649,8 @@ class Program(object):
                 warning(msg)
             else:
                 error(msg, 1)
+
+        return True
 
 
     # Routines after cloning mbed-os
