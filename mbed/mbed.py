@@ -2608,6 +2608,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
     program.check_requirements(True)
     # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
     orig_path = getcwd()
+    orig_target = target
 
     with cd(program.path):
         tools_dir = os.path.abspath(program.get_tools())
@@ -2714,7 +2715,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                 if not connected:
                     error("The target board you compiled for is not connected to your system.\nPlease reconnect it and retry the last command.", 1)
 
-    program.set_defaults(target=target, toolchain=tchain)
+    program.set_defaults(target=orig_target, toolchain=tchain)
 
 
 # Test command
@@ -2778,6 +2779,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False,
 
     # Save original working directory
     orig_path = getcwd()
+    orig_target = target
 
     macros = program.get_macros()
     tools_dir = program.get_tools()
@@ -2932,7 +2934,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False,
                 if run_only or build_and_run_tests:
                     popen(icetea_command)
 
-            program.set_defaults(target=target, toolchain=tchain)
+            program.set_defaults(target=orig_target, toolchain=tchain)
 
 
 # device management commands
@@ -3008,6 +3010,7 @@ def export(ide=None, target=None, source=False, clean=False, supported=False, ap
         program.check_requirements(True)
     # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
     orig_path = getcwd()
+    orig_target = target
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
         tools_dir = program.get_tools()
@@ -3042,7 +3045,7 @@ def export(ide=None, target=None, source=False, clean=False, supported=False, ap
           + args,
           env=env)
 
-    program.set_defaults(target=target)
+    program.set_defaults(target=orig_target)
 
 
 # Detect command
