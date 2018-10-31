@@ -2776,7 +2776,6 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False,
         icetea = False
     if icetea and not os.path.exists(os.path.join(getcwd(), 'TEST_APPS')):
         error("Cannot run icetea tests. Current folder does not contain TEST_APPS folder.", 1)
-        icetea = False
 
     # Save original working directory
     orig_path = getcwd()
