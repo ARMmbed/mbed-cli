@@ -3344,7 +3344,10 @@ def main():
     try:
         very_verbose = pargs.very_verbose
         verbose = very_verbose or pargs.verbose
-        info('Working path \"%s\" (%s)' % (getcwd(), Repo.pathtype(cwd_root)))
+        pathtype = Repo.pathtype(cwd_root)
+        action('Working path \"%s\" (%s)' % (cwd_root, pathtype))
+        if pathtype != "program":
+            action('Program path \"%s\"' % Program(cwd_root).path)
         status = pargs.command(pargs)
     except ProcessException as e:
         error(
