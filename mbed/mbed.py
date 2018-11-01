@@ -1722,13 +1722,11 @@ class Program(object):
         target_cfg = self.get_cfg('TARGET')
         target = target if target else target_cfg
 
-        if target and (target.lower() == 'detect' or target.lower() == 'auto'):
+        if not target or (target.lower() == 'detect' or target.lower() == 'auto'):
             detected = self.detect_single_target()
             if detected:
                 target = detected['name']
 
-        if target is None:
-            error("Please specify target using the -m switch or set default target using command \"mbed target\"", 1)
         return target
 
     def get_toolchain(self, toolchain=None):
@@ -1770,7 +1768,7 @@ class Program(object):
         elif len(targets) > 1:
             error("Multiple targets were detected.\nOnly 1 target board should be connected to your system.", 1)
         elif len(targets) == 0:
-            error("No targets were detected.\nPlease make sure a target board is connected to this system.", 1)
+            error("No targets were detected.\nPlease make sure a target board is connected to this system.\nAlternatively, you can specify target using the -m switch or set default target using command \"mbed target\"", 1)
         else:
             action("Detected \"%s\" connected to \"%s\" and using com port \"%s\"" % (targets[0]['name'], targets[0]['mount'], targets[0]['serial']))
             info = targets[0]
@@ -2618,6 +2616,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
     program.check_requirements(True)
     # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
     orig_path = getcwd()
+    orig_target = target
 
     with cd(program.path):
         tools_dir = os.path.abspath(program.get_tools())
@@ -2724,7 +2723,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                 if not connected:
                     error("The target board you compiled for is not connected to your system.\nPlease reconnect it and retry the last command.", 1)
 
-    program.set_defaults(target=target, toolchain=tchain)
+    program.set_defaults(target=orig_target, toolchain=tchain)
 
 
 # Test command
@@ -2787,6 +2786,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False,
 
     # Save original working directory
     orig_path = getcwd()
+    orig_target = target
 
     macros = program.get_macros()
     tools_dir = program.get_tools()
@@ -2940,7 +2940,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False,
                 if run_only or build_and_run_tests:
                     popen(icetea_command)
 
-            program.set_defaults(target=target, toolchain=tchain)
+            program.set_defaults(target=orig_target, toolchain=tchain)
 
 
 # device management commands
@@ -3016,6 +3016,7 @@ def export(ide=None, target=None, source=False, clean=False, supported=False, ap
         program.check_requirements(True)
     # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
     orig_path = getcwd()
+    orig_target = target
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
         tools_dir = program.get_tools()
@@ -3050,7 +3051,7 @@ def export(ide=None, target=None, source=False, clean=False, supported=False, ap
           + args,
           env=env)
 
-    program.set_defaults(target=target)
+    program.set_defaults(target=orig_target)
 
 
 # Detect command
