@@ -18,6 +18,7 @@ def test_import(mbed, testrepos):
     popen(['python', mbed, 'import', test1, 'testimport'])
 
     assertls(mbed, 'testimport', [
+        "*",
         "testimport",
         "`- test2",
         "   `- test3",
