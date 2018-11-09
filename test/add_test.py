@@ -20,7 +20,7 @@ def test_add(mbed, testrepos):
         popen(['python', mbed, 'add', test3, "-vv"])
 
     assertls(mbed, 'test1', [
-        "*",
+        "[mbed]",
         "test1",
         "|- test2",
         "|  `- test3",
@@ -38,7 +38,7 @@ def test_import_after_add(mbed, testrepos):
     popen(['python', mbed, 'import', test1, 'testimport', "-vv"])
 
     assertls(mbed, 'testimport', [
-        "*",
+        "[mbed]",
         "testimport",
         "|- test2",
         "|  `- test3",

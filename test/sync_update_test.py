@@ -51,7 +51,7 @@ def test_sync_update_remove(mbed, testrepos):
         popen(['python', mbed, 'update', '-vv'])
 
     assertls(mbed, 'testimport', [
-        "*",
+        "[mbed]",
         "testimport",
         "`- test2",
     ])
@@ -74,7 +74,7 @@ def test_sync_update_add(mbed, testrepos):
         popen(['python', mbed, 'update', '-vv'])
 
     assertls(mbed, 'testimport', [
-        "*",
+        "[mbed]",
         "testimport",
         "`- test2",
         "   |- test3",
@@ -101,7 +101,7 @@ def test_sync_update_move(mbed, testrepos):
         popen(['python', mbed, 'update', '-vv'])
 
     assertls(mbed, 'testimport', [
-        "*",
+        "[mbed]",
         "testimport",
         "`- test2",
         "   `- testmove",

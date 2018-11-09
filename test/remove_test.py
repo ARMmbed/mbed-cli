@@ -18,7 +18,7 @@ def test_remove(mbed, testrepos):
         popen(['python', mbed, 'remove', 'test2'])
 
     assertls(mbed, 'test1', [
-        "*",
+        "[mbed]",
         "test1",
     ])
 
@@ -31,6 +31,6 @@ def test_import_after_remove(mbed, testrepos):
     popen(['python', mbed, 'import', test1, 'testimport'])
 
     assertls(mbed, 'testimport', [
-        "*",
+        "[mbed]",
         "testimport",
     ])

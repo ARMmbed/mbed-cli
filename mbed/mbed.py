@@ -1133,6 +1133,9 @@ class Repo(object):
 
     @classmethod
     def isinsecure(cls, url):
+        path = re.sub(r'^(.+)[#?].*$', r'\1', url)
+        if os.path.isdir(path): # local paths are secure
+            return False
         up = urlparse(url)
         return (not up) or (up.scheme and up.scheme not in ['http', 'https', 'ssh', 'git']) or (up.port and int(up.port) not in [22, 80, 443])
 
