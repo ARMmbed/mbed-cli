@@ -1133,6 +1133,9 @@ class Repo(object):
 
     @classmethod
     def isinsecure(cls, url):
+        path = re.sub(r'^(.+)[#?].*$', r'\1', url)
+        if os.path.isdir(path): # local paths are secure
+            return False
         up = urlparse(url)
         return (not up) or (up.scheme and up.scheme not in ['http', 'https', 'ssh', 'git']) or (up.port and int(up.port) not in [22, 80, 443])
 
@@ -3344,7 +3347,10 @@ def main():
     try:
         very_verbose = pargs.very_verbose
         verbose = very_verbose or pargs.verbose
-        info('Working path \"%s\" (%s)' % (getcwd(), Repo.pathtype(cwd_root)))
+        pathtype = Repo.pathtype(cwd_root)
+        action('Working path \"%s\" (%s)' % (cwd_root, pathtype))
+        if pathtype != "program":
+            action('Program path \"%s\"' % Program(cwd_root).path)
         status = pargs.command(pargs)
     except ProcessException as e:
         error(
