@@ -1736,6 +1736,13 @@ class Program(object):
             error("Please specify toolchain using the -t switch or set default toolchain using command \"mbed toolchain\"", 1)
         return tchain
 
+    def get_profile(self, profile=None):
+        if not profile:
+            profile_cfg = self.get_cfg('PROFILE')
+            if profile_cfg:
+                profile = [profile_cfg]
+        return profile
+
     def set_defaults(self, target=None, toolchain=None):
         if target and not self.get_cfg('TARGET'):
             self.set_cfg('TARGET', target)
@@ -2638,6 +2645,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
     target = program.get_target(target)
     tchain = program.get_toolchain(toolchain)
     macros = program.get_macros()
+    profile = program.get_profile(profile)
 
     if compile_config:
         # Compile configuration
@@ -3150,7 +3158,7 @@ def sterm(port=None, baudrate=None, echo=None, reset=False, sterm=True):
         "Gets, sets or unsets mbed tool configuration options.\n"
         "Options can be global (via the --global switch) or local (per program)\n"
         "Global options are always overridden by local/program options.\n"
-        "Currently supported options: target, toolchain, protocol, depth, cache"))
+        "Currently supported options: target, toolchain, protocol, depth, cache, profile"))
 def config_(var=None, value=None, global_cfg=False, unset=False, list_config=False):
     name = var
     var = str(var).upper()
