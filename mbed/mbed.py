@@ -3367,9 +3367,10 @@ def main():
         very_verbose = pargs.very_verbose
         verbose = very_verbose or pargs.verbose
         pathtype = Repo.pathtype(cwd_root)
-        action('Working path \"%s\" (%s)' % (cwd_root, pathtype))
-        if pathtype != "program":
-            action('Program path \"%s\"' % Program(cwd_root).path)
+        if not sys.argv[1].lower() in ["config", "cfg", "conf"]: # `mbed config` should be parse-friendly
+            action('Working path \"%s\" (%s)' % (cwd_root, pathtype))
+            if pathtype == "library":
+                action('Program path \"%s\"' % Program(cwd_root).path)
         status = pargs.command(pargs)
     except ProcessException as e:
         error(
