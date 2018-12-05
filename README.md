@@ -189,11 +189,11 @@ $ cd mbed-os
 $ mbed releases
 mbed-os (#182bbd51bc8d, tags: latest, mbed-os-5.6.5)
   ...
-  * mbed-os-5.6.0 
-  * mbed-os-5.6.1 
-  * mbed-os-5.6.2 
-  * mbed-os-5.6.3 
-  * mbed-os-5.6.4 
+  * mbed-os-5.6.0
+  * mbed-os-5.6.1
+  * mbed-os-5.6.2
+  * mbed-os-5.6.3
+  * mbed-os-5.6.4
   * mbed-os-5.6.5  <- current
 ```
 
@@ -300,13 +300,13 @@ Removing a library from your program is not the same as deleting the library dir
 Use `mbed add` to add the latest revision of a library:
 
 ```
-$ mbed add https://developer.mbed.org/users/wim/code/TextLCD/
+$ mbed add https://os.mbed.com/users/wim/code/TextLCD/
 ```
 
 Use the `URL#hash` format to add a library from a URL at a specific revision hash:
 
 ```
-$ mbed add https://developer.mbed.org/users/wim/code/TextLCD/#e5a0dcb43ecc
+$ mbed add https://os.mbed.com/users/wim/code/TextLCD/#e5a0dcb43ecc
 ```
 
 #### Specifying a destination directory
@@ -314,7 +314,7 @@ $ mbed add https://developer.mbed.org/users/wim/code/TextLCD/#e5a0dcb43ecc
 If you want to specify a directory to which to add your library, you can give an additional argument to ``add``, which names that directory. For example, If you'd rather add the previous library in a directory called "text-lcd" (instead of TextLCD):
 
 ```
-$ mbed add https://developer.mbed.org/users/wim/code/TextLCD/ text-lcd
+$ mbed add https://os.mbed.com/users/wim/code/TextLCD/ text-lcd
 ```
 
 Although Mbed CLI supports this functionality, we don't encourage it. Adding a library with a name that differs from its source repository can lead to confusion.
@@ -443,7 +443,7 @@ The arguments for *compile* are:
 
 You can find the compiled binary, ELF image, memory usage and link statistics in the `BUILD` subdirectory of your program.
 
-For more information on build profiles, see [our build profiles](https://docs.mbed.com/docs/mbed-os-handbook/en/latest/dev_tools/build_profiles/) and [toolchain profiles](https://docs.mbed.com/docs/mbed-os-handbook/en/latest/advanced/toolchain_profiles/) pages.
+For more information on build profiles, see [our build profiles](https://os.mbed.com/docs/latest/tools/build-profiles.html) and [toolchain profiles](https://os.mbed.com/docs/latest/tools/toolchain-profiles.html) pages.
 
 ### Compiling static libraries
 
@@ -475,7 +475,7 @@ Image: ../threaded_blinky-out/threaded_blinky.bin
 
 ### Compile configuration system
 
-The [compile configuration system](https://docs.mbed.com/docs/mbed-os-handbook/en/5.3/advanced/config_system/) provides a flexible mechanism for configuring the Mbed program, its libraries and the build target.
+The [compile configuration system](https://os.mbed.com/docs/v5.10/reference/configuration.html) provides a flexible mechanism for configuring the Mbed program, its libraries and the build target.
 
 #### Inspecting the configuration
 
@@ -965,7 +965,7 @@ The update command fails if there are changes in your program or library that `m
 
 ### Updating to an upstream version
 
-Before updating a program or a library, it's good to know the names of the stable releases, usually marked with a tag using a common format, such as `1.2`, `v1.0.1`, `r5.6`, `mbed-os-5.6` and so on. 
+Before updating a program or a library, it's good to know the names of the stable releases, usually marked with a tag using a common format, such as `1.2`, `v1.0.1`, `r5.6`, `mbed-os-5.6` and so on.
 
 You can find stable release versions of a program or a library using the `mbed releases` command:
 
@@ -974,11 +974,11 @@ $ cd mbed-os
 $ mbed releases
 mbed-os (#182bbd51bc8d, tags: latest, mbed-os-5.6.5)
   ...
-  * mbed-os-5.6.0 
-  * mbed-os-5.6.1 
-  * mbed-os-5.6.2 
-  * mbed-os-5.6.3 
-  * mbed-os-5.6.4 
+  * mbed-os-5.6.0
+  * mbed-os-5.6.1
+  * mbed-os-5.6.2
+  * mbed-os-5.6.3
+  * mbed-os-5.6.4
   * mbed-os-5.6.5  <- current
 ```
 
@@ -990,12 +990,12 @@ Lastly, you can list unstable releases, such as release candidates, alphas and b
 $ cd mbed-client
 $ mbed releases -u
 mbed-client (#31e5ce203cc0, tags: v3.0.0)
-  * mbed-os-5.0-rc1 
-  * mbed-os-5.0-rc2 
-  * r0.5-rc4 
+  * mbed-os-5.0-rc1
+  * mbed-os-5.0-rc2
+  * r0.5-rc4
   ...
-  * v2.2.0 
-  * v2.2.1 
+  * v2.2.0
+  * v2.2.1
   * v3.0.0  <- current
 ```
 
