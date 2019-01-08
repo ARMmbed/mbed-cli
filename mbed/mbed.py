@@ -37,6 +37,7 @@ import sys
 import re
 import subprocess
 import os
+import json
 import platform
 import contextlib
 import shutil
@@ -220,6 +221,13 @@ def show_progress(title, percent, max_width=80):
 def hide_progress(max_width=80):
     if sys.stdout.isatty():
         sys.stdout.write("\r%s\r" % (' ' * max_width))
+
+def create_default_mbed_app():
+    # Default data content
+    data = {'target_overrides':{'K64F':{'platform.stdio-baud-rate': 9600}}}
+    filehandler = open("mbed_app.json","w")
+    json.dump(data, filehandler, indent=4)
+    filehandler.close()
 
 # Process execution
 class ProcessException(Exception):
@@ -2088,6 +2096,7 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
             try:
                 with cd(d_path):
                     add(url, path=d, depth=depth, protocol=protocol, top=False)
+                    create_default_mbed_app()
             except Exception as e:
                 if os.path.isdir(os.path.join(d_path, d)):
                     rmtree_readonly(os.path.join(d_path, d))
