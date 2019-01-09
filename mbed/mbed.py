@@ -1360,7 +1360,7 @@ class Repo(object):
         lock_file = os.path.join(lock_dir, 'pid')
         timeout = 300
 
-        for i in range(timeout): 
+        for i in range(timeout):
             if i:
                 time.sleep(1)
 
@@ -1395,10 +1395,10 @@ class Repo(object):
                         os.fsync(f)
                     break
                 except (OSError) as e:
-                    ## Windows:  
+                    ## Windows:
                     ##   <type 'exceptions.WindowsError'>    17 [Error 183] Cannot create a file when that file already exists: 'testing'
                     ##   or when concurrent:                 13 WindowsError(5, 'Access is denied')
-                    ## Linux:    <type 'exceptions.OSError'> 17 [Errno 17] File exists: 'testing' 
+                    ## Linux:    <type 'exceptions.OSError'> 17 [Errno 17] File exists: 'testing'
                     ##   or when concurrent & virtualbox     71, OSError(71, 'Protocol error')
                     ##   or when full:                       28, OSError(28, 'No space left on device')
                     if e.errno in (17,13,71,28):
@@ -2604,7 +2604,7 @@ def _safe_append_profile_to_build_path(build_path, profile):
 @subcommand('compile',
     dict(name=['-t', '--toolchain'], help='Compile toolchain. Example: ARM, GCC_ARM, IAR'),
     dict(name=['-m', '--target'], help='Compile target MCU. Example: K64F, NUCLEO_F401RE, NRF51822...'),
-    dict(name=['--profile'], action='append', help='Path of a build profile configuration file. Example: mbed-os/tools/profiles/debug.json'),
+    dict(name=['--profile'], action='append', help='Path of a build profile configuration file (or name of Mbed OS profile). Default: develop'),
     dict(name='--library', dest='compile_library', action='store_true', help='Compile the current program or library as a static library.'),
     dict(name='--config', dest='compile_config', action='store_true', help='Show run-time compile configuration'),
     dict(name='--prefix', dest='config_prefix', action='append', help='Restrict listing to parameters that have this prefix'),
@@ -2751,7 +2751,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
     dict(name='--build', help='Build directory. Default: build/'),
     dict(name=['--profile'], action='append',
-         help='Path of a build profile configuration file. Example: mbed-os/tools/profiles/debug.json'),
+         help='Path of a build profile configuration file (or name of Mbed OS profile). Default: develop'),
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
     dict(name='--test-spec', dest="test_spec", help="Path used for the test spec file used when building and running tests (the default path is the build directory)"),
     dict(name='--app-config', dest="app_config", help="Path of an application configuration file. Default is to look for \"mbed_app.json\""),
@@ -2772,7 +2772,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False,
           compile_only=False, run_only=False, tests_by_name=None, source=False,
           profile=False, build=False, clean=False, test_spec=None,
           app_config=None, test_config=None, coverage=None, make_program=None,
-          new=None, generator=None, regex=None, unittests=None, 
+          new=None, generator=None, regex=None, unittests=None,
           build_data=None, greentea=None, icetea=None):
 
     # Default behaviour is to run only greentea tests
@@ -3011,6 +3011,7 @@ def dev_mgmt(toolchain=None, target=None, source=False, profile=False, build=Fal
     dict(name=['-i', '--ide'], help='IDE to create project files for. Example: UVISION4, UVISION5, GCC_ARM, IAR, COIDE'),
     dict(name=['-m', '--target'], help='Export for target MCU. Example: K64F, NUCLEO_F401RE, NRF51822...'),
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
+    dict(name=['--profile'], action='append', help='Path of a build profile configuration file (or name of Mbed OS profile). Default: debug'),
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
     dict(name=['-S', '--supported'], dest='supported', const=True, choices=['matrix', 'ides'], nargs='?', help='Shows supported matrix of targets and toolchains'),
     dict(name='--app-config', dest="app_config", help="Path of an application configuration file. Default is to look for \"mbed_app.json\""),
@@ -3018,7 +3019,7 @@ def dev_mgmt(toolchain=None, target=None, source=False, profile=False, build=Fal
     help='Generate an IDE project',
     description=(
         "Generate IDE project files for the current program."))
-def export(ide=None, target=None, source=False, clean=False, supported=False, app_config=None, no_requirements=False):
+def export(ide=None, target=None, source=False, profile=["debug"], clean=False, supported=False, app_config=None, no_requirements=False):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
@@ -3056,6 +3057,7 @@ def export(ide=None, target=None, source=False, clean=False, supported=False, ap
           + list(chain.from_iterable(zip(repeat('-D'), macros)))
           + ['-i', ide.lower()]
           + ['-m', target]
+          + list(chain.from_iterable(zip(repeat('--profile'), profile or [])))
           + (['-c'] if clean else [])
           + list(chain.from_iterable(zip(repeat('--source'), source)))
           + (['--app-config', app_config] if app_config else [])
