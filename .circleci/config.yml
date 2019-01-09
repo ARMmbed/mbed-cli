@@ -1,160 +1,162 @@
-version: 2
+version: 2.1
+commands:
+    check_inspection:
+        steps:
+            - run:
+                name: Check inspection commands
+                working_directory: integration_tests/supported-tests
+                command: |
+                    mbed compile --supported
+                    mbed compile --config --prefix mbed
+                    mbed toolchain --supported
+                    mbed target --supported
+                    mbed export --supported
+                    mbed test --compile-list
+    change_mbed_os_version:
+        parameters:
+            version:
+                type: string
+        steps:
+            - run:
+                name: Change version to Mbed OS << parameters.version >>
+                working_directory: integration_tests/supported-tests/mbed-os
+                command: mbed update --clean --clean-files "mbed-os-<< parameters.version >>"
+    run_tests:
+        steps:
+            - run:
+                name: Install GCC ARM Embedded
+                working_directory: /opt
+                command: |
+                    dpkg --add-architecture i386
+                    apt-get -y update
+                    apt-get -y install libc6:i386 libncurses5:i386 libstdc++6:i386
+                    wget -O gcc_arm_embedded.tar.bz2 "https://developer.arm.com/-/media/Files/downloads/gnu-rm/5_3-2016q1/gccarmnoneeabi532016q120160330linuxtar.bz2?revision=417e2623-c259-4a12-aacc-c87200b569c7?product=GNU%20Arm%20Embedded%20Toolchain,32-bit,,Linux,5-2016-q1-update"
+                    tar -jxf gcc_arm_embedded.tar.bz2
+                    echo 'export PATH="/opt/gcc-arm-none-eabi-5_3-2016q1/bin:$PATH"' >> $BASH_ENV
+            - run:
+                name: Configure Git and Mercurial
+                command: |
+                    git config --global user.email "test@mbed.org"
+                    git config --global user.name "mbed Test"
+                    echo -e "[ui]\nusername = mbed Test <test@mbed.org>\n" > ~/.hgrc
+            - checkout
+            - run:
+                name: Install Mbed CLI
+                command: |
+                    pip install -U pytest setuptools
+                    pip install -e .
+                    mbed --version
+            - run:
+                name: Run unit tests
+                command: py.test test
+            - run:
+                name: Configure Mbed CLI for integration tests
+                command: |
+                    mbed toolchain -G GCC_ARM
+                    mbed target -G K64F
+                    mbed config -G protocol https
+                    mkdir integration_tests
+            - run:
+                name: Create a new project
+                working_directory: integration_tests
+                command: mbed new new-test
+            - run:
+                name: Test project inspection
+                working_directory: integration_tests/new-test
+                command: |
+                    mbed ls
+                    mbed releases -r
+            - run:
+                name: Build through "compile" and "test"
+                working_directory: integration_tests/new-test
+                command: |
+                    echo $PATH
+                    ls -l /opt/gcc-arm-none-eabi-5_3-2016q1/bin
+                    mbed compile --source=. --source=mbed-os/TESTS/integration/basic -j 0
+                    mbed test --compile -n mbed-os-tests-integration-basic -j 0
+    run_old_support_tests:
+        steps:
+            - run:
+                name: Ensure importing through mercurial works
+                working_directory: integration_tests
+                command: mbed import https://os.mbed.com/teams/Morpheus/code/mbed-Client-Morpheus-hg hg-test
+            - run:
+                name: Test project inspection, updates, and compiling
+                working_directory: integration_tests/hg-test
+                command: |
+                    mbed ls
+                    mbed releases -r
+                    mbed update b02527cafcde8612ff051fea57e9975aca598807 --clean
+                    mbed update --clean
+                    mbed compile -j 0
+            - run:
+                name: Import Mbed 2 project
+                working_directory: integration_tests
+                command: mbed import https://os.mbed.com/users/samux/code/USBSerial_HelloWorld bld-test
+            - run:
+                name: Test project inspection for Mbed 2 project
+                working_directory: integration_tests/bld-test
+                command: |
+                    mbed ls
+                    mbed releases -r
+            - run:
+                name: Update Mbed library
+                working_directory: integration_tests/bld-test/mbed
+                command: mbed update 85 --clean
+            - run:
+                name: Update Mbed 2 project
+                working_directory: integration_tests/bld-test
+                command: mbed update --clean
+            - run:
+                name: Compile Mbed 2 project
+                working_directory: integration_tests/bld-test
+                command: mbed compile -m LPC1768 -j 0
+            - run:
+                name: Create new project for old Mbed OS support
+                working_directory: integration_tests
+                command: mbed new supported-tests
+            - change_mbed_os_version:
+                version: "5.8.5"
+            - check_inspection
+            - change_mbed_os_version:
+                version: "5.7.6"
+            - check_inspection
+            - change_mbed_os_version:
+                version: "5.6.6"
+            - check_inspection
+            - change_mbed_os_version:
+                version: "5.5.6"
+            - check_inspection
+            - change_mbed_os_version:
+                version: "5.4.6"
+            - check_inspection
+            - change_mbed_os_version:
+                version: "5.2.3"
+            - check_inspection
+            - change_mbed_os_version:
+                version: "5.1.5"
+            - check_inspection
 jobs:
-  py2:
-    machine: true
-    steps:
-      - run: sudo add-apt-repository -y ppa:terry.guo/gcc-arm-embedded
-      - run: sudo apt-get -y update
-      - run: sudo apt-get -y install gcc-arm-none-eabi=4.9.3.2015q3-1trusty1
-
-      - run: python --version
-      - run: pip --version
-      - run: pip install pytest
-      - run: git config --global user.email "test@mbed.org"
-      - run: git config --global user.name "mbed Test"
-      - run: echo -e "[ui]\nusername = mbed Test <test@mbed.org>\n" > ~/.hgrc
-      - checkout
-      - run: pip install -e ./
-
-      - run: mbed --version
-      - run: py.test test
-      - run: mbed toolchain -G GCC_ARM
-      - run: mbed target -G K64F
-      - run: mbed config -G protocol ssh
-      - run: mkdir .tests
-      - run: cd .tests && mbed new new-test
-      - run: cd .tests/new-test && mbed ls
-      - run: cd .tests/new-test && mbed releases -r
-      - run: cd .tests/new-test && mbed compile --source=. --source=mbed-os/TESTS/integration/basic -j 0
-      - run: cd .tests/new-test && mbed test --compile -n mbed-os-tests-integration-basic -j 0
-      - run: cd .tests && mbed import https://developer.mbed.org/teams/Morpheus/code/mbed-Client-Morpheus-hg hg-test
-      - run: cd .tests/hg-test && mbed ls
-      - run: cd .tests/hg-test && mbed releases -r
-      - run: cd .tests/hg-test && mbed update b02527cafcde8612ff051fea57e9975aca598807 --clean
-      - run: cd .tests/hg-test && mbed update --clean
-      - run: cd .tests/hg-test && mbed compile -j 0
-      - run: cd .tests && mbed import https://developer.mbed.org/users/samux/code/USBSerial_HelloWorld bld-test
-      - run: cd .tests/bld-test && mbed ls
-      - run: cd .tests/bld-test && mbed releases -r
-      - run: cd .tests/bld-test/mbed && mbed update 85 --clean
-      - run: cd .tests/bld-test && mbed update --clean
-      - run: cd .tests/bld-test && mbed compile -m LPC1768 -j 0
-      - run: cd .tests && mbed new supported-tests
-      - run: |-
-          cd .tests/supported-tests
-          echo "Testing mbed-os-5.8.5"
-          cd mbed-os
-          mbed update --clean --clean-files "mbed-os-5.8.5"
-          mbed compile --supported
-          mbed compile --config --prefix mbed
-          mbed toolchain --supported
-          mbed target --supported
-          mbed export --supported
-          mbed test --compile-list
-      - run: |-
-          cd .tests/supported-tests
-          echo "Testing mbed-os-5.7.6"
-          cd mbed-os
-          mbed update --clean --clean-files "mbed-os-5.7.5"
-          mbed compile --supported
-          mbed compile --config --prefix mbed
-          mbed toolchain --supported
-          mbed target --supported
-          mbed export --supported
-          mbed test --compile-list
-      - run: |-
-          cd .tests/supported-tests
-          echo "Testing mbed-os-5.6.6"
-          cd mbed-os
-          mbed update --clean --clean-files "mbed-os-5.6.5"
-          mbed compile --supported
-          mbed compile --config --prefix mbed
-          mbed toolchain --supported
-          mbed target --supported
-          mbed export --supported
-          mbed test --compile-list
-      - run: |-
-          cd .tests/supported-tests
-          echo "Testing mbed-os-5.5.6"
-          cd mbed-os
-          mbed update --clean --clean-files "mbed-os-5.5.5"
-          mbed compile --supported
-          mbed compile --config --prefix mbed
-          mbed toolchain --supported
-          mbed target --supported
-          mbed export --supported
-          mbed test --compile-list
-      - run: |-
-          cd .tests/supported-tests
-          echo "Testing mbed-os-5.4.6"
-          cd mbed-os
-          mbed update --clean --clean-files "mbed-os-5.4.5"
-          mbed compile --supported
-          mbed compile --config --prefix mbed
-          mbed toolchain --supported
-          mbed target --supported
-          mbed export --supported
-          mbed test --compile-list
-      - run: |-
-          cd .tests/supported-tests
-          echo "Testing mbed-os-5.2.3"
-          cd mbed-os
-          mbed update --clean --clean-files "mbed-os-5.2.3"
-          mbed compile --supported
-          mbed compile --config --prefix mbed
-          mbed toolchain --supported
-          mbed target --supported
-          mbed export --supported
-          mbed test --compile-list
-      - run: |-
-          cd .tests/supported-tests
-          echo "Testing mbed-os-5.1.5"
-          cd mbed-os
-          mbed update --clean --clean-files "mbed-os-5.1.5"
-          mbed compile --supported
-          mbed compile --config --prefix mbed
-          mbed toolchain --supported
-          mbed target --supported
-          mbed export --supported
-          mbed test --compile-list
-
-  py3:
-    machine: true
-    steps:
-      - run: sudo add-apt-repository -y ppa:terry.guo/gcc-arm-embedded
-      - run: sudo apt-get -y update
-      - run: sudo apt-get -y install gcc-arm-none-eabi=4.9.3.2015q3-1trusty1
-      - run: pyenv install 3.6.0
-      - run: pyenv global 3.6.0
-
-      - run: python --version
-      - run: pip --version
-      - run: pip install pytest
-      - run: git config --global user.email "test@mbed.org"
-      - run: git config --global user.name "mbed Test"
-      - run: echo -e "[ui]\nusername = mbed Test <test@mbed.org>\n" > ~/.hgrc
-      - checkout
-      - run: pip install -e ./
-
-      - run: mbed --version
-      - run: py.test test
-      - run: mbed toolchain -G GCC_ARM
-      - run: mbed target -G K64F
-      - run: mbed config -G protocol ssh
-
-      - run: mkdir .tests
-      - run: cd .tests && mbed new new-test
-      - run: |-
-          cd .tests/new-test/mbed-os
-          git checkout mbed-os-5.9.0
-      - run: cd .tests/new-test && mbed ls
-      - run: cd .tests/new-test && mbed releases -r
-      - run: cd .tests/new-test && mbed compile --source=. --source=mbed-os/TESTS/integration/basic -j 0
-      - run: cd .tests/new-test && mbed test --compile -n mbed-os-tests-integration-basic -j 0
-
+    python27:
+        docker:
+            - image: python:2.7
+        steps:
+            - run_tests
+            - run_old_support_tests
+    python36:
+        docker:
+            - image: python:3.6
+        steps:
+            - run_tests
+    python37:
+        docker:
+            - image: python:3.7
+        steps:
+            - run_tests
 workflows:
-  version: 2
-  build:
-    jobs:
-      - py2
-      - py3
+    version: 2
+    build:
+        jobs:
+            - python27
+            - python36
+            - python37
