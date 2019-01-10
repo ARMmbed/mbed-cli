@@ -86,7 +86,7 @@ $ sudo apt-get install libc6:i386 libncurses5:i386 libstdc++6:i386
 
 ### Installing Mbed CLI
 
-Windows users can use the [Mbed CLI for Windows installer](https://docs.mbed.com/docs/mbed-os-handbook/en/latest/dev_tools/cli_install/) to install Mbed CLI and all necessary requirements with one installer.
+Windows users can use the [Mbed CLI for Windows installer](https://os.mbed.com/docs/latest/tools/windows.html) to install Mbed CLI and all necessary requirements with one installer.
 
 You can get the latest stable version of Mbed CLI through pip by running:
 
@@ -475,7 +475,7 @@ Image: ../threaded_blinky-out/threaded_blinky.bin
 
 ### Compile configuration system
 
-The [compile configuration system](https://os.mbed.com/docs/v5.10/reference/configuration.html) provides a flexible mechanism for configuring the Mbed program, its libraries and the build target.
+The [compile configuration system](https://os.mbed.com/docs/latest/reference/configuration.html) provides a flexible mechanism for configuring the Mbed program, its libraries and the build target.
 
 #### Inspecting the configuration
 
