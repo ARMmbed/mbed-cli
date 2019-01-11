@@ -42,6 +42,28 @@ jobs:
       - run: cd .tests && mbed new supported-tests
       - run: |-
           cd .tests/supported-tests
+          echo "Testing mbed-os-5.10.2"
+          cd mbed-os
+          mbed update --clean --clean-files "mbed-os-5.10.2"
+          mbed compile --supported
+          mbed compile --config --prefix mbed
+          mbed toolchain --supported
+          mbed target --supported
+          mbed export --supported
+          mbed test --compile-list
+      - run: |-
+          cd .tests/supported-tests
+          echo "Testing mbed-os-5.9.6"
+          cd mbed-os
+          mbed update --clean --clean-files "mbed-os-5.9.6"
+          mbed compile --supported
+          mbed compile --config --prefix mbed
+          mbed toolchain --supported
+          mbed target --supported
+          mbed export --supported
+          mbed test --compile-list
+      - run: |-
+          cd .tests/supported-tests
           echo "Testing mbed-os-5.8.5"
           cd mbed-os
           mbed update --clean --clean-files "mbed-os-5.8.5"
@@ -144,13 +166,33 @@ jobs:
 
       - run: mkdir .tests
       - run: cd .tests && mbed new new-test
-      - run: |-
-          cd .tests/new-test/mbed-os
-          git checkout mbed-os-5.9.0
       - run: cd .tests/new-test && mbed ls
       - run: cd .tests/new-test && mbed releases -r
       - run: cd .tests/new-test && mbed compile --source=. --source=mbed-os/TESTS/integration/basic -j 0
       - run: cd .tests/new-test && mbed test --compile -n mbed-os-tests-integration-basic -j 0
+
+      - run: |-
+          cd .tests/supported-tests
+          echo "Testing mbed-os-5.10.2"
+          cd mbed-os
+          mbed update --clean --clean-files "mbed-os-5.10.2"
+          mbed compile --supported
+          mbed compile --config --prefix mbed
+          mbed toolchain --supported
+          mbed target --supported
+          mbed export --supported
+          mbed test --compile-list
+      - run: |-
+          cd .tests/supported-tests
+          echo "Testing mbed-os-5.9.6"
+          cd mbed-os
+          mbed update --clean --clean-files "mbed-os-5.9.6"
+          mbed compile --supported
+          mbed compile --config --prefix mbed
+          mbed toolchain --supported
+          mbed target --supported
+          mbed export --supported
+          mbed test --compile-list
 
 workflows:
   version: 2
