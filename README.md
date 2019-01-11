@@ -443,7 +443,7 @@ The arguments for *compile* are:
 
 You can find the compiled binary, ELF image, memory usage and link statistics in the `BUILD` subdirectory of your program.
 
-For more information on build profiles, see [our build profiles](https://os.mbed.com/docs/latest/tools/build-profiles.html) and [toolchain profiles](https://os.mbed.com/docs/latest/tools/toolchain-profiles.html) pages.
+For more information on build profiles, see [our build profiles](https://os.mbed.com/docs/latest/tools/build-profiles.html) page.
 
 ### Compiling static libraries
 
