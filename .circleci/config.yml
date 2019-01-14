@@ -133,6 +133,10 @@ commands:
             - change_mbed_os_version:
                 version: "5.2.3"
             - check_inspection
+            - run:
+                name: Removing mbed_app.json for 5.1.5
+                working_directory: integration_tests/supported-tests
+                command: rm mbed_app.json
             - change_mbed_os_version:
                 version: "5.1.5"
             - check_inspection
