@@ -2961,7 +2961,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False,
     dict(name=['--profile'], help=""),
     dict(name='--build', help='Build directory. Default: build/'),
     dict(name='--source', action='append', help='Source directory. Default: . (current dir)'),
-    help='device management supcommand',
+    help='device management subcommand',
     add_help=False,
     hidden_aliases=['dev-mgmt', 'dm'],
     description=("Manage Device with Pelion"))
