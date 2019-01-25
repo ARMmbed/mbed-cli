@@ -1933,7 +1933,7 @@ def formaturl(url, format="default"):
     return url
 
 # Wrapper for the MbedTermnal functionality
-def mbed_sterm(port, baudrate=9600, echo=True, reset=False, sterm=False):
+def mbed_sterm(port, baudrate=9600, echo=True, reset=False, trace=None, sterm=False):
     try:
         from .mbed_terminal import MbedTerminal
     except(ValueError): # relative import fails on Python 2 in non-package mode
@@ -1952,7 +1952,7 @@ def mbed_sterm(port, baudrate=9600, echo=True, reset=False, sterm=False):
                 mbed_serial = MbedTerminal(port, baudrate=baudrate, echo=echo)
 
             try:
-                if not mbed_serial.terminal():
+                if not mbed_serial.terminal(trace=trace):
                     error("Unable to open serial terminal.\nMost likely your pyserial is dated and needs to be updated with 'pip install --upgrade pyserial")
             except:
                 pass
@@ -3119,11 +3119,12 @@ def detect():
     dict(name=['-b', '--baudrate'], help='Communication baudrate. Default: 9600'),
     dict(name=['-e', '--echo'], help='Switch local echo on/off. Default: on'),
     dict(name=['-r', '--reset'], action='store_true', help='Reset the targets (via SendBreak) before opening terminal.'),
+    dict(name=['-t', '--trace'], dest='trace', type=str, help='Enable mbed memory tracing output formatter and set reset string to watch for. Default: off'),
     hidden_aliases=['term'],
     help='Open serial terminal to connected target.\n\n',
     description=(
         "Open serial terminal to connected target (usually board), or connect to a user-specified COM port\n"))
-def sterm(port=None, baudrate=None, echo=None, reset=False, sterm=True):
+def sterm(port=None, baudrate=None, echo=None, reset=False, trace=None, sterm=True):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
@@ -3135,7 +3136,7 @@ def sterm(port=None, baudrate=None, echo=None, reset=False, sterm=True):
 
     if port:
         action("Opening serial terminal to the specified COM port \"%s\"" % port)
-        mbed_sterm(port, baudrate=baudrate, echo=echo, reset=reset, sterm=sterm)
+        mbed_sterm(port, baudrate=baudrate, echo=echo, reset=reset, trace=trace, sterm=sterm)
     else:
         action("Detecting connected targets/boards to your system...")
         targets = program.get_detected_targets()
@@ -3147,7 +3148,7 @@ def sterm(port=None, baudrate=None, echo=None, reset=False, sterm=True):
                 action("Opening serial terminal to unknown target at \"%s\"" % target['serial'])
             else:
                 action("Opening serial terminal to \"%s\"" % target['name'])
-            mbed_sterm(target['serial'], baudrate=baudrate, echo=echo, reset=reset, sterm=sterm)
+            mbed_sterm(target['serial'], baudrate=baudrate, echo=echo, reset=reset, trace=trace, sterm=sterm)
 
 
 # Generic config command

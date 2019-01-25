@@ -41,10 +41,15 @@ class MbedTerminal(object):
             self.serial = None
             return
 
-    def terminal(self, print_header=True):
+    def terminal(self, print_header=True, trace=None):
         try:
             import serial.tools.miniterm as miniterm
-        except (IOError, ImportError, OSError):
+            try:
+                from .mbed_debug import MbedTransform
+            except(ValueError):
+                from mbed_debug import MbedTransform
+        except (IOError, ImportError, OSError) as e:
+            print(repr(e))
             return False
 
         term = miniterm.Miniterm(self.serial, echo=self.echo)
@@ -52,6 +57,9 @@ class MbedTerminal(object):
         term.menu_character = '\x14'
         term.set_rx_encoding('UTF-8')
         term.set_tx_encoding('UTF-8')
+
+        if trace:
+            term.rx_transformations += [MbedTransform(reset_str=trace)]
 
         def console_print(text):
             term.console.write('--- %s ---\n' % text)
