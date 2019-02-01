@@ -2981,9 +2981,13 @@ def dev_mgmt(toolchain=None, target=None, source=False, profile=False, build=Fal
     orig_path = getcwd()
     program = Program(getcwd(), True)
     program.check_requirements(True)
+    env = program.get_env()
     with cd(program.path):
         tools_dir = program.get_tools()
 
+    if "MBED_CLOUD_SDK_API_KEY" not in env:
+        error("CLOUD_SDK_API_KEY is not defined. Please see documentation")
+    
     script = os.path.join(tools_dir, 'device_management.py')
     if not os.path.exists(script):
         error('device management is not supported by this version of Mbed OS. Please upgrade.')
@@ -3010,7 +3014,6 @@ def dev_mgmt(toolchain=None, target=None, source=False, profile=False, build=Fal
         args += (['--toolchain', toolchain] if toolchain else [])
         args += (['--mcu', target] if target else [])
         args += (['--build', build_path] if build_path else [])
-    env = program.get_env()
     if "MBED_CLOUD_SDK_HOST" not in env:
         env["MBED_CLOUD_SDK_HOST"] = "https://api.us-east-1.mbedcloud.com"
     popen([python_cmd, '-u', script]
