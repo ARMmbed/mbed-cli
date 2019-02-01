@@ -2622,6 +2622,7 @@ def _safe_append_profile_to_build_path(build_path, profile):
     dict(name=['-c', '--clean'], action='store_true', help='Clean the build directory before compiling'),
     dict(name=['-f', '--flash'], action='store_true', help='Flash the built firmware onto a connected target.'),
     dict(name=['--sterm'], action='store_true', help='Open serial terminal after compiling. Can be chained with --flash'),
+    dict(name=['--baudrate'], help='Serial terminal communication baudrate. Default: 9600'),
     dict(name=['-N', '--artifact-name'], help='Name of the built program or library'),
     dict(name=['-S', '--supported'], dest='supported', const=True, choices=["matrix", "toolchains", "targets"], nargs="?", help='Shows supported matrix of targets and toolchains'),
     dict(name='--app-config', dest="app_config", help="Path of an application configuration file. Default is to look for \"mbed_app.json\"."),
@@ -2712,6 +2713,8 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
                   env=env)
 
             if flash or sterm:
+                baudrate = baudrate or program.get_cfg('TERM_BAUDRATE', 9600)
+
                 try:
                     from mbed_host_tests.host_tests_toolbox import flash_dev
                 except (IOError, ImportError, OSError):
@@ -2738,7 +2741,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
 
                             # reset board and/or connect to serial port
                             if flash or sterm:
-                                mbed_sterm(connected['serial'], reset=flash, sterm=sterm)
+                                mbed_sterm(connected['serial'], baudrate=baudrate, reset=flash, sterm=sterm)
 
                 if not connected:
                     error("The target board you compiled for is not connected to your system.\nPlease reconnect it and retry the last command.", 1)
@@ -3124,7 +3127,8 @@ def detect():
 
 # Serial terminal command
 @subcommand('sterm',
-    dict(name=['-p', '--port'], help='Communication port. Default: auto-detect'),
+    dict(name=['-m', '--target'], help='Compile target MCU. Example: K64F, NUCLEO_F401RE, NRF51822...'),
+    dict(name=['-p', '--port'], help='Communication port. Default: auto-detect. Specifying this will also ignore the -m/--target option above.'),
     dict(name=['-b', '--baudrate'], help='Communication baudrate. Default: 9600'),
     dict(name=['-e', '--echo'], help='Switch local echo on/off. Default: on'),
     dict(name=['-r', '--reset'], action='store_true', help='Reset the targets (via SendBreak) before opening terminal.'),
@@ -3132,7 +3136,7 @@ def detect():
     help='Open serial terminal to connected target.\n\n',
     description=(
         "Open serial terminal to connected target (usually board), or connect to a user-specified COM port\n"))
-def sterm(port=None, baudrate=None, echo=None, reset=False, sterm=True):
+def sterm(target=None, port=None, baudrate=None, echo=None, reset=False, sterm=True):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
@@ -3151,13 +3155,17 @@ def sterm(port=None, baudrate=None, echo=None, reset=False, sterm=True):
         if not targets:
             error("Couldn't detect connected targets/boards to your system.\nYou can manually specify COM port via the '--port' option.", 1)
 
-        for target in targets:
-            if target['name'] is None:
-                action("Opening serial terminal to unknown target at \"%s\"" % target['serial'])
-            else:
-                action("Opening serial terminal to \"%s\"" % target['name'])
-            mbed_sterm(target['serial'], baudrate=baudrate, echo=echo, reset=reset, sterm=sterm)
+        connected = False
+        for _target in targets:
+            if _target['name'] is None:
+                continue
+            elif not target or _target['name'].upper() == target.upper():
+                connected = _target
+                action("Opening serial terminal to \"%s\"" % _target['name'])
+                mbed_sterm(_target['serial'], baudrate=baudrate, echo=echo, reset=reset, sterm=sterm)
 
+        if not connected:
+            error("The specified \"%s\" target/board is not connected to your system" % target)
 
 # Generic config command
 @subcommand('config',
