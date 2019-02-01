@@ -1760,8 +1760,8 @@ class Program(object):
         if toolchain and not self.get_cfg('TOOLCHAIN'):
             self.set_cfg('TOOLCHAIN', toolchain)
 
-    def get_macros(self):
-        macros = []
+    def get_macros(self, macros=[]):
+        # backwards compatibility with old MACROS.txt file
         if os.path.isfile('MACROS.txt'):
             with open('MACROS.txt') as f:
                 macros = f.read().splitlines()
@@ -2613,6 +2613,7 @@ def _safe_append_profile_to_build_path(build_path, profile):
 @subcommand('compile',
     dict(name=['-t', '--toolchain'], help='Compile toolchain. Example: ARM, GCC_ARM, IAR'),
     dict(name=['-m', '--target'], help='Compile target MCU. Example: K64F, NUCLEO_F401RE, NRF51822...'),
+    dict(name=['-D', '--macro'], action='append', help='Add a macro definition'),
     dict(name=['--profile'], action='append', help='Path of a build profile configuration file (or name of Mbed OS profile). Default: develop'),
     dict(name='--library', dest='compile_library', action='store_true', help='Compile the current program or library as a static library.'),
     dict(name='--config', dest='compile_config', action='store_true', help='Show run-time compile configuration'),
@@ -2627,7 +2628,10 @@ def _safe_append_profile_to_build_path(build_path, profile):
     dict(name='--app-config', dest="app_config", help="Path of an application configuration file. Default is to look for \"mbed_app.json\"."),
     help='Compile code using the mbed build tools',
     description="Compile this program using the mbed build tools.")
-def compile_(toolchain=None, target=None, profile=False, compile_library=False, compile_config=False, config_prefix=None, source=False, build=False, clean=False, flash=False, sterm=False, artifact_name=None, supported=False, app_config=None):
+def compile_(toolchain=None, target=None, macro=False, profile=False,
+             compile_library=False, compile_config=False, config_prefix=None,
+             source=False, build=False, clean=False, flash=False, sterm=False,
+             artifact_name=None, supported=False, app_config=None):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
@@ -2656,7 +2660,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
 
     target = program.get_target(target)
     tchain = program.get_toolchain(toolchain)
-    macros = program.get_macros()
+    macros = program.get_macros(macro)
     profile = program.get_profile(profile)
 
     if compile_config:
@@ -2750,6 +2754,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
 @subcommand('test',
     dict(name=['-t', '--toolchain'], help='Compile toolchain. Example: ARM, GCC_ARM, IAR'),
     dict(name=['-m', '--target'], help='Compile target MCU. Example: K64F, NUCLEO_F401RE, NRF51822...'),
+    dict(name=['-D', '--macro'], action='append', help='Add a macro definition'),
     dict(name='--compile-list', dest='compile_list', action='store_true',
          help='List all tests that can be built'),
     dict(name='--run-list', dest='run_list', action='store_true', help='List all built tests that can be ran'),
@@ -2777,12 +2782,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
          help="Run Icetea tests. If used without --greentea flag then run only icetea tests."),
     help='Find, build and run tests',
     description="Find, build, and run tests in a program and libraries")
-def test_(toolchain=None, target=None, compile_list=False, run_list=False,
-          compile_only=False, run_only=False, tests_by_name=None, source=False,
-          profile=False, build=False, clean=False, test_spec=None,
-          app_config=None, test_config=None, coverage=None, make_program=None,
-          new=None, generator=None, regex=None, unittests=None,
-          build_data=None, greentea=None, icetea=None):
+def test_(toolchain=None, target=None, macro=False, compile_list=False, run_list=False, compile_only=False, run_only=False, tests_by_name=None, source=False, profile=False, build=False, clean=False, test_spec=None, app_config=None, test_config=None, coverage=None, make_program=None, new=None, generator=None, regex=None, unittests=None, build_data=None, greentea=None, icetea=None):
 
     # Default behaviour is to run only greentea tests
     if not (greentea or icetea or unittests):
@@ -2808,7 +2808,8 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False,
     orig_path = getcwd()
     orig_target = target
 
-    macros = program.get_macros()
+    macros = program.get_macros(macro)
+    macros.append("MBED_TEST_MODE")
     tools_dir = program.get_tools()
     build_and_run_tests = not compile_list and not run_list and not compile_only and not run_only
 
