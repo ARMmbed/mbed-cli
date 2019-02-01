@@ -1760,7 +1760,7 @@ class Program(object):
         if toolchain and not self.get_cfg('TOOLCHAIN'):
             self.set_cfg('TOOLCHAIN', toolchain)
 
-    def get_macros(self, more_macros=False):
+    def get_macros(self, more_macros=None):
         macros = more_macros or []
         # backwards compatibility with old MACROS.txt file
         if os.path.isfile('MACROS.txt'):
