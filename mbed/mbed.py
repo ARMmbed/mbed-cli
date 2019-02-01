@@ -53,7 +53,7 @@ from contextlib import contextmanager
 
 
 # Application version
-ver = '1.8.3'
+ver = '1.8.4'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
@@ -1618,7 +1618,12 @@ class Program(object):
         with open(os.path.join(req_path, req_file), 'r') as f:
             return library_name in f.read()
 
-    def check_requirements(self, show_warning=False):
+    def check_requirements(self, show_warning_only=False):
+        skip_requirements = self.get_cfg("NO_REQUIREMENTS", False)
+        if skip_requirements:
+            action("Skipping installed requirements check due to configuration flag.")
+            return True
+
         req_path = self.get_requirements() or self.path
         if not req_path:
             return False
@@ -1636,7 +1641,7 @@ class Program(object):
                     if not pkg in installed_packages:
                         missing.append(pkg)
 
-                if missing and install_requirements:
+                if missing and install_requirements and not show_warning_only:
                     try:
                         action("Auto-installing missing Python modules (%s)..." % ', '.join(missing))
                         pquery([python_cmd, '-m', 'pip', 'install', '-q', '-r', os.path.join(req_path, req_file)])
@@ -1648,15 +1653,15 @@ class Program(object):
 
         if missing:
             msg = (
-                "Unable to auto-install required Python modules.\n"
-                "The mbed OS tools in this program require the following Python modules: %s\n"
+                "Missing Python modules were not auto-installed.\n"
+                "The Mbed OS tools in this program require the following Python modules: %s\n"
                 "You can install all missing modules by running \"pip install -r %s\" in \"%s\"" % (', '.join(missing), req_file, req_path))
             if os.name == 'posix' and platform.system() == 'Darwin':
                 msg += "\nOn Mac you might have to install packages as your user by adding the \"--user\" flag"
             elif os.name == 'posix':
                 msg += "\nOn Posix systems (Linux, etc) you might have to switch to superuser account or use \"sudo\""
 
-            if show_warning:
+            if show_warning_only:
                 warning(msg)
             else:
                 error(msg, 1)
@@ -1681,7 +1686,7 @@ class Program(object):
             shutil.copy(os.path.join(mbed_tools_path, 'default_settings.py'), os.path.join(self.path, 'mbed_settings.py'))
 
         if check_reqs:
-            self.check_requirements(True)
+            self.check_requirements()
 
     def add_tools(self, path):
         if not os.path.exists(path):
@@ -2977,7 +2982,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False,
 def dev_mgmt(toolchain=None, target=None, source=False, profile=False, build=False):
     orig_path = getcwd()
     program = Program(getcwd(), True)
-    program.check_requirements(True)
+    program.check_requirements()
     with cd(program.path):
         tools_dir = program.get_tools()
 
