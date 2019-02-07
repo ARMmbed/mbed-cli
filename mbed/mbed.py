@@ -753,7 +753,7 @@ class Git(object):
 
     def fetch():
         info("Fetching revisions from remote repository to \"%s\"" % os.path.basename(getcwd()))
-        popen([git_cmd, 'fetch', '--all', '--tags'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
+        popen([git_cmd, 'fetch', '--all', '--tags', '--force'] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
 
     def discard(clean_files=False):
         info("Discarding local changes in \"%s\"" % os.path.basename(getcwd()))
