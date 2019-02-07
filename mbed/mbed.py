@@ -3013,8 +3013,6 @@ def dev_mgmt(toolchain=None, target=None, source=False, profile=False, build=Fal
         args += (['--mcu', target] if target else [])
         args += (['--build', build_path] if build_path else [])
     env = program.get_env()
-    if "MBED_CLOUD_SDK_HOST" not in env:
-        env["MBED_CLOUD_SDK_HOST"] = "https://api.us-east-1.mbedcloud.com"
     popen([python_cmd, '-u', script]
           + args
           + list(chain.from_iterable(zip(repeat('--source'), source or []))),
