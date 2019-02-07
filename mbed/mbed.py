@@ -1765,7 +1765,7 @@ class Program(object):
         # backwards compatibility with old MACROS.txt file
         if os.path.isfile('MACROS.txt'):
             with open('MACROS.txt') as f:
-                macros = f.read().splitlines()
+                macros.extend(f.read().splitlines())
         return macros
 
 
