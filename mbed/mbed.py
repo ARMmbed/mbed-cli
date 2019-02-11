@@ -1620,7 +1620,12 @@ class Program(object):
         with open(os.path.join(req_path, req_file), 'r') as f:
             return library_name in f.read()
 
-    def check_requirements(self, show_warning=False):
+    def check_requirements(self, require_install=False):
+        skip_requirements = self.get_cfg("NO_REQUIREMENTS", False)
+        if skip_requirements:
+            action("Skipping installed requirements check due to configuration flag.")
+            return True
+
         req_path = self.get_requirements() or self.path
         if not req_path:
             return False
@@ -1638,7 +1643,7 @@ class Program(object):
                     if not pkg in installed_packages:
                         missing.append(pkg)
 
-                if missing and install_requirements:
+                if missing and install_requirements and require_install:
                     try:
                         action("Auto-installing missing Python modules (%s)..." % ', '.join(missing))
                         pquery([python_cmd, '-m', 'pip', 'install', '-q', '-r', os.path.join(req_path, req_file)])
@@ -1650,18 +1655,18 @@ class Program(object):
 
         if missing:
             msg = (
-                "Unable to auto-install required Python modules.\n"
-                "The mbed OS tools in this program require the following Python modules: %s\n"
+                "Missing Python modules were not auto-installed.\n"
+                "The Mbed OS tools in this program require the following Python modules: %s\n"
                 "You can install all missing modules by running \"pip install -r %s\" in \"%s\"" % (', '.join(missing), req_file, req_path))
             if os.name == 'posix' and platform.system() == 'Darwin':
                 msg += "\nOn Mac you might have to install packages as your user by adding the \"--user\" flag"
             elif os.name == 'posix':
                 msg += "\nOn Posix systems (Linux, etc) you might have to switch to superuser account or use \"sudo\""
 
-            if show_warning:
-                warning(msg)
-            else:
+            if require_install:
                 error(msg, 1)
+            else:
+                warning(msg)
 
         return True
 
@@ -2640,7 +2645,7 @@ def compile_(toolchain=None, target=None, macro=False, profile=False,
     args = remainder
     # Find the root of the program
     program = Program(getcwd(), True)
-    program.check_requirements(True)
+    program.check_requirements()
     # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
     orig_path = getcwd()
     orig_target = target
@@ -2800,7 +2805,7 @@ def test_(toolchain=None, target=None, macro=False, compile_list=False, run_list
     args = remainder
     # Find the root of the program
     program = Program(getcwd(), True)
-    program.check_requirements(True)
+    program.check_requirements()
     # Check if current Mbed OS support icetea
     icetea_supported = program.requirements_contains('icetea')
 
@@ -3039,7 +3044,7 @@ def export(ide=None, target=None, source=False, profile=["debug"], clean=False, 
     # Find the root of the program
     program = Program(getcwd(), True)
     if not no_requirements:
-        program.check_requirements(True)
+        program.check_requirements()
     # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
     orig_path = getcwd()
     orig_target = target
@@ -3093,7 +3098,7 @@ def detect():
     args = remainder
     # Find the root of the program
     program = Program(getcwd(), False)
-    program.check_requirements(True)
+    program.check_requirements()
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
         tools_dir = program.get_tools_dir()
