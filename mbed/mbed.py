@@ -1618,7 +1618,7 @@ class Program(object):
         with open(os.path.join(req_path, req_file), 'r') as f:
             return library_name in f.read()
 
-    def check_requirements(self, show_warning_only=False):
+    def check_requirements(self, require_install=False):
         skip_requirements = self.get_cfg("NO_REQUIREMENTS", False)
         if skip_requirements:
             action("Skipping installed requirements check due to configuration flag.")
@@ -1641,7 +1641,7 @@ class Program(object):
                     if not pkg in installed_packages:
                         missing.append(pkg)
 
-                if missing and install_requirements and not show_warning_only:
+                if missing and install_requirements and require_install:
                     try:
                         action("Auto-installing missing Python modules (%s)..." % ', '.join(missing))
                         pquery([python_cmd, '-m', 'pip', 'install', '-q', '-r', os.path.join(req_path, req_file)])
@@ -1661,10 +1661,10 @@ class Program(object):
             elif os.name == 'posix':
                 msg += "\nOn Posix systems (Linux, etc) you might have to switch to superuser account or use \"sudo\""
 
-            if show_warning_only:
-                warning(msg)
-            else:
+            if require_install:
                 error(msg, 1)
+            else:
+                warning(msg)
 
         return True
 
@@ -1686,7 +1686,7 @@ class Program(object):
             shutil.copy(os.path.join(mbed_tools_path, 'default_settings.py'), os.path.join(self.path, 'mbed_settings.py'))
 
         if check_reqs:
-            self.check_requirements()
+            self.check_requirements(True)
 
     def add_tools(self, path):
         if not os.path.exists(path):
@@ -2637,7 +2637,7 @@ def compile_(toolchain=None, target=None, profile=False, compile_library=False, 
     args = remainder
     # Find the root of the program
     program = Program(getcwd(), True)
-    program.check_requirements(True)
+    program.check_requirements()
     # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
     orig_path = getcwd()
     orig_target = target
@@ -2799,7 +2799,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False,
     args = remainder
     # Find the root of the program
     program = Program(getcwd(), True)
-    program.check_requirements(True)
+    program.check_requirements()
     # Check if current Mbed OS support icetea
     icetea_supported = program.requirements_contains('icetea')
 
@@ -2982,7 +2982,7 @@ def test_(toolchain=None, target=None, compile_list=False, run_list=False,
 def dev_mgmt(toolchain=None, target=None, source=False, profile=False, build=False):
     orig_path = getcwd()
     program = Program(getcwd(), True)
-    program.check_requirements()
+    program.check_requirements(True)
     with cd(program.path):
         tools_dir = program.get_tools()
 
@@ -3039,7 +3039,7 @@ def export(ide=None, target=None, source=False, profile=["debug"], clean=False, 
     # Find the root of the program
     program = Program(getcwd(), True)
     if not no_requirements:
-        program.check_requirements(True)
+        program.check_requirements()
     # Remember the original path. this is needed for compiling only the libraries and tests for the current folder.
     orig_path = getcwd()
     orig_target = target
@@ -3093,7 +3093,7 @@ def detect():
     args = remainder
     # Find the root of the program
     program = Program(getcwd(), False)
-    program.check_requirements(True)
+    program.check_requirements()
     # Change directories to the program root to use mbed OS tools
     with cd(program.path):
         tools_dir = program.get_tools_dir()
