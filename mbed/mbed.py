@@ -144,6 +144,8 @@ mbed_sdk_tools_url = 'https://mbed.org/users/mbed_official/code/mbed-sdk-tools'
 # a list of public SCM service (github/butbucket) which support http, https and ssh schemas
 public_scm_services = ['bitbucket.org', 'github.com', 'gitlab.com']
 
+# commands that don't get the current work path shown
+skip_workpath_commands = ["config", "cfg", "conf"]
 
 # verbose logging
 verbose = False
@@ -3375,9 +3377,10 @@ def main():
         very_verbose = pargs.very_verbose
         verbose = very_verbose or pargs.verbose
         pathtype = Repo.pathtype(cwd_root)
-        action('Working path \"%s\" (%s)' % (cwd_root, pathtype))
-        if pathtype != "program":
-            action('Program path \"%s\"' % Program(cwd_root).path)
+        if not sys.argv[1].lower() in skip_workpath_commands:
+            action('Working path \"%s\" (%s)' % (cwd_root, pathtype))
+            if pathtype == "library":
+                action('Program path \"%s\"' % Program(cwd_root).path)
         status = pargs.command(pargs)
     except ProcessException as e:
         error(
