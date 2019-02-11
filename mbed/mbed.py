@@ -53,7 +53,7 @@ from contextlib import contextmanager
 
 
 # Application version
-ver = '1.8.3'
+ver = '1.9.0'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'
