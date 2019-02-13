@@ -2640,7 +2640,7 @@ def _safe_append_profile_to_build_path(build_path, profile):
 def compile_(toolchain=None, target=None, macro=False, profile=False,
              compile_library=False, compile_config=False, config_prefix=None,
              source=False, build=False, clean=False, flash=False, sterm=False,
-             artifact_name=None, supported=False, app_config=None):
+             baudrate=9600, artifact_name=None, supported=False, app_config=None):
     # Gather remaining arguments
     args = remainder
     # Find the root of the program
