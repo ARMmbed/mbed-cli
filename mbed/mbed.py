@@ -153,6 +153,8 @@ very_verbose = False
 install_requirements = True
 cache_repositories = True
 
+mbed_app_file_name = "mbed_app.json"
+
 # stores current working directory for recursive operations
 cwd_root = ""
 _cwd = os.getcwd()
@@ -226,10 +228,10 @@ def hide_progress(max_width=80):
 
 def create_default_mbed_app():
     # Default data content
-    data = {'target_overrides':{'K64F':{'platform.stdio-baud-rate': 9600}}}
-    filehandler = open("mbed_app.json","w")
-    json.dump(data, filehandler, indent=4)
-    filehandler.close()
+    if not os.path.exists(mbed_app_file_name):
+        data = {'target_overrides':{'K64F':{'platform.stdio-baud-rate': 9600}}}
+        with open(mbed_app_file_name, "w") as mbed_app_file:
+            json.dump(data, mbed_app_file, indent=4)
 
 # Process execution
 class ProcessException(Exception):
