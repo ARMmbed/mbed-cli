@@ -396,7 +396,7 @@ class Bld(object):
                         # Download and write the data in 1 MB chunks
                         data = inurl.read(1024 * 1024)
                         outfd.write(data)
-        except:
+        except Exception:
             if os.path.isfile(rev_file):
                 os.remove(rev_file)
             raise Exception(128, "Download failed!\nPlease try again later.")
