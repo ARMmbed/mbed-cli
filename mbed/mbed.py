@@ -389,11 +389,14 @@ class Bld(object):
         try:
             if not os.path.exists(rev_file):
                 action("Downloading library build \"%s\" (might take a while)" % rev)
-                outfd = open(rev_file, 'wb')
                 inurl = urlopen(url)
-                outfd.write(inurl.read())
-                outfd.close()
-        except:
+                with open(rev_file, 'wb') as outfd:
+                    data = None
+                    while data != '':
+                        # Download and write the data in 1 MB chunks
+                        data = inurl.read(1024 * 1024)
+                        outfd.write(data)
+        except Exception:
             if os.path.isfile(rev_file):
                 os.remove(rev_file)
             raise Exception(128, "Download failed!\nPlease try again later.")
