@@ -1051,8 +1051,11 @@ class Repo(object):
 
     @classmethod
     def fromlib(cls, lib=None):
-        with open(lib) as f:
-            ref = f.read(200)
+        try:
+            with open(lib) as f:
+                ref = f.read(200)
+        except UnicodeDecodeError:
+            ref = ""
 
         m_local = re.match(regex_local_ref, ref.strip().replace('\\', '/'))
         m_repo_ref = re.match(regex_url_ref, ref.strip().replace('\\', '/'))
