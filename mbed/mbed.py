@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2016 ARM Limited, All Rights Reserved
+# Copyright (c) 2016-2019 ARM Limited, All Rights Reserved
 # SPDX-License-Identifier: Apache-2.0
 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -3195,7 +3195,7 @@ def sterm(target=None, port=None, baudrate=None, echo=None, reset=False, sterm=T
         "Gets, sets or unsets mbed tool configuration options.\n"
         "Options can be global (via the --global switch) or local (per program)\n"
         "Global options are always overridden by local/program options.\n"
-        "Currently supported options: target, toolchain, protocol, depth, cache, profile"))
+        "Currently supported options: target, toolchain, protocol, depth, cache, profile, color"))
 def config_(var=None, value=None, global_cfg=False, unset=False, list_config=False):
     name = var
     var = str(var).upper()
@@ -3252,9 +3252,13 @@ def config_(var=None, value=None, global_cfg=False, unset=False, list_config=Fal
                     action('%s now set as default %s in program "%s"' % (value, name, program.name))
                 else:
                     value = program.get_cfg(var)
-                    action(('%s' % value) if value else 'No default %s set in program "%s"' % (name, program.name))
+                    if value:
+                        action('%s' % value)
+                    else:
+                        action('No default %s set in program "%s"' % (name, program.name))
+                        error("run with -h for detailed usage help")
     else:
-        subcommands['config'].error("too few arguments")
+        error("Too few arguments. Run with -h for detailed help")
 
 
 # Build system and exporters
