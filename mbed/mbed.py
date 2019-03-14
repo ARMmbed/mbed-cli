@@ -2326,7 +2326,10 @@ def publish(all_refs=None, msg=None, top=True):
         if msg:
             repo.commit(msg)
         else:
-            raw_input('Press enter to commit and publish: ')
+            if sys.version_info[0] == 3:
+                input('Press enter to commit and publish: ')
+            else:
+                raw_input('Press enter to commit and publish: ')
             repo.commit()
 
     try:
