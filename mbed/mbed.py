@@ -1038,8 +1038,6 @@ class Repo(object):
             repo.path = os.path.abspath(path or os.path.join(getcwd(), repo.name))
             repo.url = formaturl(m_repo_ref.group(1))
             repo.rev = m_repo_ref.group(3)
-            if repo.rev and repo.rev != 'latest' and repo.rev != 'tip' and not re.match(r'^([a-fA-F0-9]{6,40})$', repo.rev):
-                error('Invalid revision (%s)' % repo.rev, -1)
         else:
             error('Invalid repository (%s)' % url.strip(), -1)
 
