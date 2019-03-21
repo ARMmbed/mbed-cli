@@ -2925,7 +2925,7 @@ def test_(toolchain=None, target=None, macro=False, compile_list=False, run_list
                 if icetea:
                     proc = popen(icetea_command_base + ['--application-list'], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                  stderr=subprocess.STDOUT)
-                    applications_to_add = proc.stdout.read()
+                    applications_to_add = proc.stdout.read().decode("utf-8")
                     # Filter right row in case that debugger print something there
                     if applications_to_add and 'TEST_APPS-' in applications_to_add:
                         applications_to_add = list(filter(lambda x: 'TEST_APPS-' in x, applications_to_add.split('\n')))[0]
