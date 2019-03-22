@@ -1038,8 +1038,6 @@ class Repo(object):
             repo.path = os.path.abspath(path or os.path.join(getcwd(), repo.name))
             repo.url = formaturl(m_repo_ref.group(1))
             repo.rev = m_repo_ref.group(3)
-            if repo.rev and repo.rev != 'latest' and repo.rev != 'tip' and not re.match(r'^([a-fA-F0-9]{6,40})$', repo.rev):
-                error('Invalid revision (%s)' % repo.rev, -1)
         else:
             error('Invalid repository (%s)' % url.strip(), -1)
 
@@ -1060,6 +1058,12 @@ class Repo(object):
         m_local = re.match(regex_local_ref, ref.strip().replace('\\', '/'))
         m_repo_ref = re.match(regex_url_ref, ref.strip().replace('\\', '/'))
         m_bld_ref = re.match(regex_build_url, ref.strip().replace('\\', '/'))
+
+        if m_repo_ref:
+            rev = m_repo_ref.group(3)
+            if rev and not re.match(r'^([a-fA-F0-9]{6,40})$', rev):
+                error('Named branches not allowed in .lib, offending lib is {} '.format(os.path.basename(lib)))
+
         if not (m_local or m_bld_ref or m_repo_ref):
             warning(
                 "File \"%s\" in \"%s\" uses a non-standard .lib file extension, which is not compatible with the mbed build tools.\n" % (os.path.basename(lib), os.path.split(lib)[0]))
