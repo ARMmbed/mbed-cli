@@ -39,4 +39,8 @@ setup(
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
     ),
+    install_requires=[
+        "pyserial>=3.0,<4.0",
+        "mbed-os-tools<0.1.0",
+    ]
 )
