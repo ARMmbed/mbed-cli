@@ -1817,23 +1817,20 @@ class Program(object):
 
     def get_detected_targets(self):
         targets = []
-        try:
-            import mbed_lstools
-            oldError = None
-            if os.name == 'nt':
-                oldError = ctypes.windll.kernel32.SetErrorMode(1) # Disable Windows error box temporarily. note that SEM_FAILCRITICALERRORS = 1
-            mbeds = mbed_lstools.create()
-            detect_muts_list = mbeds.list_mbeds()
-            if os.name == 'nt':
-                ctypes.windll.kernel32.SetErrorMode(oldError)
+        import mbed_os_tools.detect
+        oldError = None
+        if os.name == 'nt':
+            oldError = ctypes.windll.kernel32.SetErrorMode(1) # Disable Windows error box temporarily. note that SEM_FAILCRITICALERRORS = 1
+        mbeds = mbed_os_tools.detect.create()
+        detect_muts_list = mbeds.list_mbeds()
+        if os.name == 'nt':
+            ctypes.windll.kernel32.SetErrorMode(oldError)
 
-            for mut in detect_muts_list:
-                targets.append({
-                    'id': mut['target_id'], 'name': mut['platform_name'],
-                    'mount': mut['mount_point'], 'serial': mut['serial_port']
-                })
-        except (IOError, ImportError, OSError):
-            return False
+        for mut in detect_muts_list:
+            targets.append({
+                'id': mut['target_id'], 'name': mut['platform_name'],
+                'mount': mut['mount_point'], 'serial': mut['serial_port']
+            })
 
         return targets
 
