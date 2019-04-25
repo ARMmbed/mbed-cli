@@ -1061,7 +1061,7 @@ class Repo(object):
 
         if m_repo_ref:
             rev = m_repo_ref.group(3)
-            if rev and not re.match(r'^([a-fA-F0-9]{6,40})$', rev):
+            if rev and rev != 'latest' and rev != 'tip' and not re.match(r'^([a-fA-F0-9]{6,40})$', rev):
                 error('Named branches not allowed in .lib, offending lib is {} '.format(os.path.basename(lib)))
 
         if not (m_local or m_bld_ref or m_repo_ref):
