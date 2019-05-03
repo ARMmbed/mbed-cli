@@ -1002,6 +1002,26 @@ class Git(object):
             if m.group(1) == "Checking out files":
                 show_progress('Checking out', (float(m.group(3)) / float(m.group(4))) * 100)
 
+_environment_markers = {
+    "platform_system": platform.system()
+}
+
+_comparators = {
+    "!=": lambda a, b: a != b,
+    "==": lambda a, b: a == b,
+}
+
+def _eval_environment_marker(marker):
+    m = re.match(r'\s*([^!=]+)\s*([!=]+)\s*([^\s]*)', marker)
+    if m:
+        try:
+            environment_marker_value = _environment_markers[m.group(1)]
+            environment_marker_cmp = m.group(3).strip("\"'")
+            return _comparators[m.group(2)](environment_marker_value, environment_marker_cmp)
+        except KeyError as e:
+            pass
+
+    raise Exception("Unsupported environment marker: {}".format(marker))
 
 # Repository object
 class Repo(object):
@@ -1652,8 +1672,14 @@ class Program(object):
                     pkg = re.sub(r'-', '_', re.sub(r'^([^<>=@]+).*$', r'\1', line).lower())
                     pkg = re.sub(r'^(git|hg|svn|bzr)\+(.*)/([\w.-]+?)(\.(git|hg))?$', r'\3', pkg)
                     pkg = re.sub(r'\[([\w]+)\]', '', pkg)
-                    if not pkg in installed_packages:
-                        missing.append(pkg)
+                    line_parts = line.split(";")
+
+                    for line_part in line_parts[1:]:
+                        if not _eval_environment_marker(line_part):
+                            break
+                    else:
+                        if not pkg in installed_packages:
+                            missing.append(pkg)
 
                 if missing and install_requirements and require_install:
                     try:
