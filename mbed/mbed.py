@@ -1278,12 +1278,23 @@ class Repo(object):
                     with self.cache_lock_held(url):
                         shutil.copytree(cache, path)
 
+                    #
+                    # If no revision was specified, use the branch associated with the cache. In the
+                    # github case this will be the default branch (IOTBTOOL-279)
+                    #
+                    if not rev:
+                        with cd(cache):
+                            branch = scm.getbranch()
+                            if branch:
+                                rev = branch
+                            else:
+                                # Can't find the cache branch; use a sensible default
+                                rev = scm.default_branch
+
                     with cd(path):
                         scm.seturl(formaturl(url, protocol))
                         scm.cleanup()
                         info("Update cached copy from remote repository")
-                        if not rev:
-                            rev = scm.default_branch
                         scm.update(rev, True, is_local=offline)
                         main = False
                 except (ProcessException, IOError):
