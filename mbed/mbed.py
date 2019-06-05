@@ -303,7 +303,7 @@ def rmtree_readonly(directory):
         shutil.rmtree(directory, onerror=remove_readonly)
 
 def sizeof_fmt(num, suffix='B'):
-    for unit in ['','K','M','G','T','P','E','Z']:
+    for unit in ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']:
         if abs(num) < 1024.0:
             return "%3.1f%s%s" % (num, unit, suffix)
         num /= 1024.0
@@ -1454,7 +1454,7 @@ class Repo(object):
                     ## Linux:    <type 'exceptions.OSError'> 17 [Errno 17] File exists: 'testing'
                     ##   or when concurrent & virtualbox     71, OSError(71, 'Protocol error')
                     ##   or when full:                       28, OSError(28, 'No space left on device')
-                    if e.errno in (17,13,71,28):
+                    if e.errno in (17, 13, 71, 28):
                         continue
                     else:
                         raise e
@@ -1984,8 +1984,10 @@ def formaturl(url, format="default"):
             url = 'https://%s%s%s/%s' % (m.group(2) or '', m.group(6), m.group(8) or '', m.group(9))
     else:
         m = re.match(regex_repo_url, url)
-        if m and m.group(1) == '': # no protocol specified, probably ssh string like "git@github.com:ARMmbed/mbed-os.git"
-            url = 'ssh://%s%s%s/%s' % (m.group(2) or 'git@', m.group(6), m.group(7) or '', m.group(8)) # convert to common ssh URL-like format
+        if m and m.group(1) == '':
+            # No protocol specified, probably ssh string like "git@github.com:ARMmbed/mbed-os.git"
+            # convert to common ssh URL-like format
+            url = 'ssh://%s%s%s/%s' % (m.group(2) or 'git@', m.group(6), m.group(7) or '', m.group(8))
             m = re.match(regex_repo_url, url)
 
         if m:
@@ -1997,20 +1999,24 @@ def formaturl(url, format="default"):
                 url = 'https://%s%s%s/%s' % (m.group(2) if (m.group(2) and (m.group(5) or m.group(3) != 'git')) else '', m.group(6), m.group(7) or '', m.group(8))
     return url
 
-# Wrapper for the MbedTermnal functionality
+
+# Wrapper for the MbedTerminal functionality
 def mbed_sterm(port, baudrate=9600, echo=True, reset=False, sterm=False):
     try:
         from .mbed_terminal import MbedTerminal
-    except(ValueError): # relative import fails on Python 2 in non-package mode
+    except ValueError:  # relative import fails on Python 2 in non-package mode
         from mbed_terminal import MbedTerminal
     except (IOError, ImportError, OSError):
-        error("The serial terminal functionality requires that the 'mbed-terminal' python module is installed.\nYou can install mbed-terminal by running 'pip install mbed-terminal'.", 1)
+        error("The serial terminal functionality requires that the 'mbed-terminal' python module is installed.\n"
+              "You can install mbed-terminal by running 'pip install mbed-terminal'.", 1)
 
     mbed_serial = MbedTerminal(port, baudrate=baudrate, echo=echo)
     if mbed_serial.serial:
         if reset:
             if not mbed_serial.reset():
-                error("Unable to reset the target board connected to your system.\nThis might be caused by an old interface firmware.\nPlease check the board page for new firmware.", 1)
+                error("Unable to reset the target board connected to your system.\n"
+                      "This might be caused by an old interface firmware.\n"
+                      "Please check the board page for new firmware.", 1)
         if sterm:
             # Some boards will reset the COM port after SendBreak, e.g. STLink based
             if not mbed_serial.serial.is_open:
