@@ -25,7 +25,7 @@ testing utilities for testing *neo*.
 - The `testrepos` [fixture](http://pytest.org/latest/fixture.html#fixture) provides a set
   of repositories to test against of varying git/hg combinations. Each repository has a local
   "server" specified by absolute path and the server address can be accesses through the 
-  `testrepos` variable. Currently the repostories are laid out in the following:
+  `testrepos` variable. Currently the repositories are laid out in the following:
 
 ```
 test1
@@ -37,4 +37,4 @@ test1
 - The `assertls` takes a neo path, directory to test, and a structure of repositories to compare
   against the result of `neo ls`.
 
-`ls_test.py` provides the simpliest test to demonstrate the framework.
+`ls_test.py` provides the simplest test to demonstrate the framework.
