@@ -30,7 +30,7 @@ except NameError:
     # Python 3
     basestring = str
     from urllib.parse import urlparse, quote
-    from urllib.request  import urlopen
+    from urllib.request import urlopen
 
 import traceback
 import sys
@@ -48,7 +48,6 @@ from itertools import chain, repeat
 import time
 import zipfile
 import argparse
-from random import randint
 from contextlib import contextmanager
 
 
@@ -971,6 +970,8 @@ class Git(object):
                     f.write(dest.replace("\\", "/") + '\n')
             except IOError:
                 error("Unable to write ignore file in \"%s\"" % os.path.join(getcwd(), Git.ignore_file), 1)
+
+
     def unignore(dest):
         try:
             with open(Git.ignore_file) as f:
@@ -1002,6 +1003,7 @@ class Git(object):
             if m.group(1) == "Checking out files":
                 show_progress('Checking out', (float(m.group(3)) / float(m.group(4))) * 100)
 
+
 _environment_markers = {
     "platform_system": platform.system()
 }
@@ -1011,6 +1013,7 @@ _comparators = {
     "==": lambda a, b: a == b,
 }
 
+
 def _eval_environment_marker(marker):
     m = re.match(r'\s*([^!=]+)\s*([!=]+)\s*([^\s]*)', marker)
     if m:
@@ -1018,10 +1021,11 @@ def _eval_environment_marker(marker):
             environment_marker_value = _environment_markers[m.group(1)]
             environment_marker_cmp = m.group(3).strip("\"'")
             return _comparators[m.group(2)](environment_marker_value, environment_marker_cmp)
-        except KeyError as e:
+        except KeyError:
             pass
 
     raise Exception("Unsupported environment marker: {}".format(marker))
+
 
 # Repository object
 class Repo(object):
@@ -1227,12 +1231,14 @@ class Repo(object):
             if os.path.isdir(os.path.join(self.path, '.'+name)):
                 return scm
 
+        # TODO: what if scm is not found?
+
     def gettags(self, rev=None):
         tags = self.scm.gettags() if self.scm else []
         if rev:
             return [tag[1] for tag in tags if tag[0].startswith(rev)]
-        else:
-            return tags
+
+        return tags
 
     # Pass backend SCM commands and parameters if SCM exists
     def __wrap_scm(self, method):
@@ -1240,6 +1246,7 @@ class Repo(object):
             if self.scm and hasattr(self.scm, method) and callable(getattr(self.scm, method)):
                 with cd(self.path):
                     return getattr(self.scm, method)(*args, **kwargs)
+
         return __scm_call
 
     def __getattr__(self, attr):
@@ -1249,8 +1256,8 @@ class Repo(object):
             wrapper = self.__wrap_scm(attr)
             self.__dict__[attr] = wrapper
             return wrapper
-        else:
-            raise AttributeError("Repo instance doesn't have attribute '%s'" % attr)
+
+        raise AttributeError("Repo instance doesn't have attribute '%s'" % attr)
 
     def remove(self, dest, *args, **kwargs):
         if os.path.isfile(dest):
@@ -1258,6 +1265,7 @@ class Repo(object):
                 os.remove(dest)
             except OSError:
                 pass
+
         return self.scm.remove(dest, *args, **kwargs)
 
     def clone(self, url, path, rev=None, depth=None, protocol=None, offline=False, **kwargs):
@@ -1359,9 +1367,11 @@ class Repo(object):
                     return
 
         if up.hostname in public_scm_services:
-            # Safely convert repo URL to https schema if this is a public SCM service (github/butbucket), supporting all schemas.
-            # This allows anonymous cloning of public repos without having to have ssh keys and associated accounts at github/bitbucket/etc.
-            # Without this anonymous users will get clone errors with ssh repository links even if the repository is public.
+            # Safely convert repo URL to https schema if this is a public SCM service (github/butbucket),
+            # supporting all schemas. This allows anonymous cloning of public repos without having to have
+            # ssh keys and associated accounts at github/bitbucket/etc.
+            # Without this anonymous users will get clone errors with ssh repository links
+            # even if the repository is public.
             # See https://help.github.com/articles/which-remote-url-should-i-use/
             url = formaturl(url, 'https')
 
@@ -1514,15 +1524,18 @@ class Repo(object):
             err = (
                 "Preserving local library \"%s\" in \"%s\".\nPlease publish this library to a remote URL to be able to restore it at any time."
                 "You can use --ignore switch to ignore all local libraries and update only the published ones.\n"
-                "You can also use --clean-deps switch to remove all local libraries. WARNING: This action cannot be undone." % (self.name, self.path))
+                "You can also use --clean-deps switch to remove all local libraries. "
+                "WARNING: This action cannot be undone." % (self.name, self.path))
         elif not clean and self.dirty():
             err = (
                 "Uncommitted changes in \"%s\" in \"%s\".\nPlease discard or stash them first and then retry update.\n"
-                "You can also use --clean switch to discard all uncommitted changes. WARNING: This action cannot be undone." % (self.name, self.path))
+                "You can also use --clean switch to discard all uncommitted changes. "
+                "WARNING: This action cannot be undone." % (self.name, self.path))
         elif not clean_deps and self.outgoing():
             err = (
                 "Unpublished changes in \"%s\" in \"%s\".\nPlease publish them first using the \"publish\" command.\n"
-                "You can also use --clean-deps to discard all local commits and replace the library with the one included in this revision. WARNING: This action cannot be undone." % (self.name, self.path))
+                "You can also use --clean-deps to discard all local commits and replace the library with "
+                "the one included in this revision. WARNING: This action cannot be undone." % (self.name, self.path))
 
         return (False, err) if err else (True, "OK")
 
@@ -1607,14 +1620,14 @@ class Program(object):
             return os.path.join(self.path, 'mbed-os')
         elif self.name == 'mbed-os':
             return self.path
-        else:
-            return None
+
+        return None
 
     def get_mbedlib_dir(self):
         if os.path.isdir(os.path.join(self.path, 'mbed')):
             return os.path.join(self.path, 'mbed')
-        else:
-            return None
+
+        return None
 
     # Gets mbed tools dir (unified)
     def get_tools_dir(self):
@@ -1706,7 +1719,8 @@ class Program(object):
             msg = (
                 "Missing Python modules were not auto-installed.\n"
                 "The Mbed OS tools in this program require the following Python modules: %s\n"
-                "You can install all missing modules by running \"pip install -r %s\" in \"%s\"" % (', '.join(missing), req_file, req_path))
+                "You can install all missing modules by running \"pip install -r %s\" "
+                "in \"%s\"" % (', '.join(missing), req_file, req_path))
             if os.name == 'posix' and platform.system() == 'Darwin':
                 msg += "\nOn Mac you might have to install packages as your user by adding the \"--user\" flag"
             elif os.name == 'posix':
@@ -1734,7 +1748,8 @@ class Program(object):
 
         if (not os.path.isfile(os.path.join(self.path, 'mbed_settings.py')) and
                 os.path.isfile(os.path.join(mbed_tools_path, 'default_settings.py'))):
-            shutil.copy(os.path.join(mbed_tools_path, 'default_settings.py'), os.path.join(self.path, 'mbed_settings.py'))
+            shutil.copy(os.path.join(mbed_tools_path, 'default_settings.py'),
+                        os.path.join(self.path, 'mbed_settings.py'))
 
         if check_reqs:
             self.check_requirements(True)
@@ -1768,7 +1783,8 @@ class Program(object):
     def get_tools(self):
         mbed_tools_path = self.get_tools_dir()
         if not mbed_tools_path:
-            error("The mbed tools were not found in \"%s\". \nYou can run \"mbed deploy\" to install dependencies and tools." % self.path, -1)
+            error("The mbed tools were not found in \"%s\". \nYou can run \"mbed deploy\" "
+                  "to install dependencies and tools." % self.path, -1)
         return mbed_tools_path
 
     def get_env(self):
@@ -1800,7 +1816,8 @@ class Program(object):
         toolchain_cfg = self.get_cfg('TOOLCHAIN')
         tchain = toolchain if toolchain else toolchain_cfg
         if tchain is None:
-            error("Please specify toolchain using the -t switch or set default toolchain using command \"mbed toolchain\"", 1)
+            error("Please specify toolchain using the -t switch or set default toolchain "
+                  "using command \"mbed toolchain\"", 1)
         return tchain
 
     def get_profile(self, profile=None):
@@ -1839,13 +1856,18 @@ class Program(object):
     def detect_single_target(self, info=None):
         targets = self.get_detected_targets()
         if targets == False:
-            error("The target detection requires that the 'mbed-ls' python module is installed.\nYou can install mbed-ls by running \"pip install mbed-ls\".", 1)
+            error("The target detection requires that the 'mbed-ls' python module is installed.\n"
+                  "You can install mbed-ls by running \"pip install mbed-ls\".", 1)
         elif len(targets) > 1:
-            error("Multiple targets were detected.\nOnly 1 target board should be connected to your system.", 1)
+            error("Multiple targets were detected.\n"
+                  "Only 1 target board should be connected to your system.", 1)
         elif len(targets) == 0:
-            error("No targets were detected.\nPlease make sure a target board is connected to this system.\nAlternatively, you can specify target using the -m switch or set default target using command \"mbed target\"", 1)
+            error("No targets were detected.\nPlease make sure a target board is connected to this system.\n"
+                  "Alternatively, you can specify target using the -m switch or "
+                  "set default target using command \"mbed target\"", 1)
         else:
-            action("Detected \"%s\" connected to \"%s\" and using com port \"%s\"" % (targets[0]['name'], targets[0]['mount'], targets[0]['serial']))
+            action("Detected \"%s\" connected to \"%s\" and using "
+                   "com port \"%s\"" % (targets[0]['name'], targets[0]['mount'], targets[0]['serial']))
             info = targets[0]
 
         if info is None:
@@ -1855,13 +1877,14 @@ class Program(object):
     def get_detected_targets(self):
         targets = []
         import mbed_os_tools.detect
-        oldError = None
+        old_error = None
         if os.name == 'nt':
-            oldError = ctypes.windll.kernel32.SetErrorMode(1) # Disable Windows error box temporarily. note that SEM_FAILCRITICALERRORS = 1
+            # Disable Windows error box temporarily. note that SEM_FAILCRITICALERRORS = 1
+            old_error = ctypes.windll.kernel32.SetErrorMode(1)
         mbeds = mbed_os_tools.detect.create()
         detect_muts_list = mbeds.list_mbeds()
         if os.name == 'nt':
-            ctypes.windll.kernel32.SetErrorMode(oldError)
+            ctypes.windll.kernel32.SetErrorMode(old_error)
 
         for mut in detect_muts_list:
             targets.append({
@@ -2024,14 +2047,18 @@ def mbed_sterm(port, baudrate=9600, echo=True, reset=False, sterm=False):
 
             try:
                 if not mbed_serial.terminal():
-                    error("Unable to open serial terminal.\nMost likely your pyserial is dated and needs to be updated with 'pip install --upgrade pyserial")
+                    error("Unable to open serial terminal.\nMost likely your pyserial is "
+                          "outdated and needs to be updated with 'pip install --upgrade pyserial")
             except:
                 pass
 
 
 # Subparser handling
 parser = argparse.ArgumentParser(prog='mbed',
-    description="Command-line code management tool for ARM mbed OS - http://www.mbed.com\nversion %s\n\nUse \"mbed <command> -h|--help\" for detailed help.\nOnline manual and guide available at https://github.com/ARMmbed/mbed-cli" % ver,
+    description="Command-line code management tool for ARM mbed OS - http://www.mbed.com\n"
+                "version %s\n\n"
+                "Use \"mbed <command> -h|--help\" for detailed help.\n"
+                "Online manual and guide available at https://github.com/ARMmbed/mbed-cli" % ver,
     formatter_class=argparse.RawTextHelpFormatter)
 subparsers = parser.add_subparsers(title="Commands", metavar="           ")
 parser.add_argument("--version", action="store_true", dest="version", help="print version number and exit")
@@ -2100,7 +2127,8 @@ def subcommand(name, *args, **kwargs):
     description=(
         "Creates a new mbed program if executed within a non-program location.\n"
         "Alternatively creates an mbed library if executed within an existing program.\n"
-        "When creating new program, the latest mbed-os release will be downloaded/added\n unless --create-only is specified.\n"
+        "When creating new program, the latest mbed-os release will be downloaded/added\n"
+        "unless --create-only is specified.\n"
         "Supported source control management: git, hg"))
 def new(name, scm='git', program=False, library=False, mbedlib=False, create_only=False, depth=None, protocol=None, offline=False, no_requirements=False):
     global cwd_root
@@ -2130,7 +2158,8 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
         if os.path.isdir(d_path) and Repo.isrepo(d_path):
             repo = Repo.fromrepo(d_path)
             if repo.scm.name != scm:
-                error("A repository already exists in \"%s\" based on %s. Please select a different name or location." % (d_path, scm), 1)
+                error("A repository already exists in \"%s\" based on %s. "
+                      "Please select a different name or location." % (d_path, scm), 1)
         else:
             repo_scm = [s for s in scms.values() if s.name == scm.lower()]
             if not repo_scm:
@@ -2203,14 +2232,19 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, insecure=Fa
     if top:
         p = Program(path)
         if p and not p.is_cwd:
-            error("Cannot import program in the specified location \"%s\" because it's already part of a program \"%s\".\n"
-                  "Please change your working directory to a different location or use \"mbed add\" to import the URL as a library." % (os.path.abspath(repo.path), p.name), 1)
+            error("Cannot import program in the specified location \"%s\" because "
+                  "it's already part of a program \"%s\".\n"
+                  "Please change your working directory to a different location or "
+                  "use \"mbed add\" to import the URL as a library." % (os.path.abspath(repo.path), p.name), 1)
 
     protocol = protocol or Program().get_cfg('PROTOCOL')
     insecure = insecure or Program().get_cfg('INSECURE')
 
     if not insecure and Repo.isinsecure(url):
-        error("Cannot import \"%s\" in \"%s\" due to arbitrary service schema/port in the repository URL.\nRepositories are usually hosted on service port 443 (https), 80 (http), or 22 (ssh).\nYou can use the \"--insecure\" switch to enable the use of arbitrary repository URLs." % (repo.url, repo.path), 255)
+        error("Cannot import \"%s\" in \"%s\" due to arbitrary service schema/port in the repository URL.\n"
+              "Repositories are usually hosted on service port 443 (https), 80 (http), or 22 (ssh).\n"
+              "You can use the \"--insecure\" switch to enable the use of "
+              "arbitrary repository URLs." % (repo.url, repo.path), 255)
 
     if os.path.isdir(repo.path) and len(os.listdir(repo.path)) > 1:
         error("Directory \"%s\" is not empty. Please ensure that the destination folder is empty." % repo.path, 1)
@@ -2229,7 +2263,8 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, insecure=Fa
             except ProcessException as e:
                 err = "Unable to update \"%s\" to %s" % (repo.name, repo.revtype(repo.rev))
                 if depth:
-                    err = err + ("\nThe --depth option might prevent fetching the whole revision tree and checking out %s." % (repo.revtype(repo.rev)))
+                    err = err + ("\nThe --depth option might prevent fetching the "
+                                 "whole revision tree and checking out %s." % (repo.revtype(repo.rev)))
                 if ignore:
                     warning(err)
                 else:
@@ -2357,8 +2392,10 @@ def publish(all_refs=None, msg=None, top=True):
     repo = Repo.fromrepo()
     if repo.is_local:
         error(
-            "%s \"%s\" in \"%s\" is a local repository.\nPlease associate it with a remote repository URL before attempting to publish.\n"
-            "Read more about publishing local repositories here:\nhttps://github.com/ARMmbed/mbed-cli/#publishing-local-program-or-library" % ("Program" if top else "Library", repo.name, repo.path), 1)
+            "%s \"%s\" in \"%s\" is a local repository.\n"
+            "Please associate it with a remote repository URL before attempting to publish.\n"
+            "Read more about publishing local repositories here:\n"
+            "https://github.com/ARMmbed/mbed-cli/#publishing-local-program-or-library" % ("Program" if top else "Library", repo.name, repo.path), 1)
 
     for lib in repo.libs:
         if lib.check_repo():
@@ -2426,13 +2463,17 @@ def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=Fa
 
     if top and not rev and repo.isdetached():
         error(
-            "This %s is in detached HEAD state, and you won't be able to receive updates from the remote repository until you either checkout a branch or create a new one.\n"
-            "You can checkout a branch using \"%s checkout <branch_name>\" command before running \"mbed update\"." % (cwd_type, repo.scm.name), 1)
+            "This %s is in detached HEAD state, and you won't be able to receive updates from the "
+            "remote repository until you either checkout a branch or create a new one.\n"
+            "You can checkout a branch using \"%s checkout <branch_name>\" command before "
+            "running \"mbed update\"." % (cwd_type, repo.scm.name), 1)
 
     if repo.isdetached() and latest_deps:
         warning(
-            "The repo %s is in detached HEAD state, and you won't be able to receive updates from the remote repository until you either checkout a branch or create a new one.\n"
-            "You can checkout a branch using \"%s checkout <branch_name>\" command before running \"mbed update\"." % (repo.name, repo.scm.name))
+            "The repo %s is in detached HEAD state, and you won't be able to receive updates from "
+            "the remote repository until you either checkout a branch or create a new one.\n"
+            "You can checkout a branch using \"%s checkout <branch_name>\" command before "
+            "running \"mbed update\"." % (repo.name, repo.scm.name))
 
     if repo.is_local and not repo.rev:
         action("Skipping unpublished empty %s \"%s\"" % (
@@ -2450,9 +2491,11 @@ def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=Fa
         except ProcessException as e:
             err = "Unable to update \"%s\" to %s" % (repo.name, repo.revtype(rev))
             if offline:
-                err = err + "\nThis might be caused by offline mode ('--offline' used). You should try without offline mode."
+                err = err + "\nThis might be caused by offline mode ('--offline' used). " \
+                            "You should try without offline mode."
             elif depth:
-                err = err + ("\nThis might be caused by the '--depth' option, which prevents fetching the whole revision history." % (repo.revtype(repo.rev)))
+                err = err + ("\nThis might be caused by the '--depth' option, which "
+                             "prevents fetching the whole revision history." % (repo.revtype(repo.rev)))
             if ignore:
                 warning(err)
             else:
@@ -2463,9 +2506,11 @@ def update(rev=None, clean=False, clean_files=False, clean_deps=False, ignore=Fa
             repo.sync()
             repo.write()
 
-    # Compare library references (.lib) before and after update, and remove libraries that do not have references in the current revision
+    # Compare library references (.lib) before and after update, and remove libraries that
+    # do not have references in the current revision
     for lib in repo_orig.libs:
-        if not os.path.isfile(lib.lib) and os.path.isdir(lib.path): # Library reference doesn't exist in the new revision. Will try to remove library to reproduce original structure
+        if not os.path.isfile(lib.lib) and os.path.isdir(lib.path):
+            # Library reference doesn't exist in the new revision. Will try to remove library to reproduce original structure
             with cd(lib.path):
                 lib_repo = Repo.fromrepo(lib.path)
                 gc, msg = lib_repo.can_update(clean, clean_deps)
@@ -2788,7 +2833,9 @@ def compile_(toolchain=None, target=None, macro=False, profile=False,
                 try:
                     from mbed_host_tests.host_tests_toolbox import flash_dev
                 except (IOError, ImportError, OSError):
-                    error("The '-f/--flash' option requires that the 'mbed-greentea' python module is installed.\nYou can install mbed-greentea by running \"%s -m pip install mbed-greentea\"." % python_cmd, 1)
+                    error("The '-f/--flash' option requires that the 'mbed-greentea' python module "
+                          "is installed.\nYou can install mbed-greentea by "
+                          "running \"%s -m pip install mbed-greentea\"." % python_cmd, 1)
 
                 connected = False
                 targets = program.get_detected_targets()
@@ -2814,7 +2861,8 @@ def compile_(toolchain=None, target=None, macro=False, profile=False,
                                 mbed_sterm(connected['serial'], baudrate=baudrate, reset=flash, sterm=sterm)
 
                 if not connected:
-                    error("The target board you compiled for is not connected to your system.\nPlease reconnect it and retry the last command.", 1)
+                    error("The target board you compiled for is not connected to your system.\n"
+                          "Please reconnect it and retry the last command.", 1)
 
     program.set_defaults(target=orig_target, toolchain=tchain)
 
@@ -3174,7 +3222,8 @@ def detect():
             if very_verbose:
                 error(str(e))
     else:
-        warning("The mbed-os tools were not found in \"%s\". \nLimited information will be shown about connected targets/boards" % program.path)
+        warning("The mbed-os tools were not found in \"%s\". \nLimited information will be "
+                "shown about connected targets/boards" % program.path)
         targets = program.get_detected_targets()
         if targets:
             unknown_found = False
@@ -3218,7 +3267,8 @@ def sterm(target=None, port=None, baudrate=None, echo=None, reset=False, sterm=T
         action("Detecting connected targets/boards to your system...")
         targets = program.get_detected_targets()
         if not targets:
-            error("Couldn't detect connected targets/boards to your system.\nYou can manually specify COM port via the '--port' option.", 1)
+            error("Couldn't detect connected targets/boards to your system.\n"
+                  "You can manually specify COM port via the '--port' option.", 1)
 
         connected = False
         for _target in targets:
@@ -3292,7 +3342,9 @@ def config_(var=None, value=None, global_cfg=False, unset=False, list_config=Fal
             if program.is_cwd and not var == 'ROOT':
                 error(
                     "Could not find mbed program in current path \"%s\".\n"
-                    "Change the current directory to a valid mbed program, set the current directory as an mbed program with \"mbed config root .\", or use the '--global' option to set global configuration." % program.path)
+                    "Change the current directory to a valid mbed program, set the current directory "
+                    "as an mbed program with \"mbed config root .\", or use the '--global' option "
+                    "to set global configuration." % program.path)
             with cd(program.path):
                 if unset:
                     if program.set_cfg(var, None):
@@ -3364,7 +3416,8 @@ def cache_(on=False, off=False, dir=None, ls=False, purge=False, global_cfg=Fals
         action("Cache location \"%s\"" % cfg['cache_dir'])
     elif cmd == 'dir':
         if not argument:
-            error("Please specify directory or path to cache repositories. Alternatively specify \"default\" to cache repositories in the default user home location.")
+            error("Please specify directory or path to cache repositories. Alternatively "
+                  "specify \"default\" to cache repositories in the default user home location.")
         if not os.path.exists(argument):
             try:
                 os.makedirs(argument)
@@ -3384,7 +3437,6 @@ def cache_(on=False, off=False, dir=None, ls=False, purge=False, global_cfg=Fals
                     size += os.path.getsize(os.path.join(dirpath, f))
             return size
         action("Listing cached repositories in \"%s\"" % cfg['cache_base'])
-        repos = []
         total_size = 0
         for dirpath, dirs, files in os.walk(cfg['cache_dir']):
             dirs[:] = [d for d in dirs  if not d.startswith('.')]
