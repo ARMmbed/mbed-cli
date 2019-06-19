@@ -3426,7 +3426,7 @@ def main():
 
     # Python 3 backwards compatability warning
     if sys.version_info[0] == 3:
-        warning("If you're using Python 3 with Mbed OS 5.8 and earlier versions, Python errors will occur when compiling, testing and exporting")
+        warning("Python 3 is not yet fully supported: Python errors may occur when compiling, testing and exporting")
 
     pargs, remainder = parser.parse_known_args()
     status = 1
@@ -3461,10 +3461,6 @@ def main():
         if very_verbose:
             traceback.print_exc(file=sys.stdout)
         error("Unknown Error: %s" % e, 255)
-    finally:
-        # Warn user if Python 3 might have caused an exception.
-        if status and sys.version_info[0] == 3:
-            warning("Using Python 3 with Mbed OS 5.8 and earlier can cause errors with compiling, testing and exporting");
 
     sys.exit(status or 0)
 
