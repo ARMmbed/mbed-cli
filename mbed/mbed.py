@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2016-2019 ARM Limited, All Rights Reserved
+# Copyright (c) 2016-2019 Arm Limited, All Rights Reserved
 # SPDX-License-Identifier: Apache-2.0
 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,7 +53,7 @@ from contextlib import contextmanager
 
 
 # Application version
-ver = '1.10.0'
+ver = '1.10.1'
 
 # Default paths to Mercurial and Git
 hg_cmd = 'hg'

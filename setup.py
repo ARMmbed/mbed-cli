@@ -1,4 +1,4 @@
-# Copyright (c) 2016 ARM Limited, All Rights Reserved
+# Copyright (c) 2016-2019 ARM Limited, All Rights Reserved
 # SPDX-License-Identifier: Apache-2.0
 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,12 +18,12 @@ with open("README.md", "r") as fh:
 
 setup(
     name="mbed-cli",
-    version="1.10.0",
+    version="1.10.1",
     description="Arm Mbed command line tool for repositories version control, publishing and updating code from remotely hosted repositories (GitHub, GitLab and mbed.com), and invoking Mbed OS own build system and export functions, among other operations",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url='http://github.com/ARMmbed/mbed-cli',
-    author='ARM mbed',
+    author='Arm mbed',
     author_email='support@mbed.org',
     packages=["mbed"],
     entry_points={
