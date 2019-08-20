@@ -2727,6 +2727,7 @@ def compile_(toolchain=None, target=None, macro=False, profile=False,
               + ['-t', tchain, '-m', target]
               + list(chain.from_iterable(zip(repeat('--source'), source)))
               + (['-v'] if verbose else [])
+              + (['--app-config', app_config] if app_config else [])
               + (list(chain.from_iterable(zip(repeat('--prefix'), config_prefix))) if config_prefix else []),
               env=env)
     else:
