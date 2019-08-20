@@ -2725,7 +2725,6 @@ def compile_(toolchain=None, target=None, macro=False, profile=False,
         # Compile configuration
         popen([python_cmd, os.path.join(tools_dir, 'get_config.py')]
               + ['-t', tchain, '-m', target]
-              + list(chain.from_iterable(zip(repeat('--profile'), profile or [])))
               + list(chain.from_iterable(zip(repeat('--source'), source)))
               + (['-v'] if verbose else [])
               + (list(chain.from_iterable(zip(repeat('--prefix'), config_prefix))) if config_prefix else []),
