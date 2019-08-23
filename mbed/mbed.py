@@ -1905,6 +1905,7 @@ class Cfg(object):
 
     # Sets config value
     def set(self, var, val):
+        retval = False
         if not re.match(r'^([\w+-]+)$', var):
             error("%s is invalid config variable name" % var)
 
@@ -1926,8 +1927,10 @@ class Cfg(object):
         try:
             with open(fl, 'w') as f:
                 f.write('\n'.join(lines) + '\n')
+                retval = True
         except (IOError, OSError):
             warning("Unable to write config file %s" % fl)
+        return retval
 
     # Gets config value
     def get(self, var, default_val=None):
@@ -3286,11 +3289,11 @@ def config_(var=None, value=None, global_cfg=False, unset=False, list_config=Fal
                     "Change the current directory to a valid mbed program, set the current directory as an mbed program with \"mbed config root .\", or use the '--global' option to set global configuration." % program.path)
             with cd(program.path):
                 if unset:
-                    program.set_cfg(var, None)
-                    action('Unset default %s in program "%s"' % (name, program.name))
+                    if program.set_cfg(var, None):
+                        action('Unset default %s in program "%s"' % (name, program.name))
                 elif value:
-                    program.set_cfg(var, value)
-                    action('%s now set as default %s in program "%s"' % (value, name, program.name))
+                    if program.set_cfg(var, value):
+                        action('%s now set as default %s in program "%s"' % (value, name, program.name))
                 else:
                     value = program.get_cfg(var)
                     if value:
