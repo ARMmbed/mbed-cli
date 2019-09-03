@@ -2830,25 +2830,27 @@ def compile_(toolchain=None, target=None, macro=False, profile=False,
     dict(name='--test-spec', dest="test_spec", help="Path used for the test spec file used when building and running tests (the default path is the build directory)"),
     dict(name='--app-config', dest="app_config", help="Path of an application configuration file. Default is to look for \"mbed_app.json\""),
     dict(name='--test-config', dest="test_config", help="Path or mbed OS keyword of a test configuration file. Example: ethernet, odin_wifi, or path/to/config.json"),
-    dict(name='--coverage', choices=['html', 'xml', 'both'], help='Generate code coverage report for unit tetsts'),
-    dict(name=['--make-program'], choices=['gmake', 'make', 'mingw32-make', 'ninja'], help='Which make program to use for unit tests'),
-    dict(name=['--generator'], choices=['Unix Makefiles', 'MinGW Makefiles', 'Ninja'], help='Which CMake generator to use for unit tests'),
-    dict(name='--new', help='generate files for a new unit test', metavar="FILEPATH"),
-    dict(name=['-r', '--regex'], help='Run unit tests matching regular expression'),
+    dict(name='--coverage', choices=['html', 'xml', 'both'], help='Generate code coverage report for unit or module tests'),
+    dict(name=['--make-program'], choices=['gmake', 'make', 'mingw32-make', 'ninja'], help='Which make program to use for unit or module tests'),
+    dict(name=['--generator'], choices=['Unix Makefiles', 'MinGW Makefiles', 'Ninja'], help='Which CMake generator to use for unit or module tests'),
+    dict(name='--new', help='generate files for a new unit or module test', metavar="FILEPATH"),
+    dict(name=['-r', '--regex'], help='Run unit or module tests matching regular expression'),
     dict(name=['--unittests'], action="store_true", help='Run only unit tests'),
+    dict(name=['--moduletests'], action="store_true", help='Run only module tests'),
     dict(name='--build-data', dest="build_data", default=None, help="Dump build_data to this file"),
     dict(name=['--greentea'], dest="greentea", action='store_true', default=False, help="Run Greentea tests"),
     dict(name=['--icetea'], dest="icetea", action='store_true', default=False,
          help="Run Icetea tests. If used without --greentea flag then run only icetea tests."),
     help='Find, build and run tests',
     description="Find, build, and run tests in a program and libraries")
-def test_(toolchain=None, target=None, macro=False, compile_list=False, run_list=False, compile_only=False, run_only=False, tests_by_name=None, source=False, profile=False, build=False, clean=False, test_spec=None, app_config=None, test_config=None, coverage=None, make_program=None, new=None, generator=None, regex=None, unittests=None, build_data=None, greentea=None, icetea=None):
+def test_(toolchain=None, target=None, macro=False, compile_list=False, run_list=False, compile_only=False, run_only=False, tests_by_name=None, source=False, profile=False, build=False, clean=False, test_spec=None, app_config=None, test_config=None, coverage=None, make_program=None, new=None, generator=None, regex=None, unittests=None, build_data=None, greentea=None, icetea=None, moduletests=None):
 
     # Default behaviour is to run only greentea tests
-    if not (greentea or icetea or unittests):
+    if not (greentea or icetea or unittests or moduletests):
         greentea = True
         icetea = False
         unittests = False
+        moduletests = False
 
     # Gather remaining arguments
     args = remainder
@@ -2907,6 +2909,36 @@ def test_(toolchain=None, target=None, macro=False, compile_list=False, run_list
                         env=env)
             else:
                 warning("Unit testing is not supported with this Mbed OS version.")
+        elif moduletests:
+            mbed_os_dir = program.get_os_dir()
+            if mbed_os_dir is None:
+                error("No Mbed OS directory found.")
+            moduletests_dir = os.path.join(mbed_os_dir, "MODULETESTS")
+
+            tool = os.path.join(moduletests_dir, "mbed_moduletest.py")
+            if os.path.exists(tool):
+                # Setup the build path if not specified
+                build_path = build
+                if not build_path:
+                    build_path = os.path.join(os.path.relpath(program.path, orig_path), program.build_dir, 'moduletests')
+
+                # Run module testing tools
+                popen([python_cmd, tool]
+                        + (["--compile"] if compile_only else [])
+                        + (["--run"] if run_only else [])
+                        + (["--clean"] if clean else [])
+                        + (["--debug"] if profile and "debug" in profile else [])
+                        + (["--coverage", coverage] if coverage else [])
+                        + (["--make-program", make_program] if make_program else [])
+                        + (["--generator", generator] if generator else [])
+                        + (["--regex", regex] if regex else [])
+                        + ["--build", build_path]
+                        + (["--new", new] if new else [])
+                        + (["--verbose"] if verbose else [])
+                        + remainder,
+                        env=env)
+            else:
+                warning("Module testing is not supported with this Mbed OS version.")
         elif icetea or greentea:
             target = program.get_target(target)
             tchain = program.get_toolchain(toolchain)
