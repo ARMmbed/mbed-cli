@@ -3431,9 +3431,9 @@ def main():
     pargs, remainder = parser.parse_known_args()
     status = 1
 
+    very_verbose = pargs.very_verbose
+    verbose = very_verbose or pargs.verbose
     try:
-        very_verbose = pargs.very_verbose
-        verbose = very_verbose or pargs.verbose
         pathtype = Repo.pathtype(cwd_root)
         if not sys.argv[1].lower() in skip_workpath_commands:
             action('Working path \"%s\" (%s)' % (cwd_root, pathtype))
@@ -3441,12 +3441,13 @@ def main():
                 action('Program path \"%s\"' % Program(cwd_root).path)
         status = pargs.command(pargs)
     except ProcessException as e:
+        tip = "" if verbose else "\nTip: You could retry the last command with \"-v\" flag for verbose output\n"
+
         error(
             "\"%s\" returned error.\n"
             "Code: %d\n"
             "Path: \"%s\"\n"
-            "Command: \"%s\"\n"
-            "Tip: You could retry the last command with \"-v\" flag for verbose output\n" % (e.args[1], e.args[0], e.args[3], e.args[2]), e.args[0])
+            "Command: \"%s\"%s" % (e.args[1], e.args[0], e.args[3], e.args[2], tip))
     except OSError as e:
         if e.args[0] == errno.ENOENT:
             error(
