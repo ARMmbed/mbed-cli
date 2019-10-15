@@ -3424,6 +3424,7 @@ def main():
         log(ver+"\n")
         sys.exit(0)
 
+
     # Python 3 backwards compatability warning
     if sys.version_info[0] == 3:
         warning("Python 3 is not yet fully supported: Python errors may occur when compiling, testing and exporting")
