@@ -47,5 +47,6 @@ setup(
     install_requires=[
         "pyserial>=3.0,<4.0",
         "mbed-os-tools>=0.0.9,<0.1.0",
+        "mercurial>=5.2"
     ]
 )
