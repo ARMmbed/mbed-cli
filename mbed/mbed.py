@@ -229,7 +229,7 @@ def hide_progress(max_width=80):
 def create_default_mbed_app():
     # Default data content
     if not os.path.exists(mbed_app_file_name):
-        data = {'target_overrides':{'K64F':{'platform.stdio-baud-rate': 9600}}}
+        data = {'target_overrides':{'*':{'platform.stdio-baud-rate': 9600}}}
         with open(mbed_app_file_name, "w") as mbed_app_file:
             json.dump(data, mbed_app_file, indent=4)
 
