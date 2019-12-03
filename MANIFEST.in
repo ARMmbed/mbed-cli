@@ -1,2 +1,5 @@
-include README.md LICENSE pypi_readme.rst
+global-exclude *.py[cod] __pycache__ *.so
 graft test
+include README.rst
+include LICENSE
+include requirements.txt

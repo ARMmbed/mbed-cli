@@ -12,41 +12,60 @@
 
 import os
 from setuptools import setup
+from setuptools import find_packages
 
-with open("README.md", "r") as fh:
+NAME = 'mbed-cli'
+__version__ = None
+
+repository_dir = os.path.dirname(__file__)
+
+# single source for project version information without side effects
+with open(os.path.join(repository_dir, 'mbed', '_version.py')) as fh:
+    exec(fh.read())
+
+# .rst readme needed for pypi
+with open(os.path.join(repository_dir, 'README.rst')) as fh:
+    long_description = fh.read()
+
+with open(os.path.join(repository_dir, 'requirements.txt')) as fh:
+    requirements = fh.readlines()
+
+with open("README.rst", "r") as fh:
     long_description = fh.read()
 
 setup(
-    name="mbed-cli",
-    version="1.10.2",
-    description="Arm Mbed command line tool for repositories version control, publishing and updating code from remotely hosted repositories (GitHub, GitLab and mbed.com), and invoking Mbed OS own build system and export functions, among other operations",
-    long_description=long_description,
-    long_description_content_type="text/markdown",
-    url='http://github.com/ARMmbed/mbed-cli',
     author='Arm mbed',
     author_email='support@mbed.org',
-    packages=["mbed"],
+    classifiers=(
+        'Development Status :: 5 - Production/Stable',
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: Apache Software License',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python',
+        'Topic :: Internet',
+        'Topic :: Software Development :: Embedded Systems',
+        'Topic :: Software Development :: Object Brokering',
+    ),
+    description="Command line tool for interacting with Mbed OS projects",
+    keywords="Mbed OS CLI",
+    include_package_data=True,
+    install_requires=requirements,
+    license='Apache 2.0',
+    long_description=long_description,
+    name=NAME,
+    packages=find_packages(),
+    python_requires='>=2.7.10, !=3.4.1, !=3.4.2, <4',
+    url="http://github.com/ARMmbed/mbed-cli",
+    version=__version__,
     entry_points={
         'console_scripts': [
             'mbed=mbed.mbed:main',
             'mbed-cli=mbed.mbed:main',
         ]
-    },
-    python_requires='>=2.7.10, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.0, !=3.4.1, !=3.4.2, <4',
-    classifiers=(
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        "License :: OSI Approved :: Apache Software License",
-        "Operating System :: OS Independent",
-    ),
-    install_requires=[
-        "pyserial>=3.0,<4.0",
-        "mbed-os-tools>=0.0.9,<0.1.0",
-        "mercurial>=5.2"
-    ]
+    }
 )
