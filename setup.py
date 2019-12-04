@@ -43,7 +43,7 @@ setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python',
-        'Topic :: Internet',
+        'Topic :: Software Development :: Build Tools',
         'Topic :: Software Development :: Embedded Systems',
     ),
     description="Command line tool for interacting with Mbed OS projects",
