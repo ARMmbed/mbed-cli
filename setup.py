@@ -59,7 +59,7 @@ setup(
     long_description=long_description,
     name=NAME,
     packages=find_packages(),
-    python_requires='>=2.7.10, !=3.4.1, !=3.4.2, <4',
+    python_requires='>=2.7.10, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, <4',
     url="http://github.com/ARMmbed/mbed-cli",
     version=__version__,
     entry_points={
