@@ -15,13 +15,9 @@ from setuptools import setup
 from setuptools import find_packages
 
 NAME = 'mbed-cli'
-__version__ = None
+__version__ = '1.10.3'
 
 repository_dir = os.path.dirname(__file__)
-
-# single source for project version information without side effects
-with open(os.path.join(repository_dir, 'mbed', '_version.py')) as fh:
-    exec(fh.read())
 
 # .rst readme needed for pypi
 with open(os.path.join(repository_dir, 'README.rst')) as fh:
@@ -49,7 +45,6 @@ setup(
         'Programming Language :: Python',
         'Topic :: Internet',
         'Topic :: Software Development :: Embedded Systems',
-        'Topic :: Software Development :: Object Brokering',
     ),
     description="Command line tool for interacting with Mbed OS projects",
     keywords="Mbed OS CLI",
