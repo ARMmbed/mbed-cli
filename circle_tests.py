@@ -74,5 +74,5 @@ for cmd in tests[startIndex:]:
     proc.communicate()
 
     if proc.returncode != 0:
-        print "\n------------\nERROR: \"%s\"" % cmd
+        print("\n------------\nERROR: \"%s\"" % cmd)
         sys.exit(1)
