@@ -137,9 +137,9 @@ mbed_base_url = 'https://github.com/ARMmbed'
 # default mbed OS url
 mbed_os_url = 'https://github.com/ARMmbed/mbed-os'
 # default mbed library url
-mbed_lib_url = 'https://mbed.org/users/mbed_official/code/mbed/builds/'
+mbed_lib_url = 'https://os.mbed.com/users/mbed_official/code/mbed/builds/'
 # mbed SDK tools needed for programs based on mbed SDK library
-mbed_sdk_tools_url = 'https://mbed.org/users/mbed_official/code/mbed-sdk-tools'
+mbed_sdk_tools_url = 'https://os.mbed.com/users/mbed_official/code/mbed-sdk-tools/'
 
 # a list of public SCM service (github/butbucket) which support http, https and ssh schemas
 public_scm_services = ['bitbucket.org', 'github.com', 'gitlab.com']
@@ -2182,7 +2182,7 @@ def new(name, scm='git', program=False, library=False, mbedlib=False, create_onl
     help='Import program from URL',
     description=(
         "Imports mbed program and its dependencies from a source control based URL\n"
-        "(GitHub, Bitbucket, mbed.org) into the current directory or specified\npath.\n"
+        "(GitHub, Bitbucket, os.mbed.com) into the current directory or specified\npath.\n"
         "Use \"mbed add <URL>\" to add a library into an existing program."))
 def import_(url, path=None, ignore=False, depth=None, protocol=None, insecure=False, offline=False, no_requirements=False, top=True):
     global cwd_root
@@ -2261,7 +2261,7 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, insecure=Fa
     help='Add library from URL',
     description=(
         "Adds mbed library and its dependencies from a source control based URL\n"
-        "(GitHub, Bitbucket, mbed.org) into an existing program.\n"
+        "(GitHub, Bitbucket, os.mbed.com) into an existing program.\n"
         "Use \"mbed import <URL>\" to import as a program"))
 def add(url, path=None, ignore=False, depth=None, protocol=None, insecure=False, offline=False, no_requirements=False, top=True):
     offline_warning(offline, top)

@@ -31,7 +31,7 @@ with open("README.rst", "r") as fh:
 
 setup(
     author='Arm mbed',
-    author_email='support@mbed.org',
+    author_email='support@mbed.com',
     classifiers=(
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
