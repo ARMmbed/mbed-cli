@@ -2833,7 +2833,8 @@ def compile_(toolchain=None, target=None, macro=False, profile=False,
     dict(name='--test-spec', dest="test_spec", help="Path used for the test spec file used when building and running tests (the default path is the build directory)"),
     dict(name='--app-config', dest="app_config", help="Path of an application configuration file. Default is to look for \"mbed_app.json\""),
     dict(name='--test-config', dest="test_config", help="Path or mbed OS keyword of a test configuration file. Example: ethernet, odin_wifi, or path/to/config.json"),
-    dict(name='--coverage', choices=['html', 'xml', 'both'], help='Generate code coverage report for unit tetsts'),
+    dict(name='--coverage', choices=['html', 'xml', 'both'], help='Generate code coverage report for unit tests'),
+    dict(name='--valgrind', action='store_true', help='Use Valgrind for unit tests'),
     dict(name=['--make-program'], choices=['gmake', 'make', 'mingw32-make', 'ninja'], help='Which make program to use for unit tests'),
     dict(name=['--generator'], choices=['Unix Makefiles', 'MinGW Makefiles', 'Ninja'], help='Which CMake generator to use for unit tests'),
     dict(name='--new', help='generate files for a new unit test', metavar="FILEPATH"),
@@ -2845,7 +2846,7 @@ def compile_(toolchain=None, target=None, macro=False, profile=False,
          help="Run Icetea tests. If used without --greentea flag then run only icetea tests."),
     help='Find, build and run tests',
     description="Find, build, and run tests in a program and libraries")
-def test_(toolchain=None, target=None, macro=False, compile_list=False, run_list=False, compile_only=False, run_only=False, tests_by_name=None, source=False, profile=False, build=False, clean=False, test_spec=None, app_config=None, test_config=None, coverage=None, make_program=None, new=None, generator=None, regex=None, unittests=None, build_data=None, greentea=None, icetea=None):
+def test_(toolchain=None, target=None, macro=False, compile_list=False, run_list=False, compile_only=False, run_only=False, tests_by_name=None, source=False, profile=False, build=False, clean=False, test_spec=None, app_config=None, test_config=None, coverage=None, valgrind=None, make_program=None, new=None, generator=None, regex=None, unittests=None, build_data=None, greentea=None, icetea=None):
 
     # Default behaviour is to run only greentea tests
     if not (greentea or icetea or unittests):
@@ -2900,6 +2901,7 @@ def test_(toolchain=None, target=None, macro=False, compile_list=False, run_list
                         + (["--clean"] if clean else [])
                         + (["--debug"] if profile and "debug" in profile else [])
                         + (["--coverage", coverage] if coverage else [])
+                        + (["--valgrind", valgrind] if valgrind else [])
                         + (["--make-program", make_program] if make_program else [])
                         + (["--generator", generator] if generator else [])
                         + (["--regex", regex] if regex else [])
