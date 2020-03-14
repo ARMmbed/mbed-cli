@@ -1574,7 +1574,7 @@ class Program(object):
                 break
 
         self.name = os.path.basename(self.path)
-        self.is_classic = os.path.isfile(os.path.join(self.path, 'mbed.bld'))
+        self.is_classic = os.path.isfile(os.path.join(self.path, 'mbed','.bld', 'bldrc'))
 
         # is_cwd flag indicates that current dir is assumed to be root, not root repo
         if self.is_cwd and print_warning:
