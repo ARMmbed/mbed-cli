@@ -2785,6 +2785,10 @@ def compile_(toolchain=None, target=None, macro=False, profile=False,
                     error("The '-f/--flash' option requires that the 'mbed-greentea' python module is installed.\nYou can install mbed-greentea by running \"%s -m pip install mbed-greentea\"." % python_cmd, 1)
 
                 connected = False
+                # Convert Dual Core target name to mbedls target name
+                if target.upper().endswith('_CM4') or target.upper().endswith('_CM7'):
+                    target = target[:-4]
+                    action('Target to detect: %s' % target)
                 targets = program.get_detected_targets()
                 if targets:
                     for _target in targets:
