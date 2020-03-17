@@ -15,7 +15,7 @@ from setuptools import setup
 from setuptools import find_packages
 
 NAME = 'mbed-cli'
-__version__ = '1.10.2'
+__version__ = '1.10.3'
 
 repository_dir = os.path.dirname(__file__)
 
