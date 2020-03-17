@@ -2901,7 +2901,7 @@ def test_(toolchain=None, target=None, macro=False, compile_list=False, run_list
                         + (["--clean"] if clean else [])
                         + (["--debug"] if profile and "debug" in profile else [])
                         + (["--coverage", coverage] if coverage else [])
-                        + (["--valgrind", valgrind] if valgrind else [])
+                        + (["--valgrind"] if valgrind else [])
                         + (["--make-program", make_program] if make_program else [])
                         + (["--generator", generator] if generator else [])
                         + (["--regex", regex] if regex else [])
