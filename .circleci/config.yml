@@ -146,7 +146,7 @@ jobs:
             - image: python:2.7
         steps:
             - run_tests
-            - run_old_support_tests
+            #- run_old_support_tests
     python36:
         docker:
             - image: python:3.6
