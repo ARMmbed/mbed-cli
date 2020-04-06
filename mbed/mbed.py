@@ -394,7 +394,7 @@ class Bld(object):
                 inurl = urlopen(url)
                 with open(rev_file, 'wb') as outfd:
                     data = None
-                    while data != '':
+                    while data != b'':
                         # Download and write the data in 1 MB chunks
                         data = inurl.read(1024 * 1024)
                         outfd.write(data)
