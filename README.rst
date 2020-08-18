@@ -12,7 +12,7 @@ Mbed CLI supports both Git and Mercurial repositories, so you'll also need to in
 
 Get Started
 ===========
-The best way to get started is to `read the documentation on GitHub <https://github.com/ARMmbed/mbed-cli/blob/master/README.rst>`_.
+The best way to get started is to `read the documentation on os.mbed.com <https://os.mbed.com/docs/mbed-os/latest/build-tools/mbed-cli.html>`_.
 
 License
 =======
