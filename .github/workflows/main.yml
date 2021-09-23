@@ -1,0 +1,77 @@
+on:
+  pull_request:
+  push:
+
+jobs: 
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ 'pypy-2.7', 'pypy-3.6', 'pypy-3.7' ]
+
+    container:
+      image: ghcr.io/armmbed/mbed-os-env:master-latest
+
+    runs-on: ubuntu-latest
+
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+
+
+      - name: Setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Display Python version
+        run: python -c "import sys; print(sys.version)"
+
+      - 
+        name: Configure Git and Mercurial
+        shell: bash
+        run: |
+          git config --global user.email "test@mbed.org"
+          git config --global user.name "mbed Test"
+          echo -e "[ui]\nusername = mbed Test <test@mbed.org>\n" > ~/.hgrc
+
+      - 
+        name: Run unit tests
+        run: |
+          python -m pip install pytest setuptools
+          python -m pytest test
+
+      - 
+        name: install mbed-cli
+        run: |
+          python -m pip install -e .
+          python -m mbed --version
+
+      - 
+        name: Configure Mbed CLI for integration tests
+        run: |
+          python -m mbed toolchain -G GCC_ARM
+          python -m mbed target -G K64F
+          python -m mbed config -G protocol https
+
+      - 
+        name: Create a new project
+        run: |
+          mkdir integration_tests
+          cd integration_tests
+          python -m mbed new new-test
+
+      - 
+        name: Test project inspection
+        working-directory: integration_tests/new-test
+        run: |
+          python -m mbed ls
+          python -m mbed releases -r
+
+      - 
+        name: Build through "compile" and "test"
+        working-directory: integration_tests/new-test
+        run: |
+          python -m mbed compile --source=. --source=mbed-os/drivers/tests/TESTS/mbed_drivers/generic_tests -j 0
+          python -m mbed test --compile -n mbed-os-tests-mbed_drivers-generic_tests -j 0
