@@ -1335,6 +1335,11 @@ class Repo(object):
 
             for f in files:
                 if f.endswith('.lib') or f.endswith('.bld'):
+                    # If we are in a subdirectory that is importing mbed-os,
+                    # skip the import of mbed-os: the app will have already
+                    # imported mbed-os.
+                    if (f == 'mbed-os.lib') and (root != cwd_root):
+                        continue
                     repo = Repo.fromlib(os.path.join(root, f))
                     if repo:
                         yield repo
