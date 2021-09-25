@@ -492,6 +492,9 @@ class Hg(object):
         return True
 
     def clone(url, name=None, depth=None, protocol=None):
+        if any(os.access(os.path.join(path, name), os.X_OK) for path in os.environ["PATH"].split(os.pathsep)) == False:
+            raise ProcessException(1, "hg file is not exist")
+
         if verbose or very_verbose:
             popen([hg_cmd, 'clone', formaturl(url, protocol), name] + (['-v'] if very_verbose else ([] if verbose else ['-q'])))
         else:
